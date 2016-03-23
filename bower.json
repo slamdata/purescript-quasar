@@ -1,0 +1,19 @@
+{
+  "name": "purescript-quasar",
+  "homepage": "https://github.com/slamdata/purescript-quasar",
+  "description": "Quasar API library for PureScript ",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/slamdata/purescript-quasar.git"
+  },
+  "ignore": [
+    "**/.*",
+    "bower_components",
+    "node_modules",
+    "output",
+    "test",
+    "bower.json",
+    "package.json"
+  ]
+}
