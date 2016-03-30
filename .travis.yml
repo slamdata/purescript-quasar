@@ -13,6 +13,7 @@ script:
   - mkdir -p $HOME/bin/mongodb
   - cp -R -n mongodb-linux-x86_64-3.0.6/* $HOME/bin/mongodb
   - export PATH=$HOME/bin/mongodb/bin:$PATH
+  - mongod --version
   - npm run build
 after_success:
 - >-
