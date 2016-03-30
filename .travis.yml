@@ -3,10 +3,6 @@ dist: trusty
 sudo: required
 node_js: 5
 install:
-  - npm install
-  - npm install -g bower
-  - bower install
-script:
   - mkdir $HOME/bin
   - curl -O https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-3.0.6.tgz
   - tar -zxvf mongodb-linux-x86_64-3.0.6.tgz
@@ -15,6 +11,10 @@ script:
   - export PATH=$HOME/bin/mongodb/bin:$PATH
   - mongod --version
   - java -version
+  - npm install
+  - npm install -g bower
+  - bower install
+script:
   - npm run build
 after_success:
 - >-
