@@ -2,9 +2,9 @@
   "private": true,
   "scripts": {
     "postinstall": "node script/get-quasar.js",
-    "clean": "rimraf output && rimraf .pulp-cache",
+    "clean": "rimraf output && rimraf .pulp-cache && rimraf test/tmp",
     "build": "pulp build",
-    "test": "pulp test"
+    "test": "pulp test --test-path test/src"
   },
   "devDependencies": {
     "pulp": "^8.1.0",

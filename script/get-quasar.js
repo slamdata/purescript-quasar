@@ -86,11 +86,11 @@ function main() {
     console.warn("[Warning] Quasar jar will not be fetched unless you set the GITHUB_AUTH_TOKEN environment variable");
   } else {
 
-    if (!fs.existsSync("./jars")){
-      fs.mkdirSync("./jars");
+    if (!fs.existsSync("./test/quasar")){
+      fs.mkdirSync("./test/quasar");
     }
 
-    var quasarDest = fs.createWriteStream("./jars/quasar.jar");
+    var quasarDest = fs.createWriteStream("./test/quasar/quasar.jar");
 
     var quasarDistribution = "quasar";
     if (process.argv.indexOf("--advanced") != -1) {

@@ -1,0 +1,12 @@
+{
+  "server": {
+    "port": 53174
+  },
+  "mountings": {
+    "/": {
+      "mongodb": {
+        "connectionUri": "mongodb://localhost:63174"
+      }
+    }
+  }
+}

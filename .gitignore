@@ -4,4 +4,5 @@
 /bower_components/
 /node_modules/
 /output/
-/jars/
+/test/quasar/quasar.jar
+/test/tmp/
