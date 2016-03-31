@@ -47,7 +47,7 @@ spawnMongo = do
   FS.mkdirRec "test/tmp/db"
   var ← makeVar
   log "Starting mongod..."
-  proc ← liftEff $ do --pipeOutputs =<<
+  proc ← liftEff do
     cp ← CP.spawn
       "mongod"
       ["--port", "63174", "--dbpath", "db"]
@@ -68,7 +68,7 @@ spawnQuasar = do
   FSA.writeFile "test/tmp/quasar/config.json" buf
   var ← makeVar
   log "Starting Quasar..."
-  proc ← liftEff $ do
+  proc ← liftEff do
     cp ←
       CP.spawn
         "java"
@@ -82,9 +82,9 @@ spawnQuasar = do
   takeVar var *> log "Started"
   pure proc
 
-pipeOutputs ∷ ∀ eff. CP.ChildProcess → Eff (cp ∷ CP.CHILD_PROCESS, console ∷ CONSOLE, err ∷ EXCEPTION | eff) CP.ChildProcess
-pipeOutputs cp = do
-  Stream.pipe (CP.stdout cp) Proc.stdout
-  Stream.pipe (CP.stderr cp) Proc.stderr
-  CP.onExit cp Debug.Trace.traceAnyA
-  pure cp
+-- pipeOutputs ∷ ∀ eff. CP.ChildProcess → Eff (cp ∷ CP.CHILD_PROCESS, console ∷ CONSOLE, err ∷ EXCEPTION | eff) CP.ChildProcess
+-- pipeOutputs cp = do
+--   Stream.pipe (CP.stdout cp) Proc.stdout
+--   Stream.pipe (CP.stderr cp) Proc.stderr
+--   CP.onExit cp Debug.Trace.traceAnyA
+--   pure cp
