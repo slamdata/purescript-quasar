@@ -18,12 +18,13 @@ module Test.Main where
 
 import Prelude
 
-import Control.Monad.Aff (Aff, runAff)
+import Control.Monad.Aff (Aff, runAff, attempt)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Aff.Console (log)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Console as Console
 import Control.Monad.Eff.Exception (EXCEPTION, Error, throwException)
 import Control.Monad.Reader.Trans (runReaderT)
 
@@ -32,9 +33,9 @@ import Data.Either (Either(..), isRight)
 import Data.Foldable (for_)
 import Data.Maybe (Maybe(..))
 import Data.Path.Pathy (rootDir, dir, file, (</>))
+import Data.Posix.Signal (Signal(SIGTERM))
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
-import Data.Posix.Signal (Signal(SIGTERM))
 
 import Network.HTTP.Affjax (AJAX)
 
@@ -42,6 +43,8 @@ import Node.Buffer (BUFFER)
 import Node.ChildProcess as CP
 import Node.FS (FS)
 import Node.FS.Aff as FSA
+import Node.Process (PROCESS)
+import Node.Process as Proc
 
 import Test.Assert (ASSERT, assert')
 import Test.Util.Process (spawnMongo, spawnQuasar)
@@ -49,6 +52,8 @@ import Test.Util.Process (spawnMongo, spawnQuasar)
 import Quasar.QuasarF (QuasarF(..))
 import Quasar.QuasarF.Interpreter.Aff (eval)
 
+-- | Evaluates and runs a `QuasarF` value, throwing an assertion error if the
+-- | query fails.
 run
   ∷ ∀ eff a
   . Show a
@@ -60,8 +65,22 @@ run qf = do
   liftEff $ assert' "Query errored" (isRight x)
   pure x
 
-main ∷ Eff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, err ∷ EXCEPTION, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, ajax ∷ AJAX, assert ∷ ASSERT) Unit
-main = runAff throwException (const (pure unit)) do
+-- | Used to catch Aff exceptions that don't get caught in main due to them
+-- | being raised asynchronously.
+jumpOutOnError
+  ∷ ∀ eff a
+  . Aff (console ∷ CONSOLE, process ∷ PROCESS | eff) a
+  → Aff (console ∷ CONSOLE, process ∷ PROCESS | eff) a
+jumpOutOnError aff = do
+  x ← attempt aff
+  case x of
+    Left err → liftEff do
+      Console.error (show err)
+      Proc.exit 1
+    Right x' → pure x'
+
+main ∷ Eff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, process ∷ PROCESS, err ∷ EXCEPTION, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, ajax ∷ AJAX, assert ∷ ASSERT) Unit
+main = runAff throwException (const (pure unit)) $ jumpOutOnError do
 
   mongod ← spawnMongo
   quasar ← spawnQuasar

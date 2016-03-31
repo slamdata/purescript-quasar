@@ -19,21 +19,23 @@ module Test.Util.Process (spawnMongo, spawnQuasar) where
 import Prelude
 
 import Control.Monad.Aff (Aff, launchAff, later', forkAff)
-import Control.Monad.Aff.AVar (AVAR, makeVar, takeVar, putVar, killVar)
-import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Exception (EXCEPTION, error)
-import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Aff.AVar (AVAR, makeVar, takeVar, putVar)
 import Control.Monad.Aff.Console (log)
+import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Exception (EXCEPTION, error)
+import Control.Monad.Error.Class (throwError)
 
-import Data.String as Str
+import Data.Functor (($>))
 import Data.Maybe (Maybe(..), isJust)
+import Data.String as Str
 
 import Node.Buffer (BUFFER)
 import Node.ChildProcess as CP
+import Node.Encoding as Enc
 import Node.FS (FS)
 import Node.FS.Aff as FSA
 import Node.Stream as Stream
-import Node.Encoding as Enc
 
 import Test.Util.FS as FS
 
@@ -68,12 +70,15 @@ spawn name startLine spawnProc = do
   log $ "Starting " ++ name ++ "..."
   var ← makeVar
   proc ← spawnProc
+  liftEff $ Stream.onDataString (CP.stderr proc) Enc.UTF8 \s ->
+    launchAff $ putVar var $ Just $ error $ "An error occurred: " ++ s
   liftEff $ Stream.onDataString (CP.stdout proc) Enc.UTF8 \s ->
     launchAff
       if isJust (Str.indexOf startLine s)
-      then putVar var unit
+      then putVar var Nothing
       else pure unit
-  forkAff $ later' 10000 $ killVar var (error "Timed out")
+  forkAff $ later' 10000 $ putVar var $ Just (error "Timed out")
   v ← takeVar var
-  log "Started"
-  pure proc
+  case v of
+    Nothing → log "Started" $> proc
+    Just err → throwError err
