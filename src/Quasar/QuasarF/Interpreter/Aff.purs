@@ -70,7 +70,11 @@ eval = \q -> case q of
   ReadQuery path sql vars pagination k -> do
     let params = Tuple "q" sql : toVarParams vars <> toPageParams pagination
     url ← mkURL Paths.query path params
-    k <$> mkRequest jarrResult (AX.get url)
+    k <$> mkRequest jarrResult
+      (AX.affjax $ AX.defaultRequest
+        { url = url
+        , headers = [Req.Accept applicationJSON]
+        })
 
   WriteQuery path file sql vars k -> do
     url ← mkURL Paths.query path (toVarParams vars)
