@@ -136,8 +136,11 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     log "\nGetMount:"
     run $ GetMount testMount id
 
+    log "\nMoveMount:"
+    run $ MoveMount testMount testMount2 id
+
     log "\nDeleteMount:"
-    run $ DeleteMount testMount id
+    run $ DeleteMount testMount2 id
 
   liftEff do
     CP.kill SIGTERM mongod
@@ -152,6 +155,7 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
   testFile1 = rootDir </> dir "test" </> file "zzz"
   testFile2 = rootDir </> dir "test" </> file "aaa"
   testMount = Right (rootDir </> file "testMount")
+  testMount2 = Right (rootDir </> file "testMount2")
 
   content =
     "foo" := "bar"

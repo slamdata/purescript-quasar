@@ -141,6 +141,15 @@ eval = \q -> case q of
   GetMount path k ->
     k <$> (mkRequest jsonResult <<< AX.get =<< mkURL Paths.mount path Nil)
 
+  MoveMount fromPath toPath k -> do
+    url ← mkURL Paths.mount fromPath Nil
+    k <$> mkRequest unitResult
+      (AX.affjax AX.defaultRequest
+        { url = url
+        , method = Left MOVE
+        , headers = [Req.RequestHeader "Destination" (either printPath printPath toPath)]
+        })
+
   DeleteMount path k ->
     k <$> (mkRequest unitResult <<< AX.delete =<< mkURL Paths.mount path Nil)
 

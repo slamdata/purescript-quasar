@@ -31,7 +31,7 @@ type DirPath = AbsDir Sandboxed
 type AnyPath = Either DirPath FilePath
 
 type SQL = String
-type MountConfig = Json
+type MountConfig = JObject
 type Metadata = Json
 
 newtype LDJSON = LDJSON String
@@ -56,6 +56,7 @@ data QuasarF a
   | DeleteFile FilePath (Either Error Unit → a)
   | MoveFile FilePath FilePath (Either Error Unit → a)
   | GetMount AnyPath (Either Error MountConfig → a)
-  | CreateMount AnyPath MountConfig (Either Error Unit → a)
-  | UpdateMount AnyPath MountConfig (Either Error Unit → a)
+  | CreateMount AnyPath Json (Either Error Unit → a)
+  | UpdateMount AnyPath Json (Either Error Unit → a)
+  | MoveMount AnyPath AnyPath (Either Error Unit → a)
   | DeleteMount AnyPath (Either Error Unit → a)
