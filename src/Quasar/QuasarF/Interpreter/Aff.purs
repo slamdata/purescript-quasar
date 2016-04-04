@@ -112,13 +112,13 @@ eval = \q -> case q of
     url ← mkURL Paths.data_ (Right file) Nil
     k <$> mkRequest unitResult (AX.delete url)
 
-  MoveFile fromPath toPath k -> do
-    url ← mkURL Paths.data_ (Right fromPath) Nil
+  MoveData fromPath toPath k -> do
+    url ← mkURL Paths.data_ fromPath Nil
     k <$> mkRequest unitResult
       (AX.affjax AX.defaultRequest
         { url = url
         , method = Left MOVE
-        , headers = [Req.RequestHeader "Destination" (printPath toPath)]
+        , headers = [Req.RequestHeader "Destination" (either printPath printPath toPath)]
         })
 
   CreateMount path config k -> do
@@ -162,7 +162,7 @@ eval = \q -> case q of
   strResult = Right
 
   unitResult ∷ String → Either Error Unit
-  unitResult = (const (Right unit))
+  unitResult = const (Right unit)
 
   toVarParams ∷ SM.StrMap String → List (Tuple String String)
   toVarParams = map (lmap ("var." <> _)) <<< SM.toList

@@ -110,8 +110,9 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     log "\nCompileQuery:"
     run $ CompileQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) id
 
-    log "\nMoveFile:"
-    run $ MoveFile testFile1 testFile2 id
+    log "\nMoveData:"
+    run $ MoveData (Right testFile1) (Right testFile2) id
+    run $ MoveData (Left testFile2Dir) (Left testFile3Dir) id
 
     log "\nWriteFile:"
     run $ WriteFile testFile1 (Right [content]) id
@@ -121,11 +122,11 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nReadFile:"
     run $ ReadFile testFile1 (Just { offset: 0, limit: 100 }) id
-    run $ ReadFile testFile2 (Just { offset: 0, limit: 1 }) id
+    run $ ReadFile testFile3 (Just { offset: 0, limit: 1 }) id
 
     log "\nDeleteFile:"
     run $ DeleteFile testFile1 id
-    run $ DeleteFile testFile2 id
+    run $ DeleteFile testFile3 id
 
     log "\nCreateMount:"
     run $ CreateMount testMount mountConfig1 id
@@ -153,7 +154,10 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
   where
   testDbAnyDir = Left (rootDir </> dir "test")
   testFile1 = rootDir </> dir "test" </> file "zzz"
-  testFile2 = rootDir </> dir "test" </> file "aaa"
+  testFile2Dir = rootDir </> dir "test" </> dir "subdir"
+  testFile2 = testFile2Dir </> file "aaa"
+  testFile3Dir = rootDir </> dir "test" </> dir "what"
+  testFile3 = testFile3Dir </> file "aaa"
   testMount = Right (rootDir </> file "testMount")
   testMount2 = Right (rootDir </> file "testMount2")
 

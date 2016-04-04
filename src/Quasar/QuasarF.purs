@@ -44,6 +44,8 @@ type Vars = StrMap String
 
 type Pagination = { offset ∷ Int, limit ∷ Int }
 
+-- TODO: distinguish 404 errors (for move source missing, at least)
+
 data QuasarF a
   = ServerInfo (Either Error JObject → a)
   | ReadQuery AnyPath SQL Vars (Maybe Pagination) (Either Error JArray → a)
@@ -54,7 +56,7 @@ data QuasarF a
   | WriteFile FilePath Content (Either Error Unit → a)
   | AppendFile FilePath Content (Either Error Unit → a)
   | DeleteFile FilePath (Either Error Unit → a)
-  | MoveFile FilePath FilePath (Either Error Unit → a)
+  | MoveData AnyPath AnyPath (Either Error Unit → a)
   | GetMount AnyPath (Either Error MountConfig → a)
   | CreateMount AnyPath Json (Either Error Unit → a)
   | UpdateMount AnyPath Json (Either Error Unit → a)
