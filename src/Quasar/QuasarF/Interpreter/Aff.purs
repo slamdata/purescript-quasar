@@ -70,7 +70,7 @@ eval = \q -> case q of
   ReadQuery path sql vars pagination k -> do
     let params = Tuple "q" sql : toVarParams vars <> toPageParams pagination
     url ← mkURL Paths.query path params
-    k <$> mkRequest jarrResult
+    k <$> mkRequest jsonResult
       (AX.affjax $ AX.defaultRequest
         { url = url
         , headers = [Req.Accept applicationJSON]
@@ -92,7 +92,7 @@ eval = \q -> case q of
 
   ReadFile path pagination k -> do
     url ← mkURL Paths.data_ (Right path) (toPageParams pagination)
-    k <$> mkRequest jarrResult
+    k <$> mkRequest jsonResult
       (AX.affjax AX.defaultRequest
         { url = url
         , headers = [Req.Accept applicationJSON]
@@ -146,11 +146,8 @@ eval = \q -> case q of
 
   where
 
-  jsonResult ∷ String → Either Error Json.Json
-  jsonResult = lmap error <$> Json.jsonParser
-
-  jarrResult ∷ String → Either Error Json.JArray
-  jarrResult = lmap error <$> Json.decodeJson <=< jsonResult
+  jsonResult ∷ ∀ j. Json.DecodeJson j ⇒ String → Either Error j
+  jsonResult = lmap error <$> (Json.decodeJson <=< Json.jsonParser)
 
   strResult ∷ String → Either Error String
   strResult = Right

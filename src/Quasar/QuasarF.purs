@@ -20,7 +20,7 @@ import Prelude
 
 import Control.Monad.Eff.Exception (Error)
 
-import Data.Argonaut (Json, JArray)
+import Data.Argonaut (Json, JArray, JObject)
 import Data.Either (Either)
 import Data.Maybe (Maybe)
 import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed)
@@ -45,9 +45,9 @@ type Vars = StrMap String
 type Pagination = { offset ∷ Int, limit ∷ Int }
 
 data QuasarF a
-  = ServerInfo (Either Error Json → a)
+  = ServerInfo (Either Error JObject → a)
   | ReadQuery AnyPath SQL Vars (Maybe Pagination) (Either Error JArray → a)
-  | WriteQuery AnyPath FilePath SQL Vars (Either Error Json → a)
+  | WriteQuery AnyPath FilePath SQL Vars (Either Error JObject → a)
   | CompileQuery AnyPath SQL Vars (Either Error String → a)
   | GetMetadata AnyPath (Either Error Metadata → a)
   | ReadFile FilePath (Maybe Pagination) (Either Error JArray → a)
