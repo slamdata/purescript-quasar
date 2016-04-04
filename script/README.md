@@ -5,7 +5,7 @@ project root  with a GitHub authorization token:
 GITHUB_AUTH_TOKEN=XXXXXXXX node script/get-quasar.js
 ```
 
-The jar will be placed at `jars/quasar.jar`, and will be used in the
+The jar will be placed at `test/quasar/quasar.jar`, and will be used in the
 integration tests.
 
 To download Quasar Advanced, use the `--advanced` option:
