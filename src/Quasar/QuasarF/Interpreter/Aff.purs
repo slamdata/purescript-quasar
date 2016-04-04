@@ -18,14 +18,13 @@ module Quasar.QuasarF.Interpreter.Aff (Config, eval) where
 
 import Prelude
 
-import Control.Bind ((=<<))
+import Control.Bind ((=<<), (<=<))
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Aff.Class (class MonadAff, liftAff)
-import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Reader.Class (class MonadReader, ask)
 
-import Data.Argonaut (Json, (.?))
+import Data.Argonaut ((.?))
 import Data.Argonaut as Json
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
@@ -48,7 +47,7 @@ import Network.HTTP.Affjax.Request as AXR
 import Network.HTTP.RequestHeader as Req
 import Network.HTTP.StatusCode (StatusCode(..))
 
-import Quasar.Paths as Paths
+import Quasar.PathsP as Paths
 import Quasar.QuasarF (QuasarF(..), runLDJSON, AnyPath, Content, Pagination)
 
 type Config = { basePath ∷ AX.URL }
@@ -56,17 +55,22 @@ type Config = { basePath ∷ AX.URL }
 eval
   ∷ ∀ m eff
   . ( MonadReader Config m
-    , MonadAff (console ∷ CONSOLE, ajax ∷ AX.AJAX | eff) m
+    , MonadAff (ajax ∷ AX.AJAX | eff) m
     )
   ⇒ Natural QuasarF m
 eval = \q -> case q of
+
+  ServerInfo k -> do
+    { basePath } ← ask
+    k <$> mkRequest jsonResult (AX.get (basePath <> Str.drop 1 (printPath Paths.serverInfo)))
+
   GetMetadata path k ->
     k <$> (mkRequest jsonResult <<< AX.get =<< mkURL Paths.metadata path Nil)
 
   ReadQuery path sql vars pagination k -> do
     let params = Tuple "q" sql : toVarParams vars <> toPageParams pagination
     url ← mkURL Paths.query path params
-    k <$> mkRequest jsonResult (AX.get url)
+    k <$> mkRequest jarrResult (AX.get url)
 
   WriteQuery path file sql vars k -> do
     url ← mkURL Paths.query path (toVarParams vars)
@@ -84,7 +88,7 @@ eval = \q -> case q of
 
   ReadFile path pagination k -> do
     url ← mkURL Paths.data_ (Right path) (toPageParams pagination)
-    k <$> mkRequest jsonResult
+    k <$> mkRequest jarrResult
       (AX.affjax AX.defaultRequest
         { url = url
         , headers = [Req.Accept applicationJSON]
@@ -138,8 +142,11 @@ eval = \q -> case q of
 
   where
 
-  jsonResult ∷ String → Either Error Json
+  jsonResult ∷ String → Either Error Json.Json
   jsonResult = lmap error <$> Json.jsonParser
+
+  jarrResult ∷ String → Either Error Json.JArray
+  jarrResult = lmap error <$> Json.decodeJson <=< jsonResult
 
   strResult ∷ String → Either Error String
   strResult = Right
@@ -174,7 +181,7 @@ mkURL endpoint path params = do
   toQueryString ∷ List (Tuple String String) → String
   toQueryString
     = ("?" <> _)
-    <<< Str.joinWith ";"
+    <<< Str.joinWith "&"
     <<< List.toUnfoldable
     <<< map (\(Tuple k v) → k <> "=" <> encodeURIComponent v)
 
@@ -185,7 +192,7 @@ mkPath base fsPath
   $ bimap (baseify (dir "/")) (baseify (file "")) fsPath
   where
   baseify
-    ∷ ∀ b s. Path Rel b Sandboxed → Path Abs b Sandboxed → Path Rel b Sandboxed
+    ∷ ∀ b. Path Rel b Sandboxed → Path Abs b Sandboxed → Path Rel b Sandboxed
   baseify x p = base </> fromMaybe x (p `relativeTo` rootDir)
 
 mkDataAReq ∷ Content → AX.AffjaxRequest AXR.RequestContent

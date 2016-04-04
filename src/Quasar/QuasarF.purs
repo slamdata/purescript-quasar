@@ -45,11 +45,12 @@ type Vars = StrMap String
 type Pagination = { offset ∷ Int, limit ∷ Int }
 
 data QuasarF a
-  = ReadQuery AnyPath SQL Vars (Maybe Pagination) (Either Error Json → a)
+  = ServerInfo (Either Error Json → a)
+  | ReadQuery AnyPath SQL Vars (Maybe Pagination) (Either Error JArray → a)
   | WriteQuery AnyPath FilePath SQL Vars (Either Error Json → a)
   | CompileQuery AnyPath SQL Vars (Either Error String → a)
   | GetMetadata AnyPath (Either Error Metadata → a)
-  | ReadFile FilePath (Maybe Pagination) (Either Error Json → a)
+  | ReadFile FilePath (Maybe Pagination) (Either Error JArray → a)
   | WriteFile FilePath Content (Either Error Unit → a)
   | AppendFile FilePath Content (Either Error Unit → a)
   | DeleteFile FilePath (Either Error Unit → a)

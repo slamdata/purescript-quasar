@@ -92,6 +92,10 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
       ["--port", "63174", "--file", file]
       (CP.defaultSpawnOptions { cwd = Just "test/data" })
 
+
+  log "\nServerInfo:"
+  run $ ServerInfo id
+
   log "\nGetMetadata:"
   run $ GetMetadata testDbAnyDir id
 
