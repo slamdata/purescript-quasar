@@ -55,7 +55,7 @@ data QuasarF a
   | ReadFile FilePath (Maybe Pagination) (Either Error JArray → a)
   | WriteFile FilePath Content (Either Error Unit → a)
   | AppendFile FilePath Content (Either Error Unit → a)
-  | DeleteFile FilePath (Either Error Unit → a)
+  | DeleteData AnyPath (Either Error Unit → a)
   | MoveData AnyPath AnyPath (Either Error Unit → a)
   | GetMount AnyPath (Either Error MountConfig → a)
   | CreateMount AnyPath Json (Either Error Unit → a)

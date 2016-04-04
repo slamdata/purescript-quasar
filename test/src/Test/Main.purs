@@ -124,9 +124,9 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     run $ ReadFile testFile1 (Just { offset: 0, limit: 100 }) id
     run $ ReadFile testFile3 (Just { offset: 0, limit: 1 }) id
 
-    log "\nDeleteFile:"
-    run $ DeleteFile testFile1 id
-    run $ DeleteFile testFile3 id
+    log "\nDeleteData:"
+    run $ DeleteData (Right testFile1) id
+    run $ DeleteData (Left testFile3Dir) id
 
     log "\nCreateMount:"
     run $ CreateMount testMount mountConfig1 id

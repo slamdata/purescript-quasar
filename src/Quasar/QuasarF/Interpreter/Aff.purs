@@ -108,9 +108,8 @@ eval = \q -> case q of
     k <$> mkRequest unitResult
       (AX.affjax (mkDataAReq content) { url = url, method = Left POST })
 
-  DeleteFile file k -> do
-    url ← mkURL Paths.data_ (Right file) Nil
-    k <$> mkRequest unitResult (AX.delete url)
+  DeleteData path k -> do
+    k <$> (mkRequest unitResult <<< AX.delete =<< mkURL Paths.data_ path Nil)
 
   MoveData fromPath toPath k -> do
     url ← mkURL Paths.data_ fromPath Nil
