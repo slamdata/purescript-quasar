@@ -28,6 +28,7 @@ import Control.Monad.Error.Class (throwError)
 
 import Data.Functor (($>))
 import Data.Maybe (Maybe(..), isJust)
+import Data.Posix.Signal (Signal(SIGTERM))
 import Data.String as Str
 
 import Node.Buffer (BUFFER)
@@ -81,4 +82,6 @@ spawn name startLine spawnProc = do
   v ← takeVar var
   case v of
     Nothing → log "Started" $> proc
-    Just err → throwError err
+    Just err → do
+      liftEff $ CP.kill SIGTERM proc
+      throwError err

@@ -26,6 +26,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Console as Console
 import Control.Monad.Eff.Exception (EXCEPTION, Error, throwException)
+import Control.Monad.Error.Class (throwError)
 import Control.Monad.Reader.Trans (runReaderT)
 
 import Data.Argonaut (jsonEmptyObject, (~>), (:=))
@@ -92,54 +93,59 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
       ["--port", "63174", "--file", file]
       (CP.defaultSpawnOptions { cwd = Just "test/data" })
 
+  result ← attempt do
 
-  log "\nServerInfo:"
-  run $ ServerInfo id
+    log "\nServerInfo:"
+    run $ ServerInfo id
 
-  log "\nGetMetadata:"
-  run $ GetMetadata testDbAnyDir id
+    log "\nGetMetadata:"
+    run $ GetMetadata testDbAnyDir id
 
-  log "\nReadQuery:"
-  run $ ReadQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 }) id
+    log "\nReadQuery:"
+    run $ ReadQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 }) id
 
-  log "\nWriteQuery:"
-  run $ WriteQuery testDbAnyDir testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty id
+    log "\nWriteQuery:"
+    run $ WriteQuery testDbAnyDir testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty id
 
-  log "\nCompileQuery:"
-  run $ CompileQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) id
+    log "\nCompileQuery:"
+    run $ CompileQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) id
 
-  log "\nMoveFile:"
-  run $ MoveFile testFile1 testFile2 id
+    log "\nMoveFile:"
+    run $ MoveFile testFile1 testFile2 id
 
-  log "\nWriteFile:"
-  run $ WriteFile testFile1 (Right [content]) id
+    log "\nWriteFile:"
+    run $ WriteFile testFile1 (Right [content]) id
 
-  log "\nAppendFile:"
-  run $ AppendFile testFile1 (Right [content]) id
+    log "\nAppendFile:"
+    run $ AppendFile testFile1 (Right [content]) id
 
-  log "\nReadFile:"
-  run $ ReadFile testFile1 (Just { offset: 0, limit: 100 }) id
-  run $ ReadFile testFile2 (Just { offset: 0, limit: 1 }) id
+    log "\nReadFile:"
+    run $ ReadFile testFile1 (Just { offset: 0, limit: 100 }) id
+    run $ ReadFile testFile2 (Just { offset: 0, limit: 1 }) id
 
-  log "\nDeleteFile:"
-  run $ DeleteFile testFile1 id
-  run $ DeleteFile testFile2 id
+    log "\nDeleteFile:"
+    run $ DeleteFile testFile1 id
+    run $ DeleteFile testFile2 id
 
-  log "\nCreateMount:"
-  run $ CreateMount testMount mountConfig1 id
+    log "\nCreateMount:"
+    run $ CreateMount testMount mountConfig1 id
 
-  log "\nUpdateMount:"
-  run $ UpdateMount testMount mountConfig2 id
+    log "\nUpdateMount:"
+    run $ UpdateMount testMount mountConfig2 id
 
-  log "\nGetMount:"
-  run $ GetMount testMount id
+    log "\nGetMount:"
+    run $ GetMount testMount id
 
-  log "\nDeleteMount:"
-  run $ DeleteMount testMount id
+    log "\nDeleteMount:"
+    run $ DeleteMount testMount id
 
   liftEff do
     CP.kill SIGTERM mongod
     CP.kill SIGTERM quasar
+
+  case result of
+    Left err → throwError err
+    Right _ → pure unit
 
   where
   testDbAnyDir = Left (rootDir </> dir "test")
