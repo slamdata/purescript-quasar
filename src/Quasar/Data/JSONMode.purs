@@ -18,6 +18,8 @@ module Quasar.Data.JSONMode where
 
 import Prelude
 
+import Data.MediaType (MediaType(..))
+
 data JSONMode = Readable | Precise
 
 instance eqJSONMode ∷ Eq JSONMode where
@@ -34,3 +36,9 @@ instance ordJSONMode ∷ Ord JSONMode where
 instance showJSONMode ∷ Show JSONMode where
   show Readable = "Readable"
   show Precise = "Precise"
+
+decorateMode ∷ MediaType → JSONMode → MediaType
+decorateMode (MediaType mt) mode = MediaType (mt <> modeToString mode)
+  where
+  modeToString Readable = ";mode=readable"
+  modeToString Precise = ";mode=precise"

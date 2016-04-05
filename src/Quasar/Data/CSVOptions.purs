@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Data.CSV where
+module Quasar.Data.CSVOptions where
 
 import Prelude
 
 import Data.MediaType (MediaType(..))
 import Data.String as String
-
-data CSV = CSV CSVOptions String
 
 type CSVOptions =
   { columnDelimiter ∷ String

@@ -26,7 +26,7 @@ import Data.Maybe (Maybe)
 import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed)
 import Data.StrMap (StrMap)
 
-import Quasar.Data.QData (QData)
+import Quasar.Data (QData)
 
 type FilePath = AbsFile Sandboxed
 type DirPath = AbsDir Sandboxed

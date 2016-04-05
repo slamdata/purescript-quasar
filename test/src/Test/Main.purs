@@ -50,7 +50,7 @@ import Node.Process as Proc
 import Test.Assert (ASSERT, assert)
 import Test.Util.Process (spawnMongo, spawnQuasar)
 
-import Quasar.Data.QData (JSON(..), JSONMode(..), json)
+import Quasar.Data (QData(..), JSONMode(..))
 import Quasar.QuasarF (QuasarF(..), QError(..))
 import Quasar.QuasarF.Interpreter.Aff (eval)
 
@@ -118,10 +118,10 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ MoveData (Left testFile2Dir) (Left testFile3Dir) id
 
     log "\nWriteFile:"
-    run isRight $ WriteFile testFile1 (json content) id
+    run isRight $ WriteFile testFile1 content id
 
     log "\nAppendFile:"
-    run isRight $ AppendFile testFile1 (json content) id
+    run isRight $ AppendFile testFile1 content id
 
     log "\nReadFile:"
     run isRight $ ReadFile testFile1 (Just { offset: 0, limit: 100 }) id
