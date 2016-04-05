@@ -22,10 +22,11 @@ import Control.Monad.Eff.Exception (Error, message)
 
 import Data.Argonaut (Json, JArray, JObject)
 import Data.Either (Either)
-import Data.Either.Nested (Either3)
 import Data.Maybe (Maybe)
 import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed)
 import Data.StrMap (StrMap)
+
+import Quasar.Data.QData (QData)
 
 type FilePath = AbsFile Sandboxed
 type DirPath = AbsDir Sandboxed
@@ -34,18 +35,6 @@ type AnyPath = Either DirPath FilePath
 type SQL = String
 type MountConfig = JObject
 type Metadata = Json
-
-newtype LDJSON = LDJSON String
-
-runLDJSON ∷ LDJSON → String
-runLDJSON (LDJSON s) = s
-
-newtype CSV = CSV String
-
-runCSV ∷ CSV → String
-runCSV (CSV s) = s
-
-type Content = Either3 LDJSON CSV JArray
 type Vars = StrMap String
 
 type Pagination = { offset ∷ Int, limit ∷ Int }
@@ -71,8 +60,8 @@ data QuasarF a
   | CompileQuery AnyPath SQL Vars (Either QError String → a)
   | GetMetadata AnyPath (Either QError Metadata → a)
   | ReadFile FilePath (Maybe Pagination) (Either QError JArray → a)
-  | WriteFile FilePath Content (Either QError Unit → a)
-  | AppendFile FilePath Content (Either QError Unit → a)
+  | WriteFile FilePath QData (Either QError Unit → a)
+  | AppendFile FilePath QData (Either QError Unit → a)
   | DeleteData AnyPath (Either QError Unit → a)
   | MoveData AnyPath AnyPath (Either QError Unit → a)
   | GetMount AnyPath (Either QError MountConfig → a)
