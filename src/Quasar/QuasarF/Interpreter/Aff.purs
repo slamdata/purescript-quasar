@@ -28,12 +28,13 @@ import Data.Argonaut ((.?))
 import Data.Argonaut as Json
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
+import Data.Either.Nested (either3)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.MediaType (MediaType(..))
-import Data.MediaType.Common (applicationJSON)
+import Data.MediaType.Common (applicationJSON, textCSV)
 import Data.NaturalTransformation (Natural)
 import Data.Path.Pathy (Path, Rel, Abs, RelDir, Sandboxed, rootDir, file, dir, relativeTo, printPath, peel, runDirName, runFileName, (</>))
 import Data.String as Str
@@ -48,7 +49,7 @@ import Network.HTTP.RequestHeader as Req
 import Network.HTTP.StatusCode (StatusCode(..))
 
 import Quasar.PathsP as Paths
-import Quasar.QuasarF (QuasarF(..), runLDJSON, AnyPath, Content, Pagination)
+import Quasar.QuasarF (QuasarF(..), runLDJSON, runCSV, AnyPath, Content, Pagination)
 
 type Config = { basePath ∷ AX.URL }
 
@@ -211,8 +212,8 @@ mkDataAReq content =
     , content = Just $ snd (rc content)
     }
   where
-  ty = either (const applicationLDJSON) (const applicationJSON)
-  rc = either (AXR.toRequest <<< runLDJSON) (AXR.toRequest <<< Json.fromArray)
+  ty = either3 (const applicationLDJSON) (const textCSV) (const applicationJSON)
+  rc = either3 (AXR.toRequest <<< runLDJSON) (AXR.toRequest <<< runCSV) (AXR.toRequest <<< Json.fromArray)
   applicationLDJSON = MediaType "application/ldjson"
 
 mkRequest
