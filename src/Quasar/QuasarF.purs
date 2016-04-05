@@ -52,19 +52,27 @@ type Pagination = { offset ∷ Int, limit ∷ Int }
 
 -- TODO: distinguish 404 errors (for move source missing, at least)
 
+data QError
+  = NotFound
+  | Error Error
+
+instance showQError ∷ Show QError where
+  show NotFound = "NotFound"
+  show (Error err) = "(Error " <> show err <> ")"
+
 data QuasarF a
-  = ServerInfo (Either Error JObject → a)
-  | ReadQuery AnyPath SQL Vars (Maybe Pagination) (Either Error JArray → a)
-  | WriteQuery AnyPath FilePath SQL Vars (Either Error JObject → a)
-  | CompileQuery AnyPath SQL Vars (Either Error String → a)
-  | GetMetadata AnyPath (Either Error Metadata → a)
-  | ReadFile FilePath (Maybe Pagination) (Either Error JArray → a)
-  | WriteFile FilePath Content (Either Error Unit → a)
-  | AppendFile FilePath Content (Either Error Unit → a)
-  | DeleteData AnyPath (Either Error Unit → a)
-  | MoveData AnyPath AnyPath (Either Error Unit → a)
-  | GetMount AnyPath (Either Error MountConfig → a)
-  | CreateMount AnyPath Json (Either Error Unit → a)
-  | UpdateMount AnyPath Json (Either Error Unit → a)
-  | MoveMount AnyPath AnyPath (Either Error Unit → a)
-  | DeleteMount AnyPath (Either Error Unit → a)
+  = ServerInfo (Either QError JObject → a)
+  | ReadQuery AnyPath SQL Vars (Maybe Pagination) (Either QError JArray → a)
+  | WriteQuery AnyPath FilePath SQL Vars (Either QError JObject → a)
+  | CompileQuery AnyPath SQL Vars (Either QError String → a)
+  | GetMetadata AnyPath (Either QError Metadata → a)
+  | ReadFile FilePath (Maybe Pagination) (Either QError JArray → a)
+  | WriteFile FilePath Content (Either QError Unit → a)
+  | AppendFile FilePath Content (Either QError Unit → a)
+  | DeleteData AnyPath (Either QError Unit → a)
+  | MoveData AnyPath AnyPath (Either QError Unit → a)
+  | GetMount AnyPath (Either QError MountConfig → a)
+  | CreateMount AnyPath Json (Either QError Unit → a)
+  | UpdateMount AnyPath Json (Either QError Unit → a)
+  | MoveMount AnyPath AnyPath (Either QError Unit → a)
+  | DeleteMount AnyPath (Either QError Unit → a)

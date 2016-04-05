@@ -25,7 +25,7 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Console as Console
-import Control.Monad.Eff.Exception (EXCEPTION, Error, throwException)
+import Control.Monad.Eff.Exception (EXCEPTION, throwException)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Reader.Trans (runReaderT)
 
@@ -47,10 +47,10 @@ import Node.FS.Aff as FSA
 import Node.Process (PROCESS)
 import Node.Process as Proc
 
-import Test.Assert (ASSERT, assert')
+import Test.Assert (ASSERT, assert)
 import Test.Util.Process (spawnMongo, spawnQuasar)
 
-import Quasar.QuasarF (QuasarF(..))
+import Quasar.QuasarF (QuasarF(..), QError(..))
 import Quasar.QuasarF.Interpreter.Aff (eval)
 
 -- | Evaluates and runs a `QuasarF` value, throwing an assertion error if the
@@ -58,12 +58,13 @@ import Quasar.QuasarF.Interpreter.Aff (eval)
 run
   ∷ ∀ eff a
   . Show a
-  ⇒ QuasarF (Either Error a)
-  → Aff (ajax ∷ AJAX, console ∷ CONSOLE, assert ∷ ASSERT | eff) (Either Error a)
-run qf = do
+  ⇒ (Either QError a → Boolean)
+  → QuasarF (Either QError a)
+  → Aff (ajax ∷ AJAX, console ∷ CONSOLE, assert ∷ ASSERT | eff) (Either QError a)
+run pred qf = do
   x ← runReaderT (eval qf) ({ basePath: "http://localhost:53174" })
   log (show x)
-  liftEff $ assert' "Query errored" (isRight x)
+  liftEff $ assert (pred x)
   pure x
 
 -- | Used to catch Aff exceptions that don't get caught in main due to them
@@ -96,52 +97,56 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
   result ← attempt do
 
     log "\nServerInfo:"
-    run $ ServerInfo id
+    run isRight $ ServerInfo id
 
     log "\nGetMetadata:"
-    run $ GetMetadata testDbAnyDir id
+    run isRight $ GetMetadata (Left testDbAnyDir) id
+    run isNotFound $ GetMetadata (Right nonexistant) id
 
     log "\nReadQuery:"
-    run $ ReadQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 }) id
+    run isRight $ ReadQuery (Left testDbAnyDir) "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 }) id
 
     log "\nWriteQuery:"
-    run $ WriteQuery testDbAnyDir testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty id
+    run isRight $ WriteQuery (Left testDbAnyDir) testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty id
 
     log "\nCompileQuery:"
-    run $ CompileQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) id
+    run isRight $ CompileQuery (Left testDbAnyDir) "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) id
 
     log "\nMoveData:"
-    run $ MoveData (Right testFile1) (Right testFile2) id
-    run $ MoveData (Left testFile2Dir) (Left testFile3Dir) id
+    run isRight $ MoveData (Right testFile1) (Right testFile2) id
+    run isRight $ MoveData (Left testFile2Dir) (Left testFile3Dir) id
 
     log "\nWriteFile:"
-    run $ WriteFile testFile1 (Right [content]) id
+    run isRight $ WriteFile testFile1 (Right [content]) id
 
     log "\nAppendFile:"
-    run $ AppendFile testFile1 (Right [content]) id
+    run isRight $ AppendFile testFile1 (Right [content]) id
 
     log "\nReadFile:"
-    run $ ReadFile testFile1 (Just { offset: 0, limit: 100 }) id
-    run $ ReadFile testFile3 (Just { offset: 0, limit: 1 }) id
+    run isRight $ ReadFile testFile1 (Just { offset: 0, limit: 100 }) id
+    run isRight $ ReadFile testFile3 (Just { offset: 0, limit: 1 }) id
+
+    log "\nReadFile NotFound:"
+    run isNotFound $ ReadFile nonexistant Nothing id
 
     log "\nDeleteData:"
-    run $ DeleteData (Right testFile1) id
-    run $ DeleteData (Left testFile3Dir) id
+    run isRight $ DeleteData (Right testFile1) id
+    run isRight $ DeleteData (Left testFile3Dir) id
 
     log "\nCreateMount:"
-    run $ CreateMount testMount mountConfig1 id
+    run isRight $ CreateMount (Right testMount) mountConfig1 id
 
     log "\nUpdateMount:"
-    run $ UpdateMount testMount mountConfig2 id
+    run isRight $ UpdateMount (Right testMount) mountConfig2 id
 
     log "\nGetMount:"
-    run $ GetMount testMount id
+    run isRight $ GetMount (Right testMount) id
 
     log "\nMoveMount:"
-    run $ MoveMount testMount testMount2 id
+    run isRight $ MoveMount (Right testMount) (Right testMount2) id
 
     log "\nDeleteMount:"
-    run $ DeleteMount testMount2 id
+    run isRight $ DeleteMount (Right testMount2) id
 
   liftEff do
     CP.kill SIGTERM mongod
@@ -152,14 +157,20 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     Right _ → pure unit
 
   where
-  testDbAnyDir = Left (rootDir </> dir "test")
+  testDbAnyDir = rootDir </> dir "test"
+  nonexistant = rootDir </> dir "test" </> file "nonexistant"
   testFile1 = rootDir </> dir "test" </> file "zzz"
   testFile2Dir = rootDir </> dir "test" </> dir "subdir"
   testFile2 = testFile2Dir </> file "aaa"
   testFile3Dir = rootDir </> dir "test" </> dir "what"
   testFile3 = testFile3Dir </> file "aaa"
-  testMount = Right (rootDir </> file "testMount")
-  testMount2 = Right (rootDir </> file "testMount2")
+  testMount = rootDir </> file "testMount"
+  testMount2 = rootDir </> file "testMount2"
+
+  isNotFound ∷ ∀ a. Either QError a → Boolean
+  isNotFound e = case e of
+    Left NotFound → true
+    _ → false
 
   content =
     "foo" := "bar"

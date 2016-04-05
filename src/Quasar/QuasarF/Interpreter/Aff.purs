@@ -49,7 +49,7 @@ import Network.HTTP.RequestHeader as Req
 import Network.HTTP.StatusCode (StatusCode(..))
 
 import Quasar.PathsP as Paths
-import Quasar.QuasarF (QuasarF(..), runLDJSON, runCSV, AnyPath, Content, Pagination)
+import Quasar.QuasarF (QuasarF(..), QError(..), AnyPath, Content, Pagination, runLDJSON, runCSV)
 
 type Config = { basePath ∷ AX.URL }
 
@@ -221,23 +221,21 @@ mkRequest
   . (MonadAff eff m)
   ⇒ (String → Either Error a)
   → Aff eff (AX.AffjaxResponse String)
-  → m (Either Error a)
+  → m (Either QError a)
 mkRequest f aff = liftAff $ handleResult f <$> attempt aff
 
 handleResult
   ∷ ∀ a
   . (String → Either Error a)
   → Either Error (AX.AffjaxResponse String)
-  → Either Error a
+  → Either QError a
 handleResult f result =
   case result of
-    Right { status, response }
-      | succeeded status → f response
+    Right { status: StatusCode code, response }
+      | code >= 200 && code < 300 → lmap Error (f response)
+      | code == 404 → Left NotFound
       | otherwise →
-          Left $ error $
+          Left $ Error $ error $
             either (pure $ "An unknown error ocurred: " ++ show response) id $
               (_ .? "error") =<< Json.decodeJson =<< Json.jsonParser response
-    Left err → Left err
-  where
-  succeeded :: StatusCode -> Boolean
-  succeeded (StatusCode code) = code >= 200 && code < 300
+    Left err → Left (Error err)
