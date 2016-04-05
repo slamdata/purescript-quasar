@@ -50,9 +50,9 @@ import Node.Process as Proc
 import Test.Assert (ASSERT, assert)
 import Test.Util.Process (spawnMongo, spawnQuasar)
 
+import Quasar.Community.Interpreter.Aff (eval)
+import Quasar.Community.QuasarF (QuasarF(..), QError(..))
 import Quasar.Data (QData(..), JSONMode(..))
-import Quasar.QuasarF (QuasarF(..), QError(..))
-import Quasar.QuasarF.Interpreter.Aff (eval)
 
 -- | Evaluates and runs a `QuasarF` value, throwing an assertion error if the
 -- | query fails.

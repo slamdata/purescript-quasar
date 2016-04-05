@@ -37,6 +37,7 @@ data QData
   = JSON JSON.JSONMode JArray
   | LDJSON JSON.JSONMode String
   | CSV CSV.CSVOptions String
+  | CustomData MediaType String
 
 instance requestableQData ∷ Requestable QData where
   toRequest (JSON mode jarr) =
@@ -49,6 +50,8 @@ instance requestableQData ∷ Requestable QData where
       (snd (toRequest content))
   toRequest (CSV mode content) =
     Tuple (Just (CSV.toMediaType mode)) (snd (toRequest content))
+  toRequest (CustomData mediaType content) =
+    Tuple (Just mediaType) (snd (toRequest content))
 
 applicationLDJSON ∷ MediaType
 applicationLDJSON = MediaType "application/ldjson;mode=readable"

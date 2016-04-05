@@ -14,12 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.PathsP where
+module Quasar.Community.Paths where
 
 import Data.Path.Pathy (RelDir, RelFile, Sandboxed, file, dir, (</>))
-
-oidcProviders ∷ RelFile Sandboxed
-oidcProviders = dir "security" </> dir "oidc" </> file "providers"
 
 upload ∷ RelFile Sandboxed
 upload = file "upload"

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.QuasarF where
+module Quasar.Community.QuasarF where
 
 import Prelude
 
@@ -38,8 +38,6 @@ type Metadata = Json
 type Vars = StrMap String
 
 type Pagination = { offset ∷ Int, limit ∷ Int }
-
--- TODO: distinguish 404 errors (for move source missing, at least)
 
 data QError
   = NotFound
