@@ -18,7 +18,7 @@ module Quasar.QuasarF where
 
 import Prelude
 
-import Control.Monad.Eff.Exception (Error)
+import Control.Monad.Eff.Exception (Error, message)
 
 import Data.Argonaut (Json, JArray, JObject)
 import Data.Either (Either)
@@ -59,6 +59,10 @@ data QError
 instance showQError ∷ Show QError where
   show NotFound = "NotFound"
   show (Error err) = "(Error " <> show err <> ")"
+
+printQError ∷ QError → String
+printQError NotFound = "Resource not found"
+printQError (Error err) = message err
 
 data QuasarF a
   = ServerInfo (Either QError JObject → a)
