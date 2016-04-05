@@ -32,6 +32,7 @@ import Control.Monad.Reader.Trans (runReaderT)
 import Data.Argonaut (jsonEmptyObject, (~>), (:=))
 import Data.Either (Either(..), isRight)
 import Data.Foldable (for_)
+import Data.Functor.Coproduct (left)
 import Data.Maybe (Maybe(..))
 import Data.Path.Pathy (rootDir, dir, file, (</>))
 import Data.Posix.Signal (Signal(SIGTERM))
@@ -50,9 +51,9 @@ import Node.Process as Proc
 import Test.Assert (ASSERT, assert)
 import Test.Util.Process (spawnMongo, spawnQuasar)
 
-import Quasar.Community.Interpreter.Aff (eval)
-import Quasar.Community.QuasarF (QuasarF(..), QError(..))
+import Quasar.Advanced.QuasarAF.Interpreter.Aff (eval)
 import Quasar.Data (QData(..), JSONMode(..))
+import Quasar.QuasarF (QuasarF(..), QError(..))
 
 -- | Evaluates and runs a `QuasarF` value, throwing an assertion error if the
 -- | query fails.
@@ -63,7 +64,7 @@ run
   → QuasarF (Either QError a)
   → Aff (ajax ∷ AJAX, console ∷ CONSOLE, assert ∷ ASSERT | eff) (Either QError a)
 run pred qf = do
-  x ← runReaderT (eval qf) ({ basePath: "http://localhost:53174" })
+  x ← runReaderT (eval (left qf)) ({ basePath: "http://localhost:53174" })
   log (show x)
   liftEff $ assert (pred x)
   pure x

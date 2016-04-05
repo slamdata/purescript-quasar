@@ -14,27 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Community.Paths where
+module Quasar.QuasarF.Interpreter.Config where
 
-import Data.Path.Pathy (RelDir, RelFile, Sandboxed, file, dir, (</>))
+import Network.HTTP.Affjax as AX
 
-upload ∷ RelFile Sandboxed
-upload = file "upload"
-
-metadata ∷ RelDir Sandboxed
-metadata = dir "metadata" </> dir "fs"
-
-mount ∷ RelDir Sandboxed
-mount = dir "mount" </> dir "fs"
-
-data_ ∷ RelDir Sandboxed
-data_ = dir "data" </> dir "fs"
-
-query ∷ RelDir Sandboxed
-query = dir "query" </> dir "fs"
-
-compile ∷ RelDir Sandboxed
-compile = dir "compile" </> dir "fs"
-
-serverInfo ∷ RelFile Sandboxed
-serverInfo = dir "server" </> file "info"
+type Config = { basePath ∷ AX.URL }

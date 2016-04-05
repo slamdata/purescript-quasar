@@ -14,8 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Community.Interpreter.Config where
+module Quasar.Advanced.QuasarAF where
 
-import Network.HTTP.Affjax as AX
+import Prelude
 
-type Config = { basePath ∷ AX.URL }
+import Data.Argonaut (JObject)
+import Data.Either (Either)
+
+import Quasar.QuasarF (QError)
+
+data QuasarAF a
+  = GetAuthProviders (Either QError JObject → a)

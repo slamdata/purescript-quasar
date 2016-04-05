@@ -14,46 +14,38 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Community.Interpreter.Affjax
+module Quasar.QuasarF.Interpreter.Affjax
   ( eval
-  , module Quasar.Community.Interpreter.Config
-  ) where
+  , module Quasar.QuasarF.Interpreter.Config
+  )
+  where
 
 import Prelude
 
-import Control.Bind ((=<<), (<=<))
-import Control.Monad.Eff.Exception (Error, error)
-import Control.Monad.Free (Free, liftF)
+import Control.Bind ((=<<))
+import Control.Monad.Free (Free)
 
 import Data.Array (catMaybes)
-import Data.Argonaut ((.?))
-import Data.Argonaut as Json
-import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
-import Data.Functor.Coproduct (Coproduct, left, right)
+import Data.Functor.Coproduct (Coproduct)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
-import Data.List as List
-import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (applicationJSON)
 import Data.NaturalTransformation (Natural)
-import Data.Path.Pathy (Path, Rel, Abs, RelDir, Sandboxed, rootDir, file, dir, relativeTo, printPath, peel, runDirName, runFileName, (</>))
+import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
 import Data.String as Str
-import Data.StrMap as SM
 import Data.Tuple (Tuple(..), fst, snd)
 
-import Global (encodeURIComponent)
-
-import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
-import Network.HTTP.StatusCode (StatusCode(..))
 
-import Quasar.Community.Interpreter.Config (Config)
-import Quasar.Community.Paths as Paths
-import Quasar.Community.QuasarF (QuasarF(..), QError(..), AnyPath, Pagination)
 import Quasar.ConfigF as CF
+import Quasar.Paths as Paths
+import Quasar.QuasarF (QuasarF(..))
+import Quasar.QuasarF.Interpreter.Config (Config)
+import Quasar.QuasarF.Interpreter.Internal (mkURL, delete, unitResult, mkRequest, defaultRequest, get, jsonResult, put, toPageParams, strResult, toVarParams, ask)
 
 type M = Free (Coproduct (CF.ConfigF Config) (AXF.AffjaxFP RequestContent String))
 
@@ -163,91 +155,3 @@ eval = \q -> case q of
 
   DeleteMount path k ->
     k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.mount path Nil)
-
-  where
-
-  jsonResult ∷ ∀ j. Json.DecodeJson j ⇒ String → Either Error j
-  jsonResult = lmap error <$> (Json.decodeJson <=< Json.jsonParser)
-
-  strResult ∷ String → Either Error String
-  strResult = Right
-
-  unitResult ∷ String → Either Error Unit
-  unitResult = const (Right unit)
-
-  toVarParams ∷ SM.StrMap String → List (Tuple String String)
-  toVarParams = map (lmap ("var." <> _)) <<< SM.toList
-
-  toPageParams ∷ Maybe Pagination → List (Tuple String String)
-  toPageParams Nothing = Nil
-  toPageParams (Just { offset, limit })
-    = Tuple "offset" (show offset)
-    : Tuple "limit" (show limit)
-    : Nil
-
-  defaultRequest ∷ AX.AffjaxRequest RequestContent
-  defaultRequest = AX.defaultRequest { content = Nothing }
-
-  get :: AX.URL -> AXF.AffjaxF RequestContent String
-  get u = AXF.affjax (defaultRequest { url = u })
-
-  put :: AX.URL -> RequestContent -> AXF.AffjaxF RequestContent String
-  put u c = AXF.affjax (defaultRequest { method = Left PUT, url = u, content = Just c })
-
-  delete :: AX.URL -> AXF.AffjaxF RequestContent String
-  delete u = AXF.affjax (defaultRequest { method = Left DELETE, url = u })
-
-ask ∷ M Config
-ask = liftF $ left $ CF.GetConfig id
-
-mkURL
-  ∷ RelDir Sandboxed
-  → AnyPath
-  → List (Tuple String String)
-  → M String
-mkURL endpoint path params = do
-  { basePath } ← ask
-  let url = basePath <> mkPath endpoint path
-  pure case params of
-    Nil → url
-    _ → url <> toQueryString params
-  where
-  toQueryString ∷ List (Tuple String String) → String
-  toQueryString
-    = ("?" <> _)
-    <<< Str.joinWith "&"
-    <<< List.toUnfoldable
-    <<< map (\(Tuple k v) → k <> "=" <> encodeURIComponent v)
-
-mkPath ∷ RelDir Sandboxed → AnyPath → String
-mkPath base fsPath
-  = Str.drop 1
-  $ either printPath printPath
-  $ bimap (baseify (dir "/")) (baseify (file "")) fsPath
-  where
-  baseify
-    ∷ ∀ b. Path Rel b Sandboxed → Path Abs b Sandboxed → Path Rel b Sandboxed
-  baseify x p = base </> fromMaybe x (p `relativeTo` rootDir)
-
-mkRequest
-  ∷ ∀ a
-  . (String → Either Error a)
-  → AXF.AffjaxF RequestContent String
-  → M (Either QError a)
-mkRequest f = map (handleResult f) <<< liftF <<< right
-
-handleResult
-  ∷ ∀ a
-  . (String → Either Error a)
-  → Either Error (AX.AffjaxResponse String)
-  → Either QError a
-handleResult f result =
-  case result of
-    Right { status: StatusCode code, response }
-      | code >= 200 && code < 300 → lmap Error (f response)
-      | code == 404 → Left NotFound
-      | otherwise →
-          Left $ Error $ error $
-            either (pure $ "An unknown error ocurred: " ++ show response) id $
-              (_ .? "error") =<< Json.decodeJson =<< Json.jsonParser response
-    Left err → Left (Error err)

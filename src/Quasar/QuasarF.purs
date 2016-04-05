@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Community.QuasarF where
+module Quasar.QuasarF where
 
 import Prelude
 

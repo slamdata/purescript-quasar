@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Community.Interpreter.Aff
+module Quasar.QuasarF.Interpreter.Aff
   ( eval
-  , module Quasar.Community.Interpreter.Config
+  , module Quasar.QuasarF.Interpreter.Config
   ) where
 
 import Prelude
@@ -32,10 +32,10 @@ import Data.NaturalTransformation (Natural)
 import Network.HTTP.Affjax as AX
 import Network.HTTP.AffjaxF as AXF
 
-import Quasar.Community.Interpreter.Affjax as IAX
-import Quasar.Community.Interpreter.Config (Config)
-import Quasar.Community.QuasarF (QuasarF)
 import Quasar.ConfigF as CF
+import Quasar.QuasarF (QuasarF)
+import Quasar.QuasarF.Interpreter.Affjax as IAX
+import Quasar.QuasarF.Interpreter.Config (Config)
 
 eval
   ∷ ∀ m eff
