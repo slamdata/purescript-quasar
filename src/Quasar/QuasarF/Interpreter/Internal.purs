@@ -37,33 +37,27 @@ import Control.Monad.Free (Free, liftF)
 
 import Data.Argonaut ((.?))
 import Data.Argonaut as Json
-import Data.Array (catMaybes)
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
 import Data.List as List
-import Data.Maybe (Maybe(..), maybe, fromMaybe)
-import Data.MediaType.Common (applicationJSON)
-import Data.NaturalTransformation (Natural)
-import Data.Path.Pathy (Path, Rel, Abs, RelDir, Sandboxed, rootDir, file, dir, relativeTo, printPath, peel, runDirName, runFileName, (</>))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Path.Pathy (Sandboxed, Rel, Path, Abs, RelDir, file, dir, printPath, rootDir, relativeTo, (</>))
 import Data.String as Str
 import Data.StrMap as SM
-import Data.Tuple (Tuple(..), fst, snd)
+import Data.Tuple (Tuple(..))
 
 import Global (encodeURIComponent)
 
 import Network.HTTP.Affjax as AX
-import Network.HTTP.Affjax.Request (RequestContent, toRequest)
+import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
-import Network.HTTP.RequestHeader as Req
 import Network.HTTP.StatusCode (StatusCode(..))
 
 import Quasar.ConfigF as CF
-import Quasar.Paths as Paths
-import Quasar.QuasarF (QuasarF(..), QError(..), AnyPath, Pagination)
-import Quasar.QuasarF.Interpreter.Config (Config)
+import Quasar.QuasarF (QError(..), AnyPath, Pagination)
 
 type AXFP = AXF.AffjaxFP RequestContent String
 

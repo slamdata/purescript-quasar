@@ -29,6 +29,8 @@ import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
 
+import OIDCCryptUtils.Types as OIDC
+
 import Quasar.Advanced.Paths as Paths
 import Quasar.Advanced.QuasarAF (QuasarAF(..))
 import Quasar.ConfigF as CF
@@ -52,3 +54,19 @@ evalA = \q -> case q of
 authify ∷ Natural (AXF.AffjaxFP RequestContent String) (AXF.AffjaxFP RequestContent String)
 authify (AXF.AffjaxFP req k) =
   AXF.AffjaxFP (req { headers = req.headers <> [Req.RequestHeader "X-Test" "Test"] }) k
+
+authHeader ∷ OIDC.IdToken → Req.RequestHeader
+authHeader (OIDC.IdToken tok) =
+  Req.RequestHeader "Authorization" ("Bearer " <> tok)
+
+-- insertAuthHeaders
+--   ∷ ∀ a
+--   . Maybe IdToken
+--   → Array Perm.PermissionToken
+--   → AX.AffjaxRequest a
+--   → AX.AffjaxRequest a
+-- insertAuthHeaders mbToken perms r =
+--   r { headers = r.headers
+--                 <> (maybe [] (pure <<< Auth.authHeader) mbToken)
+--                 <> (maybe [] pure $ Perm.permissionsHeader perms)
+--     }
