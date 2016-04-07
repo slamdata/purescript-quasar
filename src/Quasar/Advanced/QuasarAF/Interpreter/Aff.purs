@@ -27,22 +27,32 @@ import Control.Monad.Reader.Class (class MonadReader)
 import Control.Monad.Rec.Class (class MonadRec)
 
 import Data.Functor.Coproduct (Coproduct, coproduct)
+import Data.Maybe (Maybe)
 import Data.NaturalTransformation (Natural)
 
 import Network.HTTP.Affjax as AX
 import Network.HTTP.AffjaxF as AXF
 
-import Quasar.Advanced.QuasarAF (QuasarAF)
+import OIDCCryptUtils.Types (IdToken)
+
+import Quasar.Advanced.Auth (PermissionToken)
+import Quasar.Advanced.QuasarAF (QuasarAFP)
 import Quasar.Advanced.QuasarAF.Interpreter.Affjax as IAX
 import Quasar.ConfigF as CF
 import Quasar.QuasarF (QuasarF)
 import Quasar.QuasarF.Interpreter.Config (Config)
 
 eval
-  ∷ ∀ m eff
-  . ( MonadReader Config m
+  ∷ ∀ m eff r
+  . ( MonadReader
+        { basePath ∷ AX.URL
+        , idToken ∷ Maybe IdToken
+        , permissions ∷ Array PermissionToken
+        | r
+        }
+        m
     , MonadAff (ajax :: AX.AJAX | eff) m
     , MonadRec m
     )
-  ⇒ Natural (Coproduct QuasarF QuasarAF) m
+  ⇒ Natural QuasarAFP m
 eval = foldFree (coproduct CF.evalReader (liftAff <<< AXF.eval)) <<< IAX.eval

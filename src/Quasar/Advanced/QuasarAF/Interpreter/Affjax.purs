@@ -14,17 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Advanced.QuasarAF.Interpreter.Affjax (eval) where
+module Quasar.Advanced.QuasarAF.Interpreter.Affjax
+  ( M
+  , eval
+  , module Quasar.Advanced.QuasarAF.Interpreter.Config
+  ) where
 
 import Prelude
 
-import Control.Monad.Free (Free, mapF)
+import Control.Monad.Free (Free, foldFree, liftF)
 
 import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
+import Data.Maybe (Maybe(..), maybe)
 import Data.NaturalTransformation (Natural)
 import Data.Path.Pathy (printPath)
 import Data.String as Str
 
+import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
@@ -32,41 +38,61 @@ import Network.HTTP.RequestHeader as Req
 import OIDCCryptUtils.Types as OIDC
 
 import Quasar.Advanced.Paths as Paths
-import Quasar.Advanced.QuasarAF (QuasarAF(..))
+import Quasar.Advanced.Auth as Auth
+import Quasar.Advanced.QuasarAF (QuasarAFP, QuasarAF(..))
+import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
 import Quasar.ConfigF as CF
-import Quasar.QuasarF (QuasarF)
 import Quasar.QuasarF.Interpreter.Affjax as QCI
-import Quasar.QuasarF.Interpreter.Config (Config)
-import Quasar.QuasarF.Interpreter.Internal (ask, mkRequest, jsonResult, get)
+import Quasar.QuasarF.Interpreter.Internal (ask, mkRequest, jsonResult, defaultRequest)
 
-type M = Free (Coproduct (CF.ConfigF Config) (AXF.AffjaxFP RequestContent String))
+type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
-eval ∷ Natural (Coproduct QuasarF QuasarAF) M
-eval = coproduct (mapF (coproduct left (right <<< authify)) <<< QCI.eval) evalA
+eval ∷ ∀ r. Natural QuasarAFP (M r)
+eval = coproduct (evalC <<< QCI.eval) evalA
 
-evalA ∷ Natural QuasarAF M
+evalC
+  ∷ ∀ r
+  . Natural
+      (Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String)))
+      (M r)
+evalC = foldFree (coproduct (liftF <<< left) authify)
+  where
+  authify ∷ Natural (AXF.AffjaxFP RequestContent String) (M r)
+  authify (AXF.AffjaxFP req k) = do
+    { idToken, permissions } ← ask
+    liftF $ right (AXF.AffjaxFP (insertAuthHeaders idToken permissions req) k)
+
+evalA ∷ ∀ r. Natural QuasarAF (M r)
 evalA = \q -> case q of
 
-  GetAuthProviders k -> do
-    { basePath } ← ask
-    k <$> mkRequest jsonResult (get (basePath <> Str.drop 1 (printPath Paths.oidcProviders)))
+  AuthProviders k -> do
+    { basePath, idToken, permissions } ← ask
+    k <$> mkRequest jsonResult
+      (AXF.affjax $ insertAuthHeaders idToken permissions $ defaultRequest
+        { url = basePath <> Str.drop 1 (printPath Paths.oidcProviders) })
 
-authify ∷ Natural (AXF.AffjaxFP RequestContent String) (AXF.AffjaxFP RequestContent String)
-authify (AXF.AffjaxFP req k) =
-  AXF.AffjaxFP (req { headers = req.headers <> [Req.RequestHeader "X-Test" "Test"] }) k
+insertAuthHeaders
+  ∷ ∀ a
+  . Maybe OIDC.IdToken
+  → Array Auth.PermissionToken
+  → AX.AffjaxRequest a
+  → AX.AffjaxRequest a
+insertAuthHeaders idToken ps req =
+  req
+    { headers =
+        req.headers
+          <> (maybe [] (pure <<< authHeader) idToken)
+          <> (maybe [] pure $ permissionsHeader ps)
+    }
 
 authHeader ∷ OIDC.IdToken → Req.RequestHeader
 authHeader (OIDC.IdToken tok) =
   Req.RequestHeader "Authorization" ("Bearer " <> tok)
 
--- insertAuthHeaders
---   ∷ ∀ a
---   . Maybe IdToken
---   → Array Perm.PermissionToken
---   → AX.AffjaxRequest a
---   → AX.AffjaxRequest a
--- insertAuthHeaders mbToken perms r =
---   r { headers = r.headers
---                 <> (maybe [] (pure <<< Auth.authHeader) mbToken)
---                 <> (maybe [] pure $ Perm.permissionsHeader perms)
---     }
+permissionsHeader :: Array Auth.PermissionToken -> Maybe Req.RequestHeader
+permissionsHeader [] = Nothing
+permissionsHeader ps =
+  Just $
+    Req.RequestHeader
+      "X-Extra-PermissionTokens"
+      (Str.joinWith "," (map Auth.runPermissionToken ps))

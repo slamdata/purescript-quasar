@@ -15,7 +15,8 @@ limitations under the License.
 -}
 
 module Quasar.QuasarF.Interpreter.Affjax
-  ( eval
+  ( M
+  , eval
   , module Quasar.QuasarF.Interpreter.Config
   )
   where
@@ -47,9 +48,9 @@ import Quasar.QuasarF (QuasarF(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Quasar.QuasarF.Interpreter.Internal (mkURL, delete, unitResult, mkRequest, defaultRequest, get, jsonResult, put, toPageParams, strResult, toVarParams, ask)
 
-type M = Free (Coproduct (CF.ConfigF Config) (AXF.AffjaxFP RequestContent String))
+type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
-eval ∷ Natural QuasarF M
+eval ∷ ∀ r. Natural QuasarF (M r)
 eval = \q -> case q of
 
   ServerInfo k -> do

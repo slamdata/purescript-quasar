@@ -14,11 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.QuasarF.Interpreter.Config where
+module Quasar.Advanced.QuasarAF.Interpreter.Config where
 
-import Network.HTTP.Affjax as AX
+import Data.Maybe (Maybe)
+import Network.HTTP.Affjax (URL)
+import OIDCCryptUtils.Types (IdToken)
+import Quasar.Advanced.Auth (PermissionToken)
 
 type Config r =
-  { basePath ∷ AX.URL
+  { basePath ∷ URL
+  , idToken ∷ Maybe IdToken
+  , permissions ∷ Array PermissionToken
   | r
   }

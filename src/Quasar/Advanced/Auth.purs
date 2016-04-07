@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.QuasarF.Interpreter.Config where
+module Quasar.Advanced.Auth where
 
-import Network.HTTP.Affjax as AX
+newtype PermissionToken = PermissionToken String
 
-type Config r =
-  { basePath ∷ AX.URL
-  | r
-  }
+runPermissionToken :: PermissionToken -> String
+runPermissionToken (PermissionToken s) = s
