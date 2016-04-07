@@ -22,13 +22,17 @@ module Quasar.Advanced.QuasarAF.Interpreter.Affjax
 
 import Prelude
 
+import Control.Bind ((<=<))
 import Control.Monad.Free (Free, foldFree, liftF)
+import Control.Monad.Eff.Exception (error)
 
+import Data.Bifunctor (lmap)
 import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
 import Data.Maybe (Maybe(..), maybe)
 import Data.NaturalTransformation (Natural)
 import Data.Path.Pathy (printPath)
 import Data.String as Str
+import Data.Traversable (traverse)
 
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
@@ -37,9 +41,10 @@ import Network.HTTP.RequestHeader as Req
 
 import OIDCCryptUtils.Types as OIDC
 
-import Quasar.Advanced.Paths as Paths
 import Quasar.Advanced.Auth as Auth
-import Quasar.Advanced.QuasarAF (QuasarAFP, QuasarAF(..))
+import Quasar.Advanced.Auth.Provider as Provider
+import Quasar.Advanced.Paths as Paths
+import Quasar.Advanced.QuasarAF (QuasarAFP, QuasarAF(..), QError(..))
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
 import Quasar.ConfigF as CF
 import Quasar.QuasarF.Interpreter.Affjax as QCI
@@ -67,7 +72,7 @@ evalA = \q -> case q of
 
   AuthProviders k -> do
     { basePath, idToken, permissions } ← ask
-    k <$> mkRequest jsonResult
+    k <$> mkRequest (lmap error <$> traverse Provider.fromJSON <=< jsonResult)
       (AXF.affjax $ insertAuthHeaders idToken permissions $ defaultRequest
         { url = basePath <> Str.drop 1 (printPath Paths.oidcProviders) })
 

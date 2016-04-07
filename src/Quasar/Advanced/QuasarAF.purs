@@ -26,13 +26,14 @@ import Data.Either (Either)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.Maybe (Maybe)
 
+import Quasar.Advanced.Auth.Provider as Auth
 import Quasar.Data (QData)
 import Quasar.QuasarF (QuasarF(..), QError(..), AnyPath, MountConfig, FilePath, Pagination, Metadata, Vars, SQL, printQError)
 
 type QuasarAFP = Coproduct QuasarF QuasarAF
 
 data QuasarAF a
-  = AuthProviders (Either QError JObject → a)
+  = AuthProviders (Either QError (Array Auth.Provider) → a)
 
 serverInfo ∷ QuasarAFP (Either QError JObject)
 serverInfo = left $ ServerInfo id
@@ -79,5 +80,5 @@ moveMount from to = left $ MoveMount from to id
 deleteMount ∷ AnyPath → QuasarAFP (Either QError Unit)
 deleteMount path = left $ DeleteMount path id
 
-authProviders ∷ QuasarAFP (Either QError JObject)
+authProviders ∷ QuasarAFP (Either QError (Array Auth.Provider))
 authProviders = right $ AuthProviders id
