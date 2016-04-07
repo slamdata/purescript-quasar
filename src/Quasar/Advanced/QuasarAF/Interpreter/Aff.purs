@@ -16,7 +16,7 @@ limitations under the License.
 
 module Quasar.Advanced.QuasarAF.Interpreter.Aff
   ( eval
-  , module Quasar.QuasarF.Interpreter.Config
+  , module Quasar.Advanced.QuasarAF.Interpreter.Config
   ) where
 
 import Prelude
@@ -38,9 +38,9 @@ import OIDCCryptUtils.Types (IdToken)
 import Quasar.Advanced.Auth (PermissionToken)
 import Quasar.Advanced.QuasarAF (QuasarAFP)
 import Quasar.Advanced.QuasarAF.Interpreter.Affjax as IAX
+import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
 import Quasar.ConfigF as CF
 import Quasar.QuasarF (QuasarF)
-import Quasar.QuasarF.Interpreter.Config (Config)
 
 eval
   ∷ ∀ m eff r

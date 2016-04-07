@@ -51,7 +51,7 @@ import Node.Process as Proc
 import Test.Assert (ASSERT, assert)
 import Test.Util.Process (spawnMongo, spawnQuasar)
 
-import Quasar.Advanced.QuasarAF.Interpreter.Aff (eval)
+import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..), JSONMode(..))
 import Quasar.QuasarF (QuasarF(..), QError(..))
 
@@ -64,10 +64,17 @@ run
   → QuasarF (Either QError a)
   → Aff (ajax ∷ AJAX, console ∷ CONSOLE, assert ∷ ASSERT | eff) (Either QError a)
 run pred qf = do
-  x ← runReaderT (eval (left qf)) ({ basePath: "http://localhost:53174" })
+  x ← runReaderT (eval (left qf)) config
   log (show x)
   liftEff $ assert (pred x)
   pure x
+
+config ∷ Config ()
+config =
+  { basePath: "http://localhost:53174"
+  , idToken: Nothing
+  , permissions: []
+  }
 
 -- | Used to catch Aff exceptions that don't get caught in main due to them
 -- | being raised asynchronously.
