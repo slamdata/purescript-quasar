@@ -36,9 +36,9 @@ type OpenIDConfiguration =
 
 fromJSON ∷ Json → Either String OpenIDConfiguration
 fromJSON = decodeJson >=> \obj → do
-    issuer <- Issuer <$> obj .? "issuer"
-    authorizationEndpoint <- obj .? "authorization_endpoint"
-    tokenEndpoint <- obj .? "token_endpoint"
-    userinfoEndpoint <- obj .? "userinfo_endpoint"
-    jwks <- obj .? "jwks"
+    issuer ← Issuer <$> obj .? "issuer"
+    authorizationEndpoint ← obj .? "authorization_endpoint"
+    tokenEndpoint ← obj .? "token_endpoint"
+    userinfoEndpoint ← obj .? "userinfo_endpoint"
+    jwks ← obj .? "jwks"
     pure { issuer, authorizationEndpoint, tokenEndpoint, userinfoEndpoint, jwks }

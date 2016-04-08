@@ -86,13 +86,13 @@ toPageParams (Just { offset, limit })
 defaultRequest ∷ AX.AffjaxRequest RequestContent
 defaultRequest = AX.defaultRequest { content = Nothing }
 
-get :: AX.URL -> AXF.AffjaxF RequestContent String
+get ∷ AX.URL → AXF.AffjaxF RequestContent String
 get u = AXF.affjax (defaultRequest { url = u })
 
-put :: AX.URL -> RequestContent -> AXF.AffjaxF RequestContent String
+put ∷ AX.URL → RequestContent → AXF.AffjaxF RequestContent String
 put u c = AXF.affjax (defaultRequest { method = Left PUT, url = u, content = Just c })
 
-delete :: AX.URL -> AXF.AffjaxF RequestContent String
+delete ∷ AX.URL → AXF.AffjaxF RequestContent String
 delete u = AXF.affjax (defaultRequest { method = Left DELETE, url = u })
 
 mkURL

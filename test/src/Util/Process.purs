@@ -71,9 +71,9 @@ spawn name startLine spawnProc = do
   log $ "Starting " ++ name ++ "..."
   var ← makeVar
   proc ← spawnProc
-  liftEff $ Stream.onDataString (CP.stderr proc) Enc.UTF8 \s ->
+  liftEff $ Stream.onDataString (CP.stderr proc) Enc.UTF8 \s →
     launchAff $ putVar var $ Just $ error $ "An error occurred: " ++ s
-  liftEff $ Stream.onDataString (CP.stdout proc) Enc.UTF8 \s ->
+  liftEff $ Stream.onDataString (CP.stdout proc) Enc.UTF8 \s →
     launchAff
       if isJust (Str.indexOf startLine s)
       then putVar var Nothing

@@ -18,5 +18,5 @@ module Quasar.Advanced.Auth where
 
 newtype PermissionToken = PermissionToken String
 
-runPermissionToken :: PermissionToken -> String
+runPermissionToken ∷ PermissionToken → String
 runPermissionToken (PermissionToken s) = s

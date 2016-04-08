@@ -69,9 +69,9 @@ evalC = foldFree (coproduct (liftF <<< left) authify)
     liftF $ right (AXF.AffjaxFP (insertAuthHeaders idToken permissions req) k)
 
 evalA ∷ ∀ r. Natural QuasarAF (M r)
-evalA = \q -> case q of
+evalA = \q → case q of
 
-  AuthProviders k -> do
+  AuthProviders k → do
     { basePath, idToken, permissions } ← ask
     k <$> mkRequest providersResult
       (AXF.affjax $ insertAuthHeaders idToken permissions $ defaultRequest
@@ -100,7 +100,7 @@ authHeader ∷ OIDC.IdToken → Req.RequestHeader
 authHeader (OIDC.IdToken tok) =
   Req.RequestHeader "Authorization" ("Bearer " <> tok)
 
-permissionsHeader :: Array Auth.PermissionToken -> Maybe Req.RequestHeader
+permissionsHeader :: Array Auth.PermissionToken → Maybe Req.RequestHeader
 permissionsHeader [] = Nothing
 permissionsHeader ps =
   Just $

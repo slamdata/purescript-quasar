@@ -55,22 +55,22 @@ import Quasar.QuasarF.Interpreter.Internal (mkURL, delete, unitResult, mkRequest
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
 eval ∷ ∀ r. Natural QuasarF (M r)
-eval = \q -> case q of
+eval = \q → case q of
 
-  ServerInfo k -> do
+  ServerInfo k → do
     { basePath } ← ask
     let url = basePath <> Str.drop 1 (printPath Paths.serverInfo)
     k <$> mkRequest jsonResult (get url)
 
-  FileMetadata path k -> do
+  FileMetadata path k → do
     url ← mkURL Paths.metadata (Right path) Nil
     k <$> mkRequest jsonResult (get url)
 
-  DirMetadata path k -> do
+  DirMetadata path k → do
     url ← mkURL Paths.metadata (Left path) Nil
     k <$> mkRequest (resourcesResult path) (get url)
 
-  ReadQuery path sql vars pagination k -> do
+  ReadQuery path sql vars pagination k → do
     let params = Tuple "q" sql : toVarParams vars <> toPageParams pagination
     url ← mkURL Paths.query path params
     k <$> mkRequest jsonResult
@@ -79,7 +79,7 @@ eval = \q -> case q of
         , headers = [Req.Accept applicationJSON]
         })
 
-  WriteQuery path file sql vars k -> do
+  WriteQuery path file sql vars k → do
     url ← mkURL Paths.query path (toVarParams vars)
     k <$> mkRequest jsonResult
       (AXF.affjax $ defaultRequest
@@ -89,11 +89,11 @@ eval = \q -> case q of
         , content = Just $ snd (toRequest sql)
         })
 
-  CompileQuery path sql vars k -> do
+  CompileQuery path sql vars k → do
     url ← mkURL Paths.compile path (Tuple "q" sql : toVarParams vars)
     k <$> mkRequest strResult (get url)
 
-  ReadFile path pagination k -> do
+  ReadFile path pagination k → do
     url ← mkURL Paths.data_ (Right path) (toPageParams pagination)
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
@@ -101,7 +101,7 @@ eval = \q -> case q of
         , headers = [Req.Accept applicationJSON]
         })
 
-  WriteFile path content k -> do
+  WriteFile path content k → do
     url ← mkURL Paths.data_ (Right path) Nil
     let reqSettings = toRequest content
     k <$> mkRequest unitResult
@@ -112,7 +112,7 @@ eval = \q -> case q of
         , content = Just $ snd reqSettings
         })
 
-  AppendFile path content k -> do
+  AppendFile path content k → do
     url ← mkURL Paths.data_ (Right path) Nil
     let reqSettings = toRequest content
     k <$> mkRequest unitResult
@@ -123,10 +123,10 @@ eval = \q -> case q of
         , content = Just $ snd (toRequest content)
         })
 
-  DeleteData path k -> do
+  DeleteData path k → do
     k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.data_ path Nil)
 
-  MoveData fromPath toPath k -> do
+  MoveData fromPath toPath k → do
     url ← mkURL Paths.data_ fromPath Nil
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
@@ -135,7 +135,7 @@ eval = \q -> case q of
         , headers = [Req.RequestHeader "Destination" (either printPath printPath toPath)]
         })
 
-  CreateMount path config k -> do
+  CreateMount path config k → do
     let pathParts = either peel peel path
         parentDir = maybe rootDir fst pathParts
         name = maybe "" (either runDirName runFileName <<< snd) pathParts
@@ -148,14 +148,14 @@ eval = \q -> case q of
         , content = Just $ snd (toRequest config)
         })
 
-  UpdateMount path config k -> do
+  UpdateMount path config k → do
     url ← mkURL Paths.mount path Nil
     k <$> (mkRequest unitResult $ put url $ snd (toRequest config))
 
-  GetMount path k ->
+  GetMount path k →
     k <$> (mkRequest jsonResult <<< get =<< mkURL Paths.mount path Nil)
 
-  MoveMount fromPath toPath k -> do
+  MoveMount fromPath toPath k → do
     url ← mkURL Paths.mount fromPath Nil
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
@@ -164,7 +164,7 @@ eval = \q -> case q of
         , headers = [Req.RequestHeader "Destination" (either printPath printPath toPath)]
         })
 
-  DeleteMount path k ->
+  DeleteMount path k →
     k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.mount path Nil)
 
   where

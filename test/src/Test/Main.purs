@@ -97,7 +97,7 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
   quasar ← spawnQuasar
 
   dataFiles ← FSA.readdir "test/data"
-  for_ dataFiles \file ->
+  for_ dataFiles \file →
     liftEff $ CP.spawn
       "mongoimport"
       ["--port", "63174", "--file", file]

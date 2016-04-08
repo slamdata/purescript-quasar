@@ -36,7 +36,7 @@ import Node.FS.Aff as FSA
 
 mkdirRec ∷ ∀ eff. String → Aff (fs ∷ FS | eff) Unit
 mkdirRec path = case Arr.uncons (Str.split "/" path) of
-  Nothing -> pure unit
+  Nothing → pure unit
   Just { head, tail } → do
     apathize $ FSA.mkdir head
     Arr.foldM mkSegment head tail
