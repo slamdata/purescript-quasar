@@ -27,6 +27,7 @@ import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed)
 import Data.StrMap (StrMap)
 
 import Quasar.Data (QData)
+import Quasar.FS (Resource)
 
 type FilePath = AbsFile Sandboxed
 type DirPath = AbsDir Sandboxed
@@ -34,7 +35,6 @@ type AnyPath = Either DirPath FilePath
 
 type SQL = String
 type MountConfig = JObject
-type Metadata = Json
 type Vars = StrMap String
 
 type Pagination = { offset ∷ Int, limit ∷ Int }
@@ -56,7 +56,8 @@ data QuasarF a
   | ReadQuery AnyPath SQL Vars (Maybe Pagination) (Either QError JArray → a)
   | WriteQuery AnyPath FilePath SQL Vars (Either QError JObject → a)
   | CompileQuery AnyPath SQL Vars (Either QError String → a)
-  | GetMetadata AnyPath (Either QError Metadata → a)
+  | FileMetadata FilePath (Either QError Unit → a)
+  | DirMetadata DirPath (Either QError (Array Resource) → a)
   | ReadFile FilePath (Maybe Pagination) (Either QError JArray → a)
   | WriteFile FilePath QData (Either QError Unit → a)
   | AppendFile FilePath QData (Either QError Unit → a)
@@ -80,8 +81,11 @@ writeQuery path file sql vars = WriteQuery path file sql vars id
 compileQuery ∷ AnyPath → SQL → Vars → QuasarF (Either QError String)
 compileQuery path sql vars = CompileQuery path sql vars id
 
-getMetadata ∷ AnyPath → QuasarF (Either QError Metadata)
-getMetadata path = GetMetadata path id
+fileMetadata ∷ FilePath → QuasarF (Either QError Unit)
+fileMetadata path = FileMetadata path id
+
+dirMetadata ∷ DirPath → QuasarF (Either QError (Array Resource))
+dirMetadata path = DirMetadata path id
 
 readFile ∷ FilePath → Maybe Pagination → QuasarF (Either QError JArray)
 readFile path pagination = ReadFile path pagination id

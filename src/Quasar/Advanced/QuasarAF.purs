@@ -28,7 +28,8 @@ import Data.Maybe (Maybe)
 
 import Quasar.Advanced.Auth.Provider as Auth
 import Quasar.Data (QData)
-import Quasar.QuasarF (QuasarF(..), QError(..), AnyPath, MountConfig, FilePath, Pagination, Metadata, Vars, SQL, printQError)
+import Quasar.FS (Resource)
+import Quasar.QuasarF (QuasarF(..), QError(..), AnyPath, MountConfig, FilePath, DirPath, Pagination, Vars, SQL, printQError)
 
 type QuasarAFP = Coproduct QuasarF QuasarAF
 
@@ -47,8 +48,11 @@ writeQuery path file sql vars = left $ WriteQuery path file sql vars id
 compileQuery ∷ AnyPath → SQL → Vars → QuasarAFP (Either QError String)
 compileQuery path sql vars = left $ CompileQuery path sql vars id
 
-getMetadata ∷ AnyPath → QuasarAFP (Either QError Metadata)
-getMetadata path = left $ GetMetadata path id
+fileMetadata ∷ FilePath → QuasarAFP (Either QError Unit)
+fileMetadata path = left $ FileMetadata path id
+
+dirMetadata ∷ DirPath → QuasarAFP (Either QError (Array Resource))
+dirMetadata path = left $ DirMetadata path id
 
 readFile ∷ FilePath → Maybe Pagination → QuasarAFP (Either QError JArray)
 readFile path pagination = left $ ReadFile path pagination id

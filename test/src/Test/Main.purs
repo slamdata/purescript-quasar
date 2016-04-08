@@ -109,8 +109,8 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ ServerInfo id
 
     log "\nGetMetadata:"
-    run isRight $ GetMetadata (Left testDbAnyDir) id
-    run isNotFound $ GetMetadata (Right nonexistant) id
+    run isRight $ DirMetadata testDbAnyDir id
+    run isNotFound $ FileMetadata nonexistant id
 
     log "\nReadQuery:"
     run isRight $ ReadQuery (Left testDbAnyDir) "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 }) id

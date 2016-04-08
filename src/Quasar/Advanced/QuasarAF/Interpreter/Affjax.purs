@@ -24,9 +24,10 @@ import Prelude
 
 import Control.Bind ((<=<))
 import Control.Monad.Free (Free, foldFree, liftF)
-import Control.Monad.Eff.Exception (error)
+import Control.Monad.Eff.Exception (Error, error)
 
 import Data.Bifunctor (lmap)
+import Data.Either (Either)
 import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
 import Data.Maybe (Maybe(..), maybe)
 import Data.NaturalTransformation (Natural)
@@ -72,9 +73,14 @@ evalA = \q -> case q of
 
   AuthProviders k -> do
     { basePath, idToken, permissions } ← ask
-    k <$> mkRequest (lmap error <$> traverse Provider.fromJSON <=< jsonResult)
+    k <$> mkRequest providersResult
       (AXF.affjax $ insertAuthHeaders idToken permissions $ defaultRequest
         { url = basePath <> Str.drop 1 (printPath Paths.oidcProviders) })
+
+  where
+
+  providersResult ∷ String → Either Error (Array Provider.Provider)
+  providersResult = lmap error <$> traverse Provider.fromJSON <=< jsonResult
 
 insertAuthHeaders
   ∷ ∀ a

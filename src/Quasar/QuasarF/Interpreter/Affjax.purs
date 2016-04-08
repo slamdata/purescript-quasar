@@ -23,10 +23,12 @@ module Quasar.QuasarF.Interpreter.Affjax
 
 import Prelude
 
-import Control.Bind ((=<<))
+import Control.Bind ((=<<), (<=<))
+import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free)
 
 import Data.Array (catMaybes)
+import Data.Bifunctor (lmap)
 import Data.Either (Either(..), either)
 import Data.Functor.Coproduct (Coproduct)
 import Data.HTTP.Method (Method(..))
@@ -36,6 +38,7 @@ import Data.MediaType.Common (applicationJSON)
 import Data.NaturalTransformation (Natural)
 import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
 import Data.String as Str
+import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..), fst, snd)
 
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
@@ -43,8 +46,9 @@ import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
 
 import Quasar.ConfigF as CF
+import Quasar.FS.DirMetadata as DirMetadata
 import Quasar.Paths as Paths
-import Quasar.QuasarF (QuasarF(..))
+import Quasar.QuasarF (QuasarF(..), DirPath)
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Quasar.QuasarF.Interpreter.Internal (mkURL, delete, unitResult, mkRequest, defaultRequest, get, jsonResult, put, toPageParams, strResult, toVarParams, ask)
 
@@ -55,10 +59,16 @@ eval = \q -> case q of
 
   ServerInfo k -> do
     { basePath } ← ask
-    k <$> mkRequest jsonResult (get (basePath <> Str.drop 1 (printPath Paths.serverInfo)))
+    let url = basePath <> Str.drop 1 (printPath Paths.serverInfo)
+    k <$> mkRequest jsonResult (get url)
 
-  GetMetadata path k ->
-    k <$> (mkRequest jsonResult <<< get =<< mkURL Paths.metadata path Nil)
+  FileMetadata path k -> do
+    url ← mkURL Paths.metadata (Right path) Nil
+    k <$> mkRequest jsonResult (get url)
+
+  DirMetadata path k -> do
+    url ← mkURL Paths.metadata (Left path) Nil
+    k <$> mkRequest (resourcesResult path) (get url)
 
   ReadQuery path sql vars pagination k -> do
     let params = Tuple "q" sql : toVarParams vars <> toPageParams pagination
@@ -156,3 +166,8 @@ eval = \q -> case q of
 
   DeleteMount path k ->
     k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.mount path Nil)
+
+  where
+
+  resourcesResult ∷ DirPath → String → Either Error DirMetadata.DirMetadata
+  resourcesResult path = lmap error <$> DirMetadata.fromJSON path <=< jsonResult
