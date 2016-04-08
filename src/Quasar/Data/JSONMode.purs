@@ -22,16 +22,9 @@ import Data.MediaType (MediaType(..))
 
 data JSONMode = Readable | Precise
 
-instance eqJSONMode ∷ Eq JSONMode where
-  eq Readable Readable = true
-  eq Precise Precise = true
-  eq _ _ = false
+derive instance eqJSONMode ∷ Eq JSONMode
 
-instance ordJSONMode ∷ Ord JSONMode where
-  compare Readable Readable = EQ
-  compare Readable Precise = LT
-  compare Precise Precise = EQ
-  compare Precise Readable = GT
+derive instance ordJSONMode ∷ Ord JSONMode
 
 instance showJSONMode ∷ Show JSONMode where
   show Readable = "Readable"

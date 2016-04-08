@@ -36,6 +36,9 @@ type QuasarAFP = Coproduct QuasarF QuasarAF
 data QuasarAF a
   = AuthProviders (Either QError (Array Auth.Provider) → a)
 
+instance functorQuasarAF ∷ Functor QuasarAF where
+  map f (AuthProviders g) = AuthProviders (f <<< g)
+
 serverInfo ∷ QuasarAFP (Either QError JObject)
 serverInfo = left $ ServerInfo id
 
