@@ -47,6 +47,7 @@ import Network.HTTP.RequestHeader as Req
 
 import Quasar.ConfigF as CF
 import Quasar.FS.DirMetadata as DirMetadata
+import Quasar.Mount as Mount
 import Quasar.Paths as Paths
 import Quasar.QuasarF (QuasarF(..), DirPath)
 import Quasar.QuasarF.Interpreter.Config (Config)
@@ -145,15 +146,15 @@ eval = \q → case q of
         { url = url
         , method = Left POST
         , headers = [Req.RequestHeader "X-File-Name" name]
-        , content = Just $ snd (toRequest config)
+        , content = Just $ snd (toRequest (Mount.toJSON config))
         })
 
   UpdateMount path config k → do
     url ← mkURL Paths.mount path Nil
-    k <$> (mkRequest unitResult $ put url $ snd (toRequest config))
+    k <$> (mkRequest unitResult $ put url $ snd (toRequest (Mount.toJSON config)))
 
   GetMount path k →
-    k <$> (mkRequest jsonResult <<< get =<< mkURL Paths.mount path Nil)
+    k <$> (mkRequest mountConfigResult <<< get =<< mkURL Paths.mount path Nil)
 
   MoveMount fromPath toPath k → do
     url ← mkURL Paths.mount fromPath Nil
@@ -171,3 +172,6 @@ eval = \q → case q of
 
   resourcesResult ∷ DirPath → String → Either Error DirMetadata.DirMetadata
   resourcesResult path = lmap error <$> DirMetadata.fromJSON path <=< jsonResult
+
+  mountConfigResult ∷ String → Either Error Mount.MountConfig
+  mountConfigResult = lmap error <$> Mount.fromJSON <=< jsonResult

@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.QuasarF where
+module Quasar.QuasarF
+  ( module Quasar.QuasarF
+  , module Quasar.Types
+  ) where
 
 import Prelude
 
@@ -28,28 +31,8 @@ import Data.StrMap (StrMap)
 
 import Quasar.Data (QData)
 import Quasar.FS (Resource)
-
-type FilePath = AbsFile Sandboxed
-type DirPath = AbsDir Sandboxed
-type AnyPath = Either DirPath FilePath
-
-type SQL = String
-type MountConfig = JObject
-type Vars = StrMap String
-
-type Pagination = { offset ∷ Int, limit ∷ Int }
-
-data QError
-  = NotFound
-  | Error Error
-
-instance showQError ∷ Show QError where
-  show NotFound = "NotFound"
-  show (Error err) = "(Error " <> show err <> ")"
-
-printQError ∷ QError → String
-printQError NotFound = "Resource not found"
-printQError (Error err) = message err
+import Quasar.Mount (MountConfig)
+import Quasar.Types (QError(..), AnyPath, FilePath, Pagination, DirPath, Vars, SQL, printQError)
 
 data QuasarF a
   = ServerInfo (Either QError JObject → a)
@@ -64,8 +47,8 @@ data QuasarF a
   | DeleteData AnyPath (Either QError Unit → a)
   | MoveData AnyPath AnyPath (Either QError Unit → a)
   | GetMount AnyPath (Either QError MountConfig → a)
-  | CreateMount AnyPath Json (Either QError Unit → a)
-  | UpdateMount AnyPath Json (Either QError Unit → a)
+  | CreateMount AnyPath MountConfig (Either QError Unit → a)
+  | UpdateMount AnyPath MountConfig (Either QError Unit → a)
   | MoveMount AnyPath AnyPath (Either QError Unit → a)
   | DeleteMount AnyPath (Either QError Unit → a)
 
@@ -123,10 +106,10 @@ moveData from to = MoveData from to id
 getMount ∷ AnyPath → QuasarF (Either QError MountConfig)
 getMount path = GetMount path id
 
-createMount ∷ AnyPath → Json → QuasarF (Either QError Unit)
+createMount ∷ AnyPath → MountConfig → QuasarF (Either QError Unit)
 createMount path config = CreateMount path config id
 
-updateMount ∷ AnyPath → Json → QuasarF (Either QError Unit)
+updateMount ∷ AnyPath → MountConfig → QuasarF (Either QError Unit)
 updateMount path config = UpdateMount path config id
 
 moveMount ∷ AnyPath → AnyPath → QuasarF (Either QError Unit)

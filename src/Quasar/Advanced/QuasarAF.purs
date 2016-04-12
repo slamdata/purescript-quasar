@@ -17,6 +17,7 @@ limitations under the License.
 module Quasar.Advanced.QuasarAF
   ( module Quasar.Advanced.QuasarAF
   , module Quasar.QuasarF
+  , module Quasar.Types
   ) where
 
 import Prelude
@@ -29,7 +30,9 @@ import Data.Maybe (Maybe)
 import Quasar.Advanced.Auth.Provider as Auth
 import Quasar.Data (QData)
 import Quasar.FS (Resource)
-import Quasar.QuasarF (QuasarF(..), QError(..), AnyPath, MountConfig, FilePath, DirPath, Pagination, Vars, SQL, printQError)
+import Quasar.Mount (MountConfig)
+import Quasar.QuasarF (QuasarF(..))
+import Quasar.Types (QError(..), AnyPath, FilePath, DirPath, Pagination, Vars, SQL, printQError)
 
 type QuasarAFP = Coproduct QuasarF QuasarAF
 
@@ -75,10 +78,10 @@ moveData from to = left $ MoveData from to id
 getMount ∷ AnyPath → QuasarAFP (Either QError MountConfig)
 getMount path = left $ GetMount path id
 
-createMount ∷ AnyPath → Json → QuasarAFP (Either QError Unit)
+createMount ∷ AnyPath → MountConfig → QuasarAFP (Either QError Unit)
 createMount path config = left $ CreateMount path config id
 
-updateMount ∷ AnyPath → Json → QuasarAFP (Either QError Unit)
+updateMount ∷ AnyPath → MountConfig → QuasarAFP (Either QError Unit)
 updateMount path config = left $ UpdateMount path config id
 
 moveMount ∷ AnyPath → AnyPath → QuasarAFP (Either QError Unit)

@@ -53,6 +53,7 @@ import Test.Util.Process (spawnMongo, spawnQuasar)
 
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..), JSONMode(..))
+import Quasar.Mount (MountConfig(..))
 import Quasar.QuasarF (QuasarF(..), QError(..))
 
 -- | Evaluates and runs a `QuasarF` value, throwing an assertion error if the
@@ -149,6 +150,7 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ UpdateMount (Right testMount) mountConfig2 id
 
     log "\nGetMount:"
+    run isRight $ GetMount (Left rootDir) id
     run isRight $ GetMount (Right testMount) id
 
     log "\nMoveMount:"
@@ -186,16 +188,12 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     , "foo" := "baz" ~> jsonEmptyObject
     ]
 
-  mountConfig1 =
-    "view" :=
-      ( "connectionUri" := "sql2:///?q=select+*+from+%60/test/smallZips%60"
-      ~> jsonEmptyObject
-      )
-    ~> jsonEmptyObject
+  mountConfig1 = ViewConfig
+    { query: "select * from `/test/smallZips`"
+    , vars: SM.empty
+    }
 
-  mountConfig2 =
-    "view" :=
-      ( "connectionUri" := "sql2:///?q=select+*+from+%60/test/slamengine_commits%60"
-      ~> jsonEmptyObject
-      )
-    ~> jsonEmptyObject
+  mountConfig2 = ViewConfig
+    { query: "select * from `/test/slamengine_commits`"
+    , vars: SM.empty
+    }
