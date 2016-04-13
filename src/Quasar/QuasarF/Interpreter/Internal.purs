@@ -144,6 +144,6 @@ handleResult f result =
       | code == 404 → Left NotFound
       | otherwise →
           Left $ Error $ error $
-            either (pure $ "An unknown error ocurred: " ++ show response) id $
+            either (pure $ "An unknown error ocurred: " ++ show code ++ " " ++ show response) id $
               (_ .? "error") =<< Json.decodeJson =<< Json.jsonParser response
     Left err → Left (Error err)

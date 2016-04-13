@@ -22,16 +22,18 @@ module Quasar.Advanced.QuasarAF
 
 import Prelude
 
-import Data.Argonaut (Json, JArray, JObject)
+import Data.Argonaut (JArray)
 import Data.Either (Either)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.Maybe (Maybe)
 
 import Quasar.Advanced.Auth.Provider as Auth
-import Quasar.Data (QData)
+import Quasar.Data (QData, JSONMode)
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
 import Quasar.QuasarF (QuasarF(..))
+import Quasar.Query.OutputMeta (OutputMeta)
+import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (QError(..), AnyPath, FilePath, DirPath, Pagination, Vars, SQL, printQError)
 
 type QuasarAFP = Coproduct QuasarF QuasarAF
@@ -42,13 +44,13 @@ data QuasarAF a
 instance functorQuasarAF ∷ Functor QuasarAF where
   map f (AuthProviders g) = AuthProviders (f <<< g)
 
-serverInfo ∷ QuasarAFP (Either QError JObject)
+serverInfo ∷ QuasarAFP (Either QError ServerInfo)
 serverInfo = left $ ServerInfo id
 
-readQuery ∷ AnyPath → SQL → Vars → Maybe Pagination → QuasarAFP (Either QError JArray)
-readQuery path sql vars pagination = left $ ReadQuery path sql vars pagination id
+readQuery ∷ JSONMode → AnyPath → SQL → Vars → Maybe Pagination → QuasarAFP (Either QError JArray)
+readQuery mode path sql vars pagination = left $ ReadQuery mode path sql vars pagination id
 
-writeQuery ∷ AnyPath → FilePath → SQL → Vars → QuasarAFP (Either QError JObject)
+writeQuery ∷ AnyPath → FilePath → SQL → Vars → QuasarAFP (Either QError OutputMeta)
 writeQuery path file sql vars = left $ WriteQuery path file sql vars id
 
 compileQuery ∷ AnyPath → SQL → Vars → QuasarAFP (Either QError String)
@@ -60,8 +62,8 @@ fileMetadata path = left $ FileMetadata path id
 dirMetadata ∷ DirPath → QuasarAFP (Either QError (Array Resource))
 dirMetadata path = left $ DirMetadata path id
 
-readFile ∷ FilePath → Maybe Pagination → QuasarAFP (Either QError JArray)
-readFile path pagination = left $ ReadFile path pagination id
+readFile ∷ JSONMode → FilePath → Maybe Pagination → QuasarAFP (Either QError JArray)
+readFile mode path pagination = left $ ReadFile mode path pagination id
 
 writeFile ∷ FilePath → QData → QuasarAFP (Either QError Unit)
 writeFile path content = left $ WriteFile path content id

@@ -38,7 +38,6 @@ import Data.MediaType.Common (applicationJSON)
 import Data.NaturalTransformation (Natural)
 import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
 import Data.String as Str
-import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..), fst, snd)
 
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
@@ -46,12 +45,15 @@ import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
 
 import Quasar.ConfigF as CF
+import Quasar.Data.JSONMode as JSONMode
 import Quasar.FS.DirMetadata as DirMetadata
 import Quasar.Mount as Mount
 import Quasar.Paths as Paths
 import Quasar.QuasarF (QuasarF(..), DirPath)
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Quasar.QuasarF.Interpreter.Internal (mkURL, delete, unitResult, mkRequest, defaultRequest, get, jsonResult, put, toPageParams, strResult, toVarParams, ask)
+import Quasar.Query.OutputMeta as QueryOutputMeta
+import Quasar.ServerInfo as ServerInfo
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
@@ -61,7 +63,7 @@ eval = \q → case q of
   ServerInfo k → do
     { basePath } ← ask
     let url = basePath <> Str.drop 1 (printPath Paths.serverInfo)
-    k <$> mkRequest jsonResult (get url)
+    k <$> mkRequest serverInfoResult (get url)
 
   FileMetadata path k → do
     url ← mkURL Paths.metadata (Right path) Nil
@@ -71,18 +73,18 @@ eval = \q → case q of
     url ← mkURL Paths.metadata (Left path) Nil
     k <$> mkRequest (resourcesResult path) (get url)
 
-  ReadQuery path sql vars pagination k → do
+  ReadQuery mode path sql vars pagination k → do
     let params = Tuple "q" sql : toVarParams vars <> toPageParams pagination
     url ← mkURL Paths.query path params
     k <$> mkRequest jsonResult
       (AXF.affjax $ defaultRequest
         { url = url
-        , headers = [Req.Accept applicationJSON]
+        , headers = [Req.Accept $ JSONMode.decorateMode applicationJSON mode]
         })
 
   WriteQuery path file sql vars k → do
     url ← mkURL Paths.query path (toVarParams vars)
-    k <$> mkRequest jsonResult
+    k <$> mkRequest writeQueryResult
       (AXF.affjax $ defaultRequest
         { url = url
         , method = Left POST
@@ -94,12 +96,12 @@ eval = \q → case q of
     url ← mkURL Paths.compile path (Tuple "q" sql : toVarParams vars)
     k <$> mkRequest strResult (get url)
 
-  ReadFile path pagination k → do
+  ReadFile mode path pagination k → do
     url ← mkURL Paths.data_ (Right path) (toPageParams pagination)
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
         { url = url
-        , headers = [Req.Accept applicationJSON]
+        , headers = [Req.Accept $ JSONMode.decorateMode applicationJSON mode]
         })
 
   WriteFile path content k → do
@@ -169,6 +171,12 @@ eval = \q → case q of
     k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.mount path Nil)
 
   where
+
+  serverInfoResult ∷ String -> Either Error ServerInfo.ServerInfo
+  serverInfoResult = lmap error <$> ServerInfo.fromJSON <=< jsonResult
+
+  writeQueryResult ∷ String → Either Error QueryOutputMeta.OutputMeta
+  writeQueryResult = lmap error <$> QueryOutputMeta.fromJSON <=< jsonResult
 
   resourcesResult ∷ DirPath → String → Either Error DirMetadata.DirMetadata
   resourcesResult path = lmap error <$> DirMetadata.fromJSON path <=< jsonResult

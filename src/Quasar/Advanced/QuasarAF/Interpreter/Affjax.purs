@@ -45,7 +45,7 @@ import OIDCCryptUtils.Types as OIDC
 import Quasar.Advanced.Auth as Auth
 import Quasar.Advanced.Auth.Provider as Provider
 import Quasar.Advanced.Paths as Paths
-import Quasar.Advanced.QuasarAF (QuasarAFP, QuasarAF(..), QError(..))
+import Quasar.Advanced.QuasarAF (QuasarAFP, QuasarAF(..))
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
 import Quasar.ConfigF as CF
 import Quasar.QuasarF.Interpreter.Affjax as QCI

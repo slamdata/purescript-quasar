@@ -54,7 +54,8 @@ import Test.Util.Process (spawnMongo, spawnQuasar)
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..), JSONMode(..))
 import Quasar.Mount (MountConfig(..))
-import Quasar.QuasarF (QuasarF(..), QError(..))
+import Quasar.QuasarF (QuasarF, QError(..))
+import Quasar.QuasarF as QF
 
 -- | Evaluates and runs a `QuasarF` value, throwing an assertion error if the
 -- | query fails.
@@ -107,57 +108,56 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
   result ← attempt do
 
     log "\nServerInfo:"
-    run isRight $ ServerInfo id
+    run isRight $ map (\{ name, version } → name <> " " <> version) <$> QF.serverInfo
 
     log "\nGetMetadata:"
-    run isRight $ DirMetadata testDbAnyDir id
-    run isNotFound $ FileMetadata nonexistant id
+    run isRight $ QF.dirMetadata testDbAnyDir
+    run isNotFound $ QF.fileMetadata nonexistant
 
     log "\nReadQuery:"
-    run isRight $ ReadQuery (Left testDbAnyDir) "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 }) id
+    run isRight $ QF.readQuery Readable (Left testDbAnyDir) "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Precise (Left testDbAnyDir) "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
 
     log "\nWriteQuery:"
-    run isRight $ WriteQuery (Left testDbAnyDir) testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty id
+    run isRight $ map _.out <$> QF.writeQuery (Left testDbAnyDir) testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty
 
     log "\nCompileQuery:"
-    run isRight $ CompileQuery (Left testDbAnyDir) "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"]) id
+    run isRight $ QF.compileQuery (Left testDbAnyDir) "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"])
 
     log "\nMoveData:"
-    run isRight $ MoveData (Right testFile1) (Right testFile2) id
-    run isRight $ MoveData (Left testFile2Dir) (Left testFile3Dir) id
+    run isRight $ QF.moveData (Right testFile1) (Right testFile2)
+    run isRight $ QF.moveData (Left testFile2Dir) (Left testFile3Dir)
 
     log "\nWriteFile:"
-    run isRight $ WriteFile testFile1 content id
+    run isRight $ QF.writeFile testFile1 content
 
     log "\nAppendFile:"
-    run isRight $ AppendFile testFile1 content id
+    run isRight $ QF.appendFile testFile1 content
 
     log "\nReadFile:"
-    run isRight $ ReadFile testFile1 (Just { offset: 0, limit: 100 }) id
-    run isRight $ ReadFile testFile3 (Just { offset: 0, limit: 1 }) id
-
-    log "\nReadFile NotFound:"
-    run isNotFound $ ReadFile nonexistant Nothing id
+    run isRight $ QF.readFile Precise testFile1 (Just { offset: 0, limit: 100 })
+    run isRight $ QF.readFile Readable testFile3 (Just { offset: 0, limit: 1 })
+    run isNotFound $ QF.readFile Readable nonexistant Nothing
 
     log "\nDeleteData:"
-    run isRight $ DeleteData (Right testFile1) id
-    run isRight $ DeleteData (Left testFile3Dir) id
+    run isRight $ QF.deleteData (Right testFile1)
+    run isRight $ QF.deleteData (Left testFile3Dir)
 
     log "\nCreateMount:"
-    run isRight $ CreateMount (Right testMount) mountConfig1 id
+    run isRight $ QF.createMount (Right testMount) mountConfig1
 
     log "\nUpdateMount:"
-    run isRight $ UpdateMount (Right testMount) mountConfig2 id
+    run isRight $ QF.updateMount (Right testMount) mountConfig2
 
     log "\nGetMount:"
-    run isRight $ GetMount (Left rootDir) id
-    run isRight $ GetMount (Right testMount) id
+    run isRight $ QF.getMount (Left rootDir)
+    run isRight $ QF.getMount (Right testMount)
 
     log "\nMoveMount:"
-    run isRight $ MoveMount (Right testMount) (Right testMount2) id
+    run isRight $ QF.moveMount (Right testMount) (Right testMount2)
 
     log "\nDeleteMount:"
-    run isRight $ DeleteMount (Right testMount2) id
+    run isRight $ QF.deleteMount (Right testMount2)
 
   liftEff do
     CP.kill SIGTERM mongod

@@ -21,27 +21,25 @@ module Quasar.QuasarF
 
 import Prelude
 
-import Control.Monad.Eff.Exception (Error, message)
-
-import Data.Argonaut (Json, JArray, JObject)
+import Data.Argonaut (JArray)
 import Data.Either (Either)
 import Data.Maybe (Maybe)
-import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed)
-import Data.StrMap (StrMap)
 
-import Quasar.Data (QData)
+import Quasar.Data (QData, JSONMode)
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
-import Quasar.Types (QError(..), AnyPath, FilePath, Pagination, DirPath, Vars, SQL, printQError)
+import Quasar.Query.OutputMeta (OutputMeta)
+import Quasar.ServerInfo (ServerInfo)
+import Quasar.Types (QError(..), AnyPath, FilePath, DirPath, Pagination, Vars, SQL, printQError)
 
 data QuasarF a
-  = ServerInfo (Either QError JObject → a)
-  | ReadQuery AnyPath SQL Vars (Maybe Pagination) (Either QError JArray → a)
-  | WriteQuery AnyPath FilePath SQL Vars (Either QError JObject → a)
+  = ServerInfo (Either QError ServerInfo → a)
+  | ReadQuery JSONMode AnyPath SQL Vars (Maybe Pagination) (Either QError JArray → a)
+  | WriteQuery AnyPath FilePath SQL Vars (Either QError OutputMeta → a)
   | CompileQuery AnyPath SQL Vars (Either QError String → a)
   | FileMetadata FilePath (Either QError Unit → a)
   | DirMetadata DirPath (Either QError (Array Resource) → a)
-  | ReadFile FilePath (Maybe Pagination) (Either QError JArray → a)
+  | ReadFile JSONMode FilePath (Maybe Pagination) (Either QError JArray → a)
   | WriteFile FilePath QData (Either QError Unit → a)
   | AppendFile FilePath QData (Either QError Unit → a)
   | DeleteData AnyPath (Either QError Unit → a)
@@ -54,12 +52,12 @@ data QuasarF a
 
 instance functorQuasarF ∷ Functor QuasarF where
   map f (ServerInfo g) = ServerInfo (f <<< g)
-  map f (ReadQuery path sql vars pagination g) = ReadQuery path sql vars pagination (f <<< g)
+  map f (ReadQuery mode path sql vars pagination g) = ReadQuery mode path sql vars pagination (f <<< g)
   map f (WriteQuery path file sql vars g) = WriteQuery path file sql vars (f <<< g)
   map f (CompileQuery path sql vars g) = CompileQuery path sql vars (f <<< g)
   map f (FileMetadata path g) = FileMetadata path (f <<< g)
   map f (DirMetadata path g) = DirMetadata path (f <<< g)
-  map f (ReadFile path pagination g) = ReadFile path pagination(f <<< g)
+  map f (ReadFile mode path pagination g) = ReadFile mode path pagination (f <<< g)
   map f (WriteFile path content g) = WriteFile path content (f <<< g)
   map f (AppendFile path content g) = AppendFile path content (f <<< g)
   map f (DeleteData path g) = DeleteData path (f <<< g)
@@ -70,13 +68,13 @@ instance functorQuasarF ∷ Functor QuasarF where
   map f (MoveMount from to g) = MoveMount from to (f <<< g)
   map f (DeleteMount path g) = DeleteMount path (f <<< g)
 
-serverInfo ∷ QuasarF (Either QError JObject)
+serverInfo ∷ QuasarF (Either QError ServerInfo)
 serverInfo = ServerInfo id
 
-readQuery ∷ AnyPath → SQL → Vars → Maybe Pagination → QuasarF (Either QError JArray)
-readQuery path sql vars pagination = ReadQuery path sql vars pagination id
+readQuery ∷ JSONMode → AnyPath → SQL → Vars → Maybe Pagination → QuasarF (Either QError JArray)
+readQuery mode path sql vars pagination = ReadQuery mode path sql vars pagination id
 
-writeQuery ∷ AnyPath → FilePath → SQL → Vars → QuasarF (Either QError JObject)
+writeQuery ∷ AnyPath → FilePath → SQL → Vars → QuasarF (Either QError OutputMeta)
 writeQuery path file sql vars = WriteQuery path file sql vars id
 
 compileQuery ∷ AnyPath → SQL → Vars → QuasarF (Either QError String)
@@ -88,8 +86,8 @@ fileMetadata path = FileMetadata path id
 dirMetadata ∷ DirPath → QuasarF (Either QError (Array Resource))
 dirMetadata path = DirMetadata path id
 
-readFile ∷ FilePath → Maybe Pagination → QuasarF (Either QError JArray)
-readFile path pagination = ReadFile path pagination id
+readFile ∷ JSONMode → FilePath → Maybe Pagination → QuasarF (Either QError JArray)
+readFile mode path pagination = ReadFile mode path pagination id
 
 writeFile ∷ FilePath → QData → QuasarF (Either QError Unit)
 writeFile path content = WriteFile path content id

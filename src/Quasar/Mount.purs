@@ -31,10 +31,15 @@ data MountConfig
   | MongoDBConfig MongoDB.Config
 
 instance showMountConfig ∷ Show MountConfig where
-  show (ViewConfig { query, vars }) =
-    "(ViewConfig { query:" <> show query <> ", vars: " <> show vars <> " })"
-  show (MongoDBConfig { hosts, path, user, password, props }) =
-    "(MongoDBConfig { hosts: " <> show hosts <> ", path: " <> show path <> ", user: " <> show user <> ", password: " <> show password <> ", props: " <> show props <> " })"
+  show (ViewConfig { query, vars })
+    = "(ViewConfig { query: " <> show query
+    <> ", vars: " <> show vars <> " })"
+  show (MongoDBConfig { hosts, path, user, password, props })
+    = "(MongoDBConfig { hosts: " <> show hosts
+    <> ", path: " <> show path
+    <> ", user: " <> show user
+    <> ", password: " <> show password
+    <> ", props: " <> show props <> " })"
 
 fromJSON ∷ Json → Either String MountConfig
 fromJSON json

@@ -16,8 +16,7 @@ limitations under the License.
 
 module Quasar.Data
   ( QData(..)
-  , module Quasar.Data.CSVOptions
-  , module Quasar.Data.JSONMode
+  , module Exports
   ) where
 
 import Prelude
@@ -28,9 +27,11 @@ import Data.MediaType (MediaType(..))
 import Data.MediaType.Common (applicationJSON)
 import Data.Tuple (Tuple(..), snd)
 
-import Network.HTTP.Affjax.Request (class Requestable, RequestContent, toRequest)
+import Network.HTTP.Affjax.Request (class Requestable, toRequest)
 
+import Quasar.Data.CSVOptions (CSVOptions, defaultCSVOptions) as Exports
 import Quasar.Data.CSVOptions as CSV
+import Quasar.Data.JSONMode (JSONMode(..)) as Exports
 import Quasar.Data.JSONMode as JSON
 
 data QData

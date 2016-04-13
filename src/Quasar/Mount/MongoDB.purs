@@ -17,33 +17,31 @@ limitations under the License.
 module Quasar.Mount.MongoDB
   ( Config(..)
   , Host
-  , fromJSON
   , toJSON
+  , fromJSON
+  , toURI
+  , fromURI
   ) where
 
 import Prelude
 
-import Control.Bind ((>=>))
+import Control.Bind ((<=<))
+import Control.Monad (unless)
 
-import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Array as Arr
-import Data.Bifunctor (lmap, rmap)
-import Data.Either (Either(..), either)
-import Data.Foldable (any)
-import Data.List (fromList)
-import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
-import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed, printPath)
+import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
+import Data.Bifunctor (lmap)
+import Data.Either (Either(..))
+import Data.Maybe (Maybe(..), maybe)
+import Data.NonEmpty (NonEmpty(..), oneOf)
+import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed)
 import Data.String as Str
-import Data.String.Regex as Rgx
 import Data.StrMap as SM
-import Data.Tuple (Tuple(..), uncurry)
-import Data.URI (runParseAbsoluteURI)
-import Data.URI.Types as URI
-
-import Global (encodeURIComponent, decodeURIComponent)
+import Data.Tuple (Tuple)
+import Data.URI as URI
 
 type Config =
-  { hosts ∷ Array Host
+  { hosts ∷ NonEmpty Array Host
   , path ∷ Maybe (Either (AbsDir Sandboxed) (AbsFile Sandboxed))
   , user ∷ Maybe String
   , password ∷ Maybe String
@@ -52,51 +50,57 @@ type Config =
 
 type Host = Tuple URI.Host (Maybe URI.Port)
 
-fromJSON ∷ Json → Either String Config
-fromJSON = decodeJson >=> \obj → do
-  connStr ← obj .? "mongodb" >>= decodeJson >>= (_ .? "connectionUri")
-  uri ← lmap show $ runParseAbsoluteURI connStr
-  pure $ fromURI uri
-
 toJSON ∷ Config → Json
 toJSON config =
-  "mongodb" := ("connectionUri" := unit ~> jsonEmptyObject) ~> jsonEmptyObject
+  let uri = URI.printAbsoluteURI (toURI config)
+  in "mongodb" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
-fromURI ∷ URI.AbsoluteURI → Config
-fromURI uri =
-  { hosts: hostsFromURI uri
-  , path: pathFromURI uri
-  , user: userFromURI uri
-  , password: passwordFromURI uri
-  , props: propsFromURI uri
-  }
+fromJSON ∷ Json → Either String Config
+fromJSON
+  = fromURI
+  <=< lmap show <<< URI.runParseAbsoluteURI
+  <=< (_ .? "connectionUri")
+  <=< (_ .? "mongodb")
+  <=< decodeJson
 
--- TODO: encode/decode space as + in quasar URLs
-
-hostsFromURI ∷ URI.AbsoluteURI → Array Host
-hostsFromURI (URI.AbsoluteURI _ (URI.HierarchicalPart (Just (URI.Authority _ hs)) _) _) = hs
-hostsFromURI _ = []
-
-pathFromURI ∷ URI.AbsoluteURI → Maybe (Either (AbsDir Sandboxed) (AbsFile Sandboxed))
-pathFromURI (URI.AbsoluteURI _ (URI.HierarchicalPart _ p) _) = either Right Left <$> p
-
-userFromURI ∷ URI.AbsoluteURI → Maybe String
-userFromURI (URI.AbsoluteURI _ (URI.HierarchicalPart (Just (URI.Authority (Just ui) _)) _) _) =
-  map (\ix → decodeURIComponent $ Str.take ix ui) $ Str.indexOf ":" ui
-userFromURI _ = Nothing
-
-passwordFromURI ∷ URI.AbsoluteURI → Maybe String
-passwordFromURI (URI.AbsoluteURI _ (URI.HierarchicalPart (Just (URI.Authority (Just ui) _)) _) _) =
-  map (\ix → decodeURIComponent $ Str.drop (ix + 1) ui) $ Str.indexOf ":" ui
-passwordFromURI _ = Nothing
-
-propsFromURI ∷ URI.AbsoluteURI → SM.StrMap (Maybe String)
-propsFromURI (URI.AbsoluteURI _ _ (Just (URI.Query qs))) = qs
-propsFromURI _ = SM.empty
-
-mkURI ∷ Config → URI.AbsoluteURI
-mkURI { hosts, path, user, password, props } =
+toURI ∷ Config → URI.AbsoluteURI
+toURI { hosts, path, user, password, props } =
   URI.AbsoluteURI
-    (Just (URI.URIScheme "mongodb"))
-    (URI.HierarchicalPart Nothing Nothing)
-    Nothing
+    (Just uriScheme)
+    (URI.HierarchicalPart (Just (URI.Authority userInfo (oneOf hosts))) path)
+    (Just (URI.Query props))
+  where
+  userInfo = do
+    u ← user
+    p ← password
+    pure (u <> ":" <> p)
+
+fromURI ∷ URI.AbsoluteURI → Either String Config
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
+  unless (scheme == Just uriScheme) $ Left "Expected 'mongodb' URL scheme"
+  hosts ← extractHosts auth
+  let creds = extractCredentials auth
+  let props = maybe SM.empty (\(URI.Query qs) → qs) query
+  pure { hosts, path, user: creds.user, password: creds.password, props }
+
+uriScheme ∷ URI.URIScheme
+uriScheme = URI.URIScheme "mongodb"
+
+extractHosts ∷ Maybe URI.Authority → Either String (NonEmpty Array Host)
+extractHosts = maybe err Right <<< (toNonEmpty <=< map getHosts)
+  where
+  getHosts (URI.Authority _ hs) = hs
+  toNonEmpty hs = NonEmpty <$> Arr.head hs <*> Arr.tail hs
+  err = Left "Host list must not be empty"
+
+extractCredentials ∷ Maybe URI.Authority → { user ∷ Maybe String, password ∷ Maybe String }
+extractCredentials auth =
+  case auth >>= (\(URI.Authority userInfo _) → userInfo) of
+    Nothing → { user: Nothing, password: Nothing }
+    Just userInfo →
+      case Str.indexOf ":" userInfo of
+        Nothing → { user: Just userInfo, password: Nothing }
+        Just ix →
+          { user: Just (Str.take ix userInfo)
+          , password: Just (Str.drop (ix + 1) userInfo)
+          }

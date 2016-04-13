@@ -26,7 +26,7 @@ import Control.Monad.Free (foldFree)
 import Control.Monad.Reader.Class (class MonadReader)
 import Control.Monad.Rec.Class (class MonadRec)
 
-import Data.Functor.Coproduct (Coproduct, coproduct)
+import Data.Functor.Coproduct (coproduct)
 import Data.Maybe (Maybe)
 import Data.NaturalTransformation (Natural)
 
@@ -40,7 +40,6 @@ import Quasar.Advanced.QuasarAF (QuasarAFP)
 import Quasar.Advanced.QuasarAF.Interpreter.Affjax as IAX
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
 import Quasar.ConfigF as CF
-import Quasar.QuasarF (QuasarF)
 
 eval
   ∷ ∀ m eff r

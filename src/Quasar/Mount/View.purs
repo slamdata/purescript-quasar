@@ -18,25 +18,22 @@ module Quasar.Mount.View where
 
 import Prelude
 
-import Control.Bind ((>=>), (=<<))
+import Control.Bind (join, (<=<))
 import Control.Monad (unless)
 
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (~>), (:=))
-import Data.Bifunctor (lmap)
-import Data.Maybe (Maybe, maybe, fromMaybe)
+import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
-import Data.String as Str
-import Data.String.Regex as Rgx
-import Data.StrMap as SM
-import Data.List (List, (:))
+import Data.Foldable (foldMap)
+import Data.List ((:), List(..))
 import Data.List as List
+import Data.Maybe (Maybe(..), maybe)
+import Data.String as Str
+import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
-
-import Global (encodeURIComponent, decodeURIComponent)
+import Data.URI as URI
 
 import Quasar.Types (SQL, Vars)
-import Data.URI (runParseAbsoluteURI) as URI
-import Data.URI.Types (AbsoluteURI(..), Query(..), URIScheme(..)) as URI
 
 type Config =
   { query ∷ SQL
@@ -44,57 +41,45 @@ type Config =
   }
 
 toJSON ∷ Config → Json
-toJSON config
-  = "view" := ("connectionUri" := toURI config ~> jsonEmptyObject)
-  ~> jsonEmptyObject
-
-toURI ∷ Config → String
-toURI { query, vars }
-  = "sql2://"
-  <> (toQueryString
-       $ Tuple "q" query
-       : (lmap ("var." <> _) <$> SM.toList vars))
-  where
-
-  toQueryString ∷ List (Tuple String String) → String
-  toQueryString
-    = ("?" <> _)
-    <<< Str.joinWith "&"
-    <<< List.toUnfoldable
-    <<< map (\(Tuple k v) → k <> "=" <> encodeURIComponent v)
-
-fromURI ∷ URI.AbsoluteURI → Either String Config
-fromURI (URI.AbsoluteURI mbScheme _ mbQuery) = do
-  scheme ← maybe (Left "Could not parse URL scheme") Right mbScheme
-  unless (scheme == URI.URIScheme "sql2") $ Left "Expected 'sql2' URL scheme"
-  let queryMap = maybe SM.empty runQuery mbQuery
-  query ←
-    maybe (Left "Expected 'q' query variable") pure
-      $ SM.lookup "q" queryMap
-      >>= id
-      >>> map decodeURIPath
-      >>= Str.stripPrefix "("
-      >>= Str.stripSuffix ")"
-  let vars = SM.fold foldFn SM.empty $ SM.delete "q" queryMap
-  pure { query, vars }
-
-  where
-
-  runQuery ∷ URI.Query → SM.StrMap (Maybe String)
-  runQuery (URI.Query q) = q
-
-  decodeURIPath :: String -> String
-  decodeURIPath uri =
-    decodeURIComponent $
-    Rgx.replace (Rgx.regex "\\+" Rgx.noFlags{global=true}) " " uri
-
-  foldFn ∷ SM.StrMap String → String → Maybe String → SM.StrMap String
-  foldFn acc key mbVal = fromMaybe acc do
-    k ← Str.stripPrefix "var." key
-    val ← mbVal
-    pure $ SM.insert k val acc
+toJSON config =
+  let uri = URI.printAbsoluteURI (toURI config)
+  in "view" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
-fromJSON = decodeJson >=> \obj → do
-  connStr ← obj .? "view" >>= decodeJson >>= (_ .? "connectionUri")
-  fromURI =<< lmap show (URI.runParseAbsoluteURI connStr)
+fromJSON
+  = fromURI
+  <=< lmap show <<< URI.runParseAbsoluteURI
+  <=< (_ .? "connectionUri")
+  <=< (_ .? "view")
+  <=< decodeJson
+
+toURI ∷ Config → URI.AbsoluteURI
+toURI { query, vars } =
+  URI.AbsoluteURI
+    (Just uriScheme)
+    (URI.HierarchicalPart Nothing Nothing)
+    (Just (URI.Query (SM.fromList props)))
+  where
+  props ∷ List (Tuple String (Maybe String))
+  props
+    = Tuple "q" (Just query)
+    : (bimap ("var." <> _) Just <$> SM.toList vars)
+
+fromURI ∷ URI.AbsoluteURI → Either String Config
+fromURI (URI.AbsoluteURI scheme _ query) = do
+  unless (scheme == Just uriScheme) $ Left "Expected 'sql2' URL scheme"
+  let queryMap = maybe SM.empty (\(URI.Query q) → q) query
+  query ← maybe (Left "Expected 'q' query variable") pure (extractQuery queryMap)
+  let vars = SM.fromList $ foldMap extractVar (SM.toList queryMap)
+  pure { query, vars }
+
+uriScheme ∷ URI.URIScheme
+uriScheme = URI.URIScheme "sql2"
+
+extractQuery ∷ SM.StrMap (Maybe String) → Maybe String
+extractQuery =
+  Str.stripPrefix "(" <=< Str.stripSuffix ")" <=< join <<< SM.lookup "q"
+
+extractVar ∷ Tuple String (Maybe String) → List (Tuple String String)
+extractVar (Tuple key val) = maybe Nil List.singleton $
+  Tuple <$> Str.stripPrefix "var." key <*> val
