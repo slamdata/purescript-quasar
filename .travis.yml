@@ -12,9 +12,10 @@ install:
   - mongod --version
   - java -version
   - npm install
-  - npm install -g bower
+  - npm install -g bower purescript-psa@^0.3.5
   - bower install
 script:
+  - npm run build
   - npm test
 after_success:
 - >-

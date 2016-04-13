@@ -3,7 +3,7 @@
   "scripts": {
     "postinstall": "node script/get-quasar.js",
     "clean": "rimraf output && rimraf .pulp-cache && rimraf test/tmp",
-    "build": "pulp build",
+    "build": "pulp build -I test/src --censor-lib",
     "test": "pulp test --test-path test/src"
   },
   "devDependencies": {
