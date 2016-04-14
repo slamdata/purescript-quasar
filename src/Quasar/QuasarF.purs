@@ -16,6 +16,7 @@ limitations under the License.
 
 module Quasar.QuasarF
   ( module Quasar.QuasarF
+  , module Quasar.Error
   , module Quasar.Types
   ) where
 
@@ -26,11 +27,12 @@ import Data.Either (Either)
 import Data.Maybe (Maybe)
 
 import Quasar.Data (QData, JSONMode)
+import Quasar.Error (QError(..), lowerQError, printQError)
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
-import Quasar.Types (QError(..), AnyPath, FilePath, DirPath, Pagination, Vars, SQL, printQError)
+import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL)
 
 data QuasarF a
   = ServerInfo (Either QError ServerInfo → a)

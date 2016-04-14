@@ -15,7 +15,7 @@ limitations under the License.
 -}
 
 module Quasar.Mount.MongoDB
-  ( Config(..)
+  ( Config
   , Host
   , toJSON
   , fromJSON

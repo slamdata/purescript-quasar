@@ -17,6 +17,7 @@ limitations under the License.
 module Quasar.Advanced.QuasarAF
   ( module Quasar.Advanced.QuasarAF
   , module Quasar.QuasarF
+  , module Quasar.Error
   , module Quasar.Types
   ) where
 
@@ -29,12 +30,13 @@ import Data.Maybe (Maybe)
 
 import Quasar.Advanced.Auth.Provider as Auth
 import Quasar.Data (QData, JSONMode)
+import Quasar.Error (QError(..), lowerQError, printQError)
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
 import Quasar.QuasarF (QuasarF(..))
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
-import Quasar.Types (QError(..), AnyPath, FilePath, DirPath, Pagination, Vars, SQL, printQError)
+import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL)
 
 type QuasarAFP = Coproduct QuasarF QuasarAF
 

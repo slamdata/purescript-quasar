@@ -14,21 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Types where
+module Quasar.Error where
 
 import Prelude
 
 import Control.Monad.Eff.Exception (Error, error, message)
 
-import Data.Either (Either)
-import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed)
-import Data.StrMap (StrMap)
+data QError
+  = NotFound
+  | Error Error
 
-type FilePath = AbsFile Sandboxed
-type DirPath = AbsDir Sandboxed
-type AnyPath = Either DirPath FilePath
+instance showQError ∷ Show QError where
+  show NotFound = "NotFound"
+  show (Error err) = "(Error " <> show err <> ")"
 
-type SQL = String
-type Vars = StrMap String
+printQError ∷ QError → String
+printQError NotFound = "Resource not found"
+printQError (Error err) = message err
 
-type Pagination = { offset ∷ Int, limit ∷ Int }
+lowerQError ∷ QError → Error
+lowerQError NotFound = error "Resource not found"
+lowerQError (Error err) = err
