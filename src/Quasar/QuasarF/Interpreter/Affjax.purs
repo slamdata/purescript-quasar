@@ -77,7 +77,7 @@ eval = \q → case q of
 
   ReadQuery mode path sql vars pagination k → do
     let params = Tuple "q" sql : toVarParams vars <> toPageParams pagination
-    url ← mkURL Paths.query path params
+    url ← mkURL Paths.query (Left path) params
     k <$> mkRequest jsonResult
       (AXF.affjax $ defaultRequest
         { url = url
@@ -86,7 +86,7 @@ eval = \q → case q of
 
   WriteQuery path file sql vars k → do
     let destHeader = Tuple "Destination" (printPath file)
-    url ← mkURL Paths.query path (headerParams [destHeader] : toVarParams vars)
+    url ← mkURL Paths.query (Left path) (headerParams [destHeader] : toVarParams vars)
     k <$> mkRequest writeQueryResult
       (AXF.affjax $ defaultRequest
         { url = url
@@ -95,7 +95,7 @@ eval = \q → case q of
         })
 
   CompileQuery path sql vars k → do
-    url ← mkURL Paths.compile path (Tuple "q" sql : toVarParams vars)
+    url ← mkURL Paths.compile (Left path) (Tuple "q" sql : toVarParams vars)
     k <$> mkRequest strResult (get url)
 
   ReadFile mode path pagination k → do

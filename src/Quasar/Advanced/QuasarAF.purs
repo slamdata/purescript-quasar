@@ -49,13 +49,13 @@ instance functorQuasarAF ∷ Functor QuasarAF where
 serverInfo ∷ QuasarAFP (Either QError ServerInfo)
 serverInfo = left $ ServerInfo id
 
-readQuery ∷ JSONMode → AnyPath → SQL → Vars → Maybe Pagination → QuasarAFP (Either QError JArray)
+readQuery ∷ JSONMode → DirPath → SQL → Vars → Maybe Pagination → QuasarAFP (Either QError JArray)
 readQuery mode path sql vars pagination = left $ ReadQuery mode path sql vars pagination id
 
-writeQuery ∷ AnyPath → FilePath → SQL → Vars → QuasarAFP (Either QError OutputMeta)
+writeQuery ∷ DirPath → FilePath → SQL → Vars → QuasarAFP (Either QError OutputMeta)
 writeQuery path file sql vars = left $ WriteQuery path file sql vars id
 
-compileQuery ∷ AnyPath → SQL → Vars → QuasarAFP (Either QError String)
+compileQuery ∷ DirPath → SQL → Vars → QuasarAFP (Either QError String)
 compileQuery path sql vars = left $ CompileQuery path sql vars id
 
 fileMetadata ∷ FilePath → QuasarAFP (Either QError Unit)

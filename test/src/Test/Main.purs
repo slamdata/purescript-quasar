@@ -111,14 +111,14 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ map (\{ name, version } → name <> " " <> version) <$> QF.serverInfo
 
     log "\nReadQuery:"
-    run isRight $ QF.readQuery Readable (Left testDbAnyDir) "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
-    run isRight $ QF.readQuery Precise (Left testDbAnyDir) "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Readable testDbAnyDir "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Precise testDbAnyDir "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
 
     log "\nWriteQuery:"
-    run isRight $ map _.out <$> QF.writeQuery (Left testDbAnyDir) testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty
+    run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty
 
     log "\nCompileQuery:"
-    run isRight $ QF.compileQuery (Left testDbAnyDir) "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"])
+    run isRight $ QF.compileQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"])
 
     log "\nGetMetadata:"
     run isRight $ QF.dirMetadata testDbAnyDir

@@ -36,9 +36,9 @@ import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL)
 
 data QuasarF a
   = ServerInfo (Either QError ServerInfo → a)
-  | ReadQuery JSONMode AnyPath SQL Vars (Maybe Pagination) (Either QError JArray → a)
-  | WriteQuery AnyPath FilePath SQL Vars (Either QError OutputMeta → a)
-  | CompileQuery AnyPath SQL Vars (Either QError String → a)
+  | ReadQuery JSONMode DirPath SQL Vars (Maybe Pagination) (Either QError JArray → a)
+  | WriteQuery DirPath FilePath SQL Vars (Either QError OutputMeta → a)
+  | CompileQuery DirPath SQL Vars (Either QError String → a)
   | FileMetadata FilePath (Either QError Unit → a)
   | DirMetadata DirPath (Either QError (Array Resource) → a)
   | ReadFile JSONMode FilePath (Maybe Pagination) (Either QError JArray → a)
@@ -73,13 +73,13 @@ instance functorQuasarF ∷ Functor QuasarF where
 serverInfo ∷ QuasarF (Either QError ServerInfo)
 serverInfo = ServerInfo id
 
-readQuery ∷ JSONMode → AnyPath → SQL → Vars → Maybe Pagination → QuasarF (Either QError JArray)
+readQuery ∷ JSONMode → DirPath → SQL → Vars → Maybe Pagination → QuasarF (Either QError JArray)
 readQuery mode path sql vars pagination = ReadQuery mode path sql vars pagination id
 
-writeQuery ∷ AnyPath → FilePath → SQL → Vars → QuasarF (Either QError OutputMeta)
+writeQuery ∷ DirPath → FilePath → SQL → Vars → QuasarF (Either QError OutputMeta)
 writeQuery path file sql vars = WriteQuery path file sql vars id
 
-compileQuery ∷ AnyPath → SQL → Vars → QuasarF (Either QError String)
+compileQuery ∷ DirPath → SQL → Vars → QuasarF (Either QError String)
 compileQuery path sql vars = CompileQuery path sql vars id
 
 fileMetadata ∷ FilePath → QuasarF (Either QError Unit)
