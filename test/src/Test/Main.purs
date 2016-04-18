@@ -170,11 +170,11 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
   where
   testDbAnyDir = rootDir </> dir "test"
   nonexistant = rootDir </> dir "test" </> file "nonexistant"
-  testFile1 = rootDir </> dir "test" </> file "zzz"
+  testFile1 = rootDir </> dir "test" </> file "Пациенты# #"
   testFile2Dir = rootDir </> dir "test" </> dir "subdir"
-  testFile2 = testFile2Dir </> file "aaa"
+  testFile2 = testFile2Dir </> file "Ϡ⨁⟶≣ΜϞ"
   testFile3Dir = rootDir </> dir "test" </> dir "what"
-  testFile3 = testFile3Dir </> file "aaa"
+  testFile3 = testFile3Dir </> file "Ϡ⨁⟶≣ΜϞ"
   testMount = rootDir </> file "testMount"
   testMount2 = rootDir </> file "testMount2"
 

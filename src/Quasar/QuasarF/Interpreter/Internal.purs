@@ -118,6 +118,9 @@ mkURL endpoint path params = do
 mkPath ∷ RelDir Sandboxed → AnyPath → String
 mkPath base fsPath
   = Str.drop 1
+  $ Str.joinWith "/"
+  $ map encodeURIComponent
+  $ Str.split "/"
   $ either printPath printPath
   $ bimap (baseify (dir "/")) (baseify (file "")) fsPath
   where

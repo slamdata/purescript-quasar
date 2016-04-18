@@ -27,9 +27,11 @@ import Control.Bind ((=<<), (<=<))
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free)
 
+import Data.Argonaut (Json, jsonEmptyObject, (:=), (~>))
 import Data.Array (catMaybes)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), either)
+import Data.Foldable (class Foldable, foldl)
 import Data.Functor.Coproduct (Coproduct)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
@@ -83,12 +85,12 @@ eval = \q → case q of
         })
 
   WriteQuery path file sql vars k → do
-    url ← mkURL Paths.query path (toVarParams vars)
+    let destHeader = Tuple "Destination" (printPath file)
+    url ← mkURL Paths.query path (headerParams [destHeader] : toVarParams vars)
     k <$> mkRequest writeQueryResult
       (AXF.affjax $ defaultRequest
         { url = url
         , method = Left POST
-        , headers = [Req.RequestHeader "Destination" (printPath file)]
         , content = Just $ snd (toRequest sql)
         })
 
@@ -130,24 +132,24 @@ eval = \q → case q of
     k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.data_ path Nil)
 
   MoveData fromPath toPath k → do
-    url ← mkURL Paths.data_ fromPath Nil
+    let destHeader = Tuple "Destination" (either printPath printPath toPath)
+    url ← mkURL Paths.data_ fromPath (headerParams [destHeader] : Nil)
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
         , method = Left MOVE
-        , headers = [Req.RequestHeader "Destination" (either printPath printPath toPath)]
         })
 
   CreateMount path config k → do
     let pathParts = either peel peel path
         parentDir = maybe rootDir fst pathParts
         name = maybe "" (either runDirName runFileName <<< snd) pathParts
-    url ← mkURL Paths.mount (Left parentDir) Nil
+        filenameHeader = Tuple "X-File-Name" name
+    url ← mkURL Paths.mount (Left parentDir) (headerParams [filenameHeader] : Nil)
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
         , method = Left POST
-        , headers = [Req.RequestHeader "X-File-Name" name]
         , content = Just $ snd (toRequest (Mount.toJSON config))
         })
 
@@ -159,27 +161,31 @@ eval = \q → case q of
     k <$> (mkRequest mountConfigResult <<< get =<< mkURL Paths.mount path Nil)
 
   MoveMount fromPath toPath k → do
-    url ← mkURL Paths.mount fromPath Nil
+    let destHeader = Tuple "Destination" (either printPath printPath toPath)
+    url ← mkURL Paths.mount fromPath (headerParams [destHeader] : Nil)
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
         , method = Left MOVE
-        , headers = [Req.RequestHeader "Destination" (either printPath printPath toPath)]
         })
 
   DeleteMount path k →
     k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.mount path Nil)
 
+serverInfoResult ∷ String -> Either Error ServerInfo.ServerInfo
+serverInfoResult = lmap error <$> ServerInfo.fromJSON <=< jsonResult
+
+writeQueryResult ∷ String → Either Error QueryOutputMeta.OutputMeta
+writeQueryResult = lmap error <$> QueryOutputMeta.fromJSON <=< jsonResult
+
+resourcesResult ∷ DirPath → String → Either Error DirMetadata.DirMetadata
+resourcesResult path = lmap error <$> DirMetadata.fromJSON path <=< jsonResult
+
+mountConfigResult ∷ String → Either Error Mount.MountConfig
+mountConfigResult = lmap error <$> Mount.fromJSON <=< jsonResult
+
+headerParams ∷ ∀ f. Foldable f ⇒ f (Tuple String String) → Tuple String String
+headerParams = Tuple "request-headers" <<< show <<< foldl go jsonEmptyObject
   where
-
-  serverInfoResult ∷ String -> Either Error ServerInfo.ServerInfo
-  serverInfoResult = lmap error <$> ServerInfo.fromJSON <=< jsonResult
-
-  writeQueryResult ∷ String → Either Error QueryOutputMeta.OutputMeta
-  writeQueryResult = lmap error <$> QueryOutputMeta.fromJSON <=< jsonResult
-
-  resourcesResult ∷ DirPath → String → Either Error DirMetadata.DirMetadata
-  resourcesResult path = lmap error <$> DirMetadata.fromJSON path <=< jsonResult
-
-  mountConfigResult ∷ String → Either Error Mount.MountConfig
-  mountConfigResult = lmap error <$> Mount.fromJSON <=< jsonResult
+  go ∷ Json → Tuple String String → Json
+  go j (Tuple k v) = k := v ~> j
