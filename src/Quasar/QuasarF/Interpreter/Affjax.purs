@@ -27,7 +27,7 @@ import Control.Bind ((=<<), (<=<))
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free)
 
-import Data.Argonaut (Json, jsonEmptyObject, (:=), (~>))
+import Data.Argonaut (Json, JObject, jsonEmptyObject, (:=), (~>))
 import Data.Array (catMaybes)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), either)
@@ -69,7 +69,7 @@ eval = \q → case q of
 
   FileMetadata path k → do
     url ← mkURL Paths.metadata (Right path) Nil
-    k <$> mkRequest jsonResult (get url)
+    k <$> mkRequest fileMetaResult (get url)
 
   DirMetadata path k → do
     url ← mkURL Paths.metadata (Left path) Nil
@@ -183,6 +183,9 @@ resourcesResult path = lmap error <$> DirMetadata.fromJSON path <=< jsonResult
 
 mountConfigResult ∷ String → Either Error Mount.MountConfig
 mountConfigResult = lmap error <$> Mount.fromJSON <=< jsonResult
+
+fileMetaResult ∷ String → Either Error Unit
+fileMetaResult = map (\(_ ∷ JObject) → unit) <<< jsonResult
 
 headerParams ∷ ∀ f. Foldable f ⇒ f (Tuple String String) → Tuple String String
 headerParams = Tuple "request-headers" <<< show <<< foldl go jsonEmptyObject

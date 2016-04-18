@@ -110,10 +110,6 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     log "\nServerInfo:"
     run isRight $ map (\{ name, version } → name <> " " <> version) <$> QF.serverInfo
 
-    log "\nGetMetadata:"
-    run isRight $ QF.dirMetadata testDbAnyDir
-    run isNotFound $ QF.fileMetadata nonexistant
-
     log "\nReadQuery:"
     run isRight $ QF.readQuery Readable (Left testDbAnyDir) "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
     run isRight $ QF.readQuery Precise (Left testDbAnyDir) "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
@@ -123,6 +119,11 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nCompileQuery:"
     run isRight $ QF.compileQuery (Left testDbAnyDir) "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"])
+
+    log "\nGetMetadata:"
+    run isRight $ QF.dirMetadata testDbAnyDir
+    run isRight $ QF.fileMetadata testFile1
+    run isNotFound $ QF.fileMetadata nonexistant
 
     log "\nMoveData:"
     run isRight $ QF.moveData (Right testFile1) (Right testFile2)
