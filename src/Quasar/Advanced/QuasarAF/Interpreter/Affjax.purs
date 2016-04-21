@@ -69,7 +69,7 @@ evalC = foldFree (coproduct (liftF <<< left) authify)
     liftF $ right (AXF.AffjaxFP (insertAuthHeaders idToken permissions req) k)
 
 evalA ∷ ∀ r. Natural QuasarAF (M r)
-evalA = \q → case q of
+evalA = case _ of
 
   AuthProviders k → do
     { basePath, idToken, permissions } ← ask

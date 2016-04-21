@@ -60,7 +60,7 @@ import Quasar.ServerInfo as ServerInfo
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
 eval ∷ ∀ r. Natural QuasarF (M r)
-eval = \q → case q of
+eval = case _ of
 
   ServerInfo k → do
     { basePath } ← ask
