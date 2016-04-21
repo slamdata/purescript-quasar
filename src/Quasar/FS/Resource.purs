@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.FS.Resource
-  ( Resource(..)
-  , fromJSON
-  ) where
+module Quasar.FS.Resource where
 
 import Prelude
 
@@ -25,14 +22,17 @@ import Control.Alt ((<|>))
 
 import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Either (Either(..))
-import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed, dir, file, (</>))
+import Data.Maybe (Maybe)
+import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
 
 import Quasar.FS.Mount (Mount)
 import Quasar.FS.Mount as Mount
 
+import Quasar.Types (AnyPath, FilePath, DirPath)
+
 data Resource
-  = File (AbsFile Sandboxed)
-  | Directory (AbsDir Sandboxed)
+  = File FilePath
+  | Directory DirPath
   | Mount Mount
 
 derive instance eqResource ∷ Eq Resource
@@ -42,14 +42,21 @@ instance showResource ∷ Show Resource where
   show (Directory p) = "(Directory " <> show p <> ")"
   show (Mount m) = "(Mount " <> show m <> ")"
 
-fromJSON ∷ AbsDir Sandboxed → Json → Either String Resource
+fromJSON ∷ DirPath → Json → Either String Resource
 fromJSON parent json
   = Mount <$> Mount.fromJSON parent json
   <|> do
     obj ← decodeJson json
-    typ ← obj .? "type"
     name ← obj .? "name"
-    case typ of
+    obj .? "type" >>= case _ of
       "directory" → Right $ Directory (parent </> dir name)
       "file" → Right $ File (parent </> file name)
-      _ → Left $ "unknown resource type " ++ typ
+      typ → Left $ "unknown resource type " ++ typ
+
+getPath ∷ Resource → AnyPath
+getPath (File p) = Right p
+getPath (Directory p) = Left p
+getPath (Mount m) = Mount.getPath m
+
+getName ∷ Resource → Either (Maybe DirName) FileName
+getName = pathName <<< getPath

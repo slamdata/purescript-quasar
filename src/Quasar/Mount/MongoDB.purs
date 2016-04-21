@@ -34,15 +34,16 @@ import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.NonEmpty (NonEmpty(..), oneOf)
-import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed)
 import Data.String as Str
 import Data.StrMap as SM
 import Data.Tuple (Tuple)
 import Data.URI as URI
 
+import Quasar.Types (AnyPath)
+
 type Config =
   { hosts ∷ NonEmpty Array Host
-  , path ∷ Maybe (Either (AbsDir Sandboxed) (AbsFile Sandboxed))
+  , path ∷ Maybe AnyPath
   , user ∷ Maybe String
   , password ∷ Maybe String
   , props ∷ SM.StrMap (Maybe String)

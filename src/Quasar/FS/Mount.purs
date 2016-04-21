@@ -22,11 +22,14 @@ import Control.Bind ((>=>))
 
 import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Either (Either(..))
-import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed, dir, file, (</>))
+import Data.Maybe (Maybe)
+import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
+
+import Quasar.Types (AnyPath, FilePath, DirPath)
 
 data Mount
-  = View (AbsFile Sandboxed)
-  | MongoDB (AbsDir Sandboxed)
+  = View FilePath
+  | MongoDB DirPath
 
 derive instance eqMount ∷ Eq Mount
 
@@ -36,7 +39,7 @@ instance showMount ∷ Show Mount where
 
 -- | Attempts to decode a mount listing value from Quasar's filesystem metadata,
 -- | for a mount in the specified parent directory.
-fromJSON ∷ AbsDir Sandboxed → Json → Either String Mount
+fromJSON ∷ DirPath → Json → Either String Mount
 fromJSON parent = decodeJson >=> \obj → do
   mount ← obj .? "mount"
   typ ← obj .? "type"
@@ -46,3 +49,10 @@ fromJSON parent = decodeJson >=> \obj → do
     "directory", "mongodb" → Right $ MongoDB (parent </> dir name)
     _, _ → Left $
       "Unknown mount type '" <> mount <> "' for resource type '" <> typ <> "'"
+
+getPath ∷ Mount → AnyPath
+getPath (View p) = Right p
+getPath (MongoDB p) = Left p
+
+getName ∷ Mount → Either (Maybe DirName) FileName
+getName = pathName <<< getPath

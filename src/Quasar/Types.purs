@@ -18,15 +18,12 @@ module Quasar.Types where
 
 import Prelude
 
-import Control.Monad.Eff.Exception (Error, error, message)
-
-import Data.Either (Either)
-import Data.Path.Pathy (AbsFile, AbsDir, Sandboxed)
+import Data.Path.Pathy (AbsPath, AbsFile, AbsDir, Sandboxed)
 import Data.StrMap (StrMap)
 
-type FilePath = AbsFile Sandboxed
+type AnyPath = AbsPath Sandboxed
 type DirPath = AbsDir Sandboxed
-type AnyPath = Either DirPath FilePath
+type FilePath = AbsFile Sandboxed
 
 type SQL = String
 type Vars = StrMap String

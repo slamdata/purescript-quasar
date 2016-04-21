@@ -22,7 +22,7 @@
     "purescript-free": "^0.9.1",
     "purescript-nonempty": "^0.2.0",
     "purescript-oidc-crypt-utils": "^1.1.0",
-    "purescript-pathy": "^0.3.1",
+    "purescript-pathy": "^0.3.3",
     "purescript-uri": "^0.3.0"
   },
   "devDependencies": {
