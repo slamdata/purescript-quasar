@@ -26,7 +26,8 @@ import Data.Argonaut (JArray)
 import Data.Either (Either)
 import Data.Maybe (Maybe)
 
-import Quasar.Data (QData, JSONMode)
+import Quasar.Data (QData, JSONMode(..))
+import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (QError(..), lowerQError, printQError)
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
@@ -76,6 +77,9 @@ serverInfo = ServerInfo id
 readQuery ∷ JSONMode → DirPath → SQL → Vars → Maybe Pagination → QuasarF (Either QError JArray)
 readQuery mode path sql vars pagination = ReadQuery mode path sql vars pagination id
 
+readQueryEJson ∷ DirPath → SQL → Vars → Maybe Pagination → QuasarF (Either QError (Array EJson))
+readQueryEJson path sql vars pagination = readQuery Precise path sql vars pagination <#> resultsAsEJson
+
 writeQuery ∷ DirPath → FilePath → SQL → Vars → QuasarF (Either QError OutputMeta)
 writeQuery path file sql vars = WriteQuery path file sql vars id
 
@@ -90,6 +94,9 @@ dirMetadata path = DirMetadata path id
 
 readFile ∷ JSONMode → FilePath → Maybe Pagination → QuasarF (Either QError JArray)
 readFile mode path pagination = ReadFile mode path pagination id
+
+readFileEJson ∷ FilePath → Maybe Pagination → QuasarF (Either QError (Array EJson))
+readFileEJson path pagination = readFile Precise path pagination <#> resultsAsEJson
 
 writeFile ∷ FilePath → QData → QuasarF (Either QError Unit)
 writeFile path content = WriteFile path content id
