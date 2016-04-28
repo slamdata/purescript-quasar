@@ -29,7 +29,8 @@ import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.Maybe (Maybe)
 
 import Quasar.Advanced.Auth.Provider as Auth
-import Quasar.Data (QData, JSONMode)
+import Quasar.Data (QData, JSONMode(..))
+import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (QError(..), lowerQError, printQError)
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
@@ -52,6 +53,9 @@ serverInfo = left $ ServerInfo id
 readQuery ∷ JSONMode → DirPath → SQL → Vars → Maybe Pagination → QuasarAFP (Either QError JArray)
 readQuery mode path sql vars pagination = left $ ReadQuery mode path sql vars pagination id
 
+readQueryEJson ∷ DirPath → SQL → Vars → Maybe Pagination → QuasarAFP (Either QError (Array EJson))
+readQueryEJson path sql vars pagination = readQuery Precise path sql vars pagination <#> resultsAsEJson
+
 writeQuery ∷ DirPath → FilePath → SQL → Vars → QuasarAFP (Either QError OutputMeta)
 writeQuery path file sql vars = left $ WriteQuery path file sql vars id
 
@@ -66,6 +70,9 @@ dirMetadata path = left $ DirMetadata path id
 
 readFile ∷ JSONMode → FilePath → Maybe Pagination → QuasarAFP (Either QError JArray)
 readFile mode path pagination = left $ ReadFile mode path pagination id
+
+readFileEJson ∷ FilePath → Maybe Pagination → QuasarAFP (Either QError (Array EJson))
+readFileEJson path pagination = readFile Precise path pagination <#> resultsAsEJson
 
 writeFile ∷ FilePath → QData → QuasarAFP (Either QError Unit)
 writeFile path content = left $ WriteFile path content id
