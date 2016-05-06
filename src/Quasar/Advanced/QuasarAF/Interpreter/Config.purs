@@ -19,7 +19,7 @@ module Quasar.Advanced.QuasarAF.Interpreter.Config where
 import Data.Maybe (Maybe)
 import Network.HTTP.Affjax (URL)
 import OIDCCryptUtils.Types (IdToken)
-import Quasar.Advanced.Auth (PermissionToken)
+import Quasar.Advanced.PermissionToken (PermissionToken)
 
 type Config r =
   { basePath ∷ URL

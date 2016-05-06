@@ -18,6 +18,7 @@ module Quasar.Error where
 
 import Prelude
 
+import Data.Either (Either)
 import Control.Monad.Eff.Exception (Error, error, message)
 
 data QError
@@ -35,3 +36,8 @@ printQError (Error err) = message err
 lowerQError ∷ QError → Error
 lowerQError NotFound = error "Resource not found"
 lowerQError (Error err) = err
+
+type QResponse resp = Either QError resp
+type QContinuation resp next = QResponse resp → next
+
+infixr 2 type QContinuation as :~>

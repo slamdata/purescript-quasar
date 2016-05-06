@@ -42,8 +42,8 @@ import Network.HTTP.RequestHeader as Req
 
 import OIDCCryptUtils.Types as OIDC
 
-import Quasar.Advanced.Auth as Auth
-import Quasar.Advanced.Auth.Provider as Provider
+import Quasar.Advanced.PermissionToken as PermissionToken
+import Quasar.Advanced.OIDC as Provider
 import Quasar.Advanced.Paths as Paths
 import Quasar.Advanced.QuasarAF (QuasarAFP, QuasarAF(..))
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
@@ -54,38 +54,49 @@ import Quasar.QuasarF.Interpreter.Internal (ask, mkRequest, jsonResult, defaultR
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
 eval ∷ ∀ r. Natural QuasarAFP (M r)
-eval = coproduct (evalC <<< QCI.eval) evalA
+eval = coproduct (evalQuasarCommunity <<< QCI.eval) evalQuasarAdvanced
 
-evalC
+evalQuasarCommunity
   ∷ ∀ r
   . Natural
       (Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String)))
       (M r)
-evalC = foldFree (coproduct (liftF <<< left) authify)
+evalQuasarCommunity = foldFree (coproduct (liftF <<< left) authify)
   where
   authify ∷ Natural (AXF.AffjaxFP RequestContent String) (M r)
   authify (AXF.AffjaxFP req k) = do
     { idToken, permissions } ← ask
     liftF $ right (AXF.AffjaxFP (insertAuthHeaders idToken permissions req) k)
 
-evalA ∷ ∀ r. Natural QuasarAF (M r)
-evalA = case _ of
-
-  AuthProviders k → do
-    { basePath, idToken, permissions } ← ask
-    k <$> mkRequest providersResult
-      (AXF.affjax $ insertAuthHeaders idToken permissions $ defaultRequest
-        { url = basePath <> Str.drop 1 (printPath Paths.oidcProviders) })
-
+evalQuasarAdvanced ∷ ∀ r. Natural QuasarAF (M r)
+evalQuasarAdvanced (AuthProviders k) = do
+  config ← ask
+  k <$> mkRequest providerResult
+    (AXF.affjax
+       $ insertAuthHeaders
+           config.idToken
+           config.permissions
+       $ defaultRequest
+          { url = config.basePath <> Str.drop 1 (printPath Paths.oidcProviders) } )
   where
+  providerResult ∷ String → Either Error (Array Provider.Provider)
+  providerResult = lmap error <$> traverse Provider.fromJSON <=< jsonResult
+evalQuasarAdvanced (ListTokens k) = hole
+evalQuasarAdvanced (GetToken pid k) = hole
+evalQuasarAdvanced (NewToken pid k) = hole
+evalQuasarAdvanced (DeleteToken pid k) = hole
+evalQuasarAdvanced (GroupInfo gr k) = hole
+evalQuasarAdvanced (DeleteGroup gr k) = hole
+evalQuasarAdvanced (ModifyGroup gr req k) = hole
+evalQuasarAdvanced (Share with perms k) = hole
 
-  providersResult ∷ String → Either Error (Array Provider.Provider)
-  providersResult = lmap error <$> traverse Provider.fromJSON <=< jsonResult
+hole ∷ ∀ a. a
+hole = Unsafe.Coerce.unsafeCoerce unit
 
 insertAuthHeaders
   ∷ ∀ a
   . Maybe OIDC.IdToken
-  → Array Auth.PermissionToken
+  → Array PermissionToken.PermissionToken
   → AX.AffjaxRequest a
   → AX.AffjaxRequest a
 insertAuthHeaders idToken ps req =
@@ -100,10 +111,10 @@ authHeader ∷ OIDC.IdToken → Req.RequestHeader
 authHeader (OIDC.IdToken tok) =
   Req.RequestHeader "Authorization" ("Bearer " <> tok)
 
-permissionsHeader :: Array Auth.PermissionToken → Maybe Req.RequestHeader
+permissionsHeader :: Array PermissionToken.PermissionToken → Maybe Req.RequestHeader
 permissionsHeader [] = Nothing
 permissionsHeader ps =
   Just $
     Req.RequestHeader
       "X-Extra-PermissionTokens"
-      (Str.joinWith "," (map Auth.runPermissionToken ps))
+      (Str.joinWith "," (map PermissionToken.runPermissionToken ps))

@@ -17,28 +17,3 @@ limitations under the License.
 module Quasar.Advanced.Auth.OpenIDConfiguration where
 
 import Prelude
-
-import Control.Bind ((>=>))
-
-import Data.Argonaut (Json, decodeJson, (.?))
-import Data.Either (Either)
-
-import OIDCCryptUtils.JSONWebKey (JSONWebKey)
-import OIDCCryptUtils.Types (Issuer(..))
-
-type OpenIDConfiguration =
-  { issuer ∷ Issuer
-  , authorizationEndpoint ∷ String
-  , tokenEndpoint ∷ String
-  , userinfoEndpoint ∷ String
-  , jwks ∷ Array JSONWebKey
-  }
-
-fromJSON ∷ Json → Either String OpenIDConfiguration
-fromJSON = decodeJson >=> \obj → do
-    issuer ← Issuer <$> obj .? "issuer"
-    authorizationEndpoint ← obj .? "authorization_endpoint"
-    tokenEndpoint ← obj .? "token_endpoint"
-    userinfoEndpoint ← obj .? "userinfo_endpoint"
-    jwks ← obj .? "jwks"
-    pure { issuer, authorizationEndpoint, tokenEndpoint, userinfoEndpoint, jwks }

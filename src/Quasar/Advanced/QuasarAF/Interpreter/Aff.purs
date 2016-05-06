@@ -35,7 +35,7 @@ import Network.HTTP.AffjaxF as AXF
 
 import OIDCCryptUtils.Types (IdToken)
 
-import Quasar.Advanced.Auth (PermissionToken)
+import Quasar.Advanced.PermissionToken (PermissionToken)
 import Quasar.Advanced.QuasarAF (QuasarAFP)
 import Quasar.Advanced.QuasarAF.Interpreter.Affjax as IAX
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
