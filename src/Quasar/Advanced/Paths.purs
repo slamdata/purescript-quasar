@@ -16,7 +16,16 @@ limitations under the License.
 
 module Quasar.Advanced.Paths where
 
-import Data.Path.Pathy (RelFile, Sandboxed, file, dir, (</>))
+import Data.Path.Pathy (RelDir, RelFile, Sandboxed, file, dir, (</>))
 
 oidcProviders ∷ RelFile Sandboxed
 oidcProviders = dir "security" </> dir "oidc" </> file "providers"
+
+token ∷ RelDir Sandboxed
+token = dir "security" </> dir "token"
+
+group ∷ RelDir Sandboxed
+group = dir "security" </> dir "group"
+
+share ∷ RelDir Sandboxed
+share = dir "security" </> dir "share"
