@@ -14,6 +14,9 @@ import Data.Path.Pathy as Pt
 import Data.String as Str
 import Data.Traversable (for, traverse)
 
+import OIDCCryptUtils.JSONWebKey (JSONWebKey)
+import OIDCCryptUtils.Types (Issuer(..), ClientID(..))
+
 data Operation
   = Add
   | Read
@@ -353,3 +356,38 @@ instance decodeJsonToken ∷ DecodeJson Token where
     <*> (obj .? "grantedBy")
     <*> (obj .? "actions")
     <#> Token
+
+
+newtype OpenIDConfiguration =
+  OpenIDConfiguration
+    { issuer ∷ Issuer
+    , authorizationEndpoint ∷ String
+    , tokenEndpoint ∷ String
+    , userinfoEndpoint ∷ String
+    , jwks ∷ Array JSONWebKey
+    }
+
+instance decodeJSONOIDC ∷ DecodeJson OpenIDConfiguration where
+  decodeJson = decodeJson >=> \obj → do
+    issuer ← Issuer <$> obj .? "issuer"
+    authorizationEndpoint ← obj .? "authorization_endpoint"
+    tokenEndpoint ← obj .? "token_endpoint"
+    userinfoEndpoint ← obj .? "userinfo_endpoint"
+    jwks ← obj .? "jwks"
+    pure
+      $ OpenIDConfiguration
+          { issuer, authorizationEndpoint, tokenEndpoint, userinfoEndpoint, jwks }
+
+newtype Provider =
+  Provider
+    { displayName ∷ String
+    , clientID ∷ ClientID
+    , openIDConfiguration ∷ OpenIDConfiguration
+    }
+
+instance decodeJsonProvider ∷ DecodeJson Provider where
+  decodeJson = decodeJson >=> \obj → do
+    displayName ← obj .? "display_name"
+    clientID ← ClientID <$> obj .? "client_id"
+    openIDConfiguration ← obj .? "openid_configuration"
+    pure $ Provider { displayName, clientID, openIDConfiguration }

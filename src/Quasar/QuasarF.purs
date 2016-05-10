@@ -23,12 +23,11 @@ module Quasar.QuasarF
 import Prelude
 
 import Data.Argonaut (JArray)
-import Data.Either (Either)
 import Data.Maybe (Maybe)
 
 import Quasar.Data (QData, JSONMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
-import Quasar.Error (QError(..), lowerQError, printQError)
+import Quasar.Error (type (:~>), QResponse, QError(..), lowerQError, printQError)
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
 import Quasar.Query.OutputMeta (OutputMeta)
@@ -36,22 +35,22 @@ import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL)
 
 data QuasarF a
-  = ServerInfo (Either QError ServerInfo → a)
-  | ReadQuery JSONMode DirPath SQL Vars (Maybe Pagination) (Either QError JArray → a)
-  | WriteQuery DirPath FilePath SQL Vars (Either QError OutputMeta → a)
-  | CompileQuery DirPath SQL Vars (Either QError String → a)
-  | FileMetadata FilePath (Either QError Unit → a)
-  | DirMetadata DirPath (Either QError (Array Resource) → a)
-  | ReadFile JSONMode FilePath (Maybe Pagination) (Either QError JArray → a)
-  | WriteFile FilePath QData (Either QError Unit → a)
-  | AppendFile FilePath QData (Either QError Unit → a)
-  | DeleteData AnyPath (Either QError Unit → a)
-  | MoveData AnyPath AnyPath (Either QError Unit → a)
-  | GetMount AnyPath (Either QError MountConfig → a)
-  | CreateMount AnyPath MountConfig (Either QError Unit → a)
-  | UpdateMount AnyPath MountConfig (Either QError Unit → a)
-  | MoveMount AnyPath AnyPath (Either QError Unit → a)
-  | DeleteMount AnyPath (Either QError Unit → a)
+  = ServerInfo (ServerInfo :~> a)
+  | ReadQuery JSONMode DirPath SQL Vars (Maybe Pagination) (JArray :~> a)
+  | WriteQuery DirPath FilePath SQL Vars (OutputMeta :~> a)
+  | CompileQuery DirPath SQL Vars (String :~> a)
+  | FileMetadata FilePath (Unit :~> a)
+  | DirMetadata DirPath ((Array Resource) :~> a)
+  | ReadFile JSONMode FilePath (Maybe Pagination) (JArray :~> a)
+  | WriteFile FilePath QData (Unit :~> a)
+  | AppendFile FilePath QData (Unit :~> a)
+  | DeleteData AnyPath (Unit :~> a)
+  | MoveData AnyPath AnyPath (Unit :~> a)
+  | GetMount AnyPath (MountConfig :~> a)
+  | CreateMount AnyPath MountConfig (Unit :~> a)
+  | UpdateMount AnyPath MountConfig (Unit :~> a)
+  | MoveMount AnyPath AnyPath (Unit :~> a)
+  | DeleteMount AnyPath (Unit :~> a)
 
 instance functorQuasarF ∷ Functor QuasarF where
   map f (ServerInfo g) = ServerInfo (f <<< g)
@@ -71,56 +70,133 @@ instance functorQuasarF ∷ Functor QuasarF where
   map f (MoveMount from to g) = MoveMount from to (f <<< g)
   map f (DeleteMount path g) = DeleteMount path (f <<< g)
 
-serverInfo ∷ QuasarF (Either QError ServerInfo)
-serverInfo = ServerInfo id
+-- `E` for `either error`
+type QuasarFE res = QuasarF (QResponse res)
 
-readQuery ∷ JSONMode → DirPath → SQL → Vars → Maybe Pagination → QuasarF (Either QError JArray)
-readQuery mode path sql vars pagination = ReadQuery mode path sql vars pagination id
+serverInfo
+  ∷ QuasarFE ServerInfo
+serverInfo =
+  ServerInfo id
 
-readQueryEJson ∷ DirPath → SQL → Vars → Maybe Pagination → QuasarF (Either QError (Array EJson))
-readQueryEJson path sql vars pagination = readQuery Precise path sql vars pagination <#> resultsAsEJson
+readQuery
+  ∷ JSONMode
+  → DirPath
+  → SQL
+  → Vars
+  → Maybe Pagination
+  → QuasarFE JArray
+readQuery mode path sql vars pagination =
+  ReadQuery mode path sql vars pagination id
 
-writeQuery ∷ DirPath → FilePath → SQL → Vars → QuasarF (Either QError OutputMeta)
-writeQuery path file sql vars = WriteQuery path file sql vars id
+readQueryEJson
+  ∷ DirPath
+  → SQL
+  → Vars
+  → Maybe Pagination
+  → QuasarFE (Array EJson)
+readQueryEJson path sql vars pagination =
+  readQuery Precise path sql vars pagination <#> resultsAsEJson
 
-compileQuery ∷ DirPath → SQL → Vars → QuasarF (Either QError String)
-compileQuery path sql vars = CompileQuery path sql vars id
+writeQuery
+  ∷ DirPath
+  → FilePath
+  → SQL
+  → Vars
+  → QuasarFE OutputMeta
+writeQuery path file sql vars =
+  WriteQuery path file sql vars id
 
-fileMetadata ∷ FilePath → QuasarF (Either QError Unit)
-fileMetadata path = FileMetadata path id
+compileQuery
+  ∷ DirPath
+  → SQL
+  → Vars
+  → QuasarFE String
+compileQuery path sql vars =
+  CompileQuery path sql vars id
 
-dirMetadata ∷ DirPath → QuasarF (Either QError (Array Resource))
-dirMetadata path = DirMetadata path id
+fileMetadata
+  ∷ FilePath
+  → QuasarFE Unit
+fileMetadata path =
+  FileMetadata path id
 
-readFile ∷ JSONMode → FilePath → Maybe Pagination → QuasarF (Either QError JArray)
-readFile mode path pagination = ReadFile mode path pagination id
+dirMetadata
+  ∷ DirPath
+  → QuasarFE (Array Resource)
+dirMetadata path =
+  DirMetadata path id
 
-readFileEJson ∷ FilePath → Maybe Pagination → QuasarF (Either QError (Array EJson))
-readFileEJson path pagination = readFile Precise path pagination <#> resultsAsEJson
+readFile
+  ∷ JSONMode
+  → FilePath
+  → Maybe Pagination
+  → QuasarFE JArray
+readFile mode path pagination =
+  ReadFile mode path pagination id
 
-writeFile ∷ FilePath → QData → QuasarF (Either QError Unit)
-writeFile path content = WriteFile path content id
+readFileEJson
+  ∷ FilePath
+  → Maybe Pagination
+  → QuasarFE (Array EJson)
+readFileEJson path pagination =
+  readFile Precise path pagination <#> resultsAsEJson
 
-appendFile ∷ FilePath → QData → QuasarF (Either QError Unit)
-appendFile path content = AppendFile path content id
+writeFile
+  ∷ FilePath
+  → QData
+  → QuasarFE Unit
+writeFile path content =
+  WriteFile path content id
 
-deleteData ∷ AnyPath → QuasarF (Either QError Unit)
-deleteData path = DeleteData path id
+appendFile
+  ∷ FilePath
+  → QData
+  → QuasarFE Unit
+appendFile path content =
+  AppendFile path content id
 
-moveData ∷ AnyPath → AnyPath → QuasarF (Either QError Unit)
-moveData from to = MoveData from to id
+deleteData
+  ∷ AnyPath
+  → QuasarFE Unit
+deleteData path =
+  DeleteData path id
 
-getMount ∷ AnyPath → QuasarF (Either QError MountConfig)
-getMount path = GetMount path id
+moveData
+  ∷ AnyPath
+  → AnyPath
+  → QuasarFE Unit
+moveData from to =
+  MoveData from to id
 
-createMount ∷ AnyPath → MountConfig → QuasarF (Either QError Unit)
-createMount path config = CreateMount path config id
+getMount
+  ∷ AnyPath
+  → QuasarFE MountConfig
+getMount path =
+  GetMount path id
 
-updateMount ∷ AnyPath → MountConfig → QuasarF (Either QError Unit)
-updateMount path config = UpdateMount path config id
+createMount
+  ∷ AnyPath
+  → MountConfig
+  → QuasarFE Unit
+createMount path config =
+  CreateMount path config id
 
-moveMount ∷ AnyPath → AnyPath → QuasarF (Either QError Unit)
-moveMount from to = MoveMount from to id
+updateMount
+  ∷ AnyPath
+  → MountConfig
+  → QuasarFE Unit
+updateMount path config =
+  UpdateMount path config id
 
-deleteMount ∷ AnyPath → QuasarF (Either QError Unit)
-deleteMount path = DeleteMount path id
+moveMount
+  ∷ AnyPath
+  → AnyPath
+  → QuasarFE Unit
+moveMount from to =
+  MoveMount from to id
+
+deleteMount
+  ∷ AnyPath
+  → QuasarFE Unit
+deleteMount path =
+  DeleteMount path id
