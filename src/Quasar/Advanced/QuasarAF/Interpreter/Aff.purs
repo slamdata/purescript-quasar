@@ -35,8 +35,8 @@ import Network.HTTP.AffjaxF as AXF
 
 import OIDCCryptUtils.Types (IdToken)
 
-import Quasar.Advanced.PermissionToken (PermissionToken)
-import Quasar.Advanced.QuasarAF (QuasarAFP)
+import Quasar.Advanced.Types (TokenHash)
+import Quasar.Advanced.QuasarAF (QuasarAFC)
 import Quasar.Advanced.QuasarAF.Interpreter.Affjax as IAX
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
 import Quasar.ConfigF as CF
@@ -46,12 +46,12 @@ eval
   . ( MonadReader
         { basePath ∷ AX.URL
         , idToken ∷ Maybe IdToken
-        , permissions ∷ Array PermissionToken
+        , permissions ∷ Array TokenHash
         | r
         }
         m
     , MonadAff (ajax ∷ AX.AJAX | eff) m
     , MonadRec m
     )
-  ⇒ Natural QuasarAFP m
+  ⇒ Natural QuasarAFC m
 eval = foldFree (coproduct CF.evalReader (liftAff <<< AXF.eval)) <<< IAX.eval

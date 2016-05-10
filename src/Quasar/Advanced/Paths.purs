@@ -27,5 +27,5 @@ token = dir "security" </> dir "token"
 group ∷ RelDir Sandboxed
 group = dir "security" </> dir "group"
 
-share ∷ RelDir Sandboxed
-share = dir "security" </> dir "share"
+permission ∷ RelDir Sandboxed
+permission = dir "security" </> dir "permission"

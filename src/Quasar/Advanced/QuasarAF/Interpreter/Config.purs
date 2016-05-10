@@ -19,11 +19,11 @@ module Quasar.Advanced.QuasarAF.Interpreter.Config where
 import Data.Maybe (Maybe)
 import Network.HTTP.Affjax (URL)
 import OIDCCryptUtils.Types (IdToken)
-import Quasar.Advanced.PermissionToken (PermissionToken)
+import Quasar.Advanced.Types (TokenHash)
 
 type Config r =
   { basePath ∷ URL
   , idToken ∷ Maybe IdToken
-  , permissions ∷ Array PermissionToken
+  , permissions ∷ Array TokenHash
   | r
   }
