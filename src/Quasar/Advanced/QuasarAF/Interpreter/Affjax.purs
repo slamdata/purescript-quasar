@@ -26,6 +26,7 @@ import Control.Bind ((<=<))
 import Control.Monad.Free (Free, foldFree, liftF)
 import Control.Monad.Eff.Exception (Error, error)
 
+import Data.Argonaut (decodeJson)
 import Data.Bifunctor (lmap)
 import Data.Either (Either)
 import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
@@ -80,7 +81,7 @@ evalQuasarAdvanced (AuthProviders k) = do
           { url = config.basePath <> Str.drop 1 (printPath Paths.oidcProviders) } )
   where
   providerResult ∷ String → Either Error (Array Provider.Provider)
-  providerResult = lmap error <$> traverse Provider.fromJSON <=< jsonResult
+  providerResult = lmap error <$> traverse decodeJson <=< jsonResult
 evalQuasarAdvanced (ListTokens k) = hole
 evalQuasarAdvanced (GetToken pid k) = hole
 evalQuasarAdvanced (NewToken pid k) = hole

@@ -31,8 +31,8 @@ instance decodeJsonGroup ∷ DecodeJson Group where
 newtype GroupResponse =
   GroupResponse
     { members ∷ Array UserId
-    , allUsers ∷ Array UserId
-    , groups ∷ Array Group
+    , allMembers ∷ Array UserId
+    , subGroups ∷ Array Group
     }
 
 instance decodeJsonGroupResponse ∷ DecodeJson GroupResponse where
@@ -40,12 +40,12 @@ instance decodeJsonGroupResponse ∷ DecodeJson GroupResponse where
     obj ← decodeJson js
     r ←
       { members: _
-      , allUsers: _
-      , groups: _
+      , allMembers: _
+      , subGroups: _
       }
       <$> (obj .? "members")
-      <*> (obj .? "allUsers")
-      <*> (obj .? "groups")
+      <*> (obj .? "allMembers")
+      <*> (obj .? "subGroups")
     pure $ GroupResponse r
 
 newtype ModifyGroupRequest =
