@@ -74,7 +74,7 @@ evalQuasarAdvanced ∷ ∀ r. Natural QuasarAF (M r)
 evalQuasarAdvanced (GroupInfo pt k) = do
   config ← ask
   map k
-    $ mkAuthedRequest jsonResult
+    $ mkAuthedRequest (jsonResult >>> map Qa.runGroupInfo)
     $ _{ url =
            config.basePath
              <> Pt.printPath Paths.group
@@ -94,14 +94,14 @@ evalQuasarAdvanced (CreateGroup pt k) = do
 evalQuasarAdvanced (ModifyGroup pt patch k) = do
   config ← ask
   map k
-    -- same as L#92
+    -- same as L#86
     $ mkAuthedRequest unitResult
     $ _{ url =
            config.basePath
              <> Pt.printPath Paths.group
              <> Pt.printPath pt
        , method = Left PATCH
-       , content = Just $ snd $ toRequest $ encodeJson patch
+       , content = Just $ snd $ toRequest $ encodeJson $ Qa.GroupPatch patch
        }
 evalQuasarAdvanced (DeleteGroup pt k) = do
   config ← ask
@@ -116,7 +116,7 @@ evalQuasarAdvanced (DeleteGroup pt k) = do
 evalQuasarAdvanced (PermissionList isTransitive k) = do
   config ← ask
   map k
-    $ mkAuthedRequest jsonResult
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
     $ _{ url =
            config.basePath
              <> Pt.printPath Paths.permission
@@ -125,7 +125,7 @@ evalQuasarAdvanced (PermissionList isTransitive k) = do
 evalQuasarAdvanced (PermissionInfo pid k) = do
   config ← ask
   map k
-    $ mkAuthedRequest jsonResult
+    $ mkAuthedRequest (jsonResult >>> map Qa.runPermission)
     $ _{ url =
            config.basePath
              <> Pt.printPath Paths.permission
@@ -134,7 +134,7 @@ evalQuasarAdvanced (PermissionInfo pid k) = do
 evalQuasarAdvanced (PermissionChildren pid isTransitive k) = do
   config ← ask
   map k
-    $ mkAuthedRequest jsonResult
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
     $ _{ url =
            config.basePath
              <> Pt.printPath Paths.permission
@@ -145,10 +145,10 @@ evalQuasarAdvanced (PermissionChildren pid isTransitive k) = do
 evalQuasarAdvanced (SharePermission req k) = do
   config ← ask
   map k
-    $ mkAuthedRequest jsonResult
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
     $ _{ url = config.basePath <> Pt.printPath Paths.permission
        , method = Left POST
-       , content = Just $ snd $ toRequest $ encodeJson req
+       , content = Just $ snd $ toRequest $ encodeJson $ Qa.ShareRequest req
        }
 evalQuasarAdvanced (DeletePermission pid k) = do
   config ← ask
@@ -163,23 +163,23 @@ evalQuasarAdvanced (DeletePermission pid k) = do
 evalQuasarAdvanced (TokenList k) = do
   config ← ask
   map k
-    $ mkAuthedRequest jsonResult
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runToken))
     $ _{ url = config.basePath <> Pt.printPath Paths.token }
 evalQuasarAdvanced (TokenInfo tid k) = do
   config ← ask
   map k
-    $ mkAuthedRequest jsonResult
+    $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
     $ _{ url = config.basePath <> Pt.printPath Paths.token <> Qa.runTokenId tid }
 evalQuasarAdvanced (CreateToken mbName actions k) = do
   config ← ask
   map k
-    $ mkAuthedRequest jsonResult
+    $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
     $ _{ url = config.basePath <> Pt.printPath Paths.token
        , method = Left POST
        , content =
            Just $ snd $ toRequest
              $ "name" := maybe "" Qa.runTokenName mbName
-             ~> "actions" := actions
+             ~> "actions" := (map Qa.Action actions)
              ~> jsonEmptyObject
        }
 evalQuasarAdvanced (DeleteToken tid k) = do
@@ -192,7 +192,7 @@ evalQuasarAdvanced (DeleteToken tid k) = do
 evalQuasarAdvanced (AuthProviders k) = do
   config ← ask
   map k
-    $ mkAuthedRequest jsonResult
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runProvider))
     $ _{ url = config.basePath <> Str.drop 1 (Pt.printPath Paths.oidcProviders) }
 
 mkAuthedRequest

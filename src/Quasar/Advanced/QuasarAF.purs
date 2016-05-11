@@ -43,20 +43,20 @@ import Quasar.Advanced.Types as Qa
 
 
 data QuasarAF a
-  = GroupInfo (Pt.AbsFile Pt.Sandboxed) (Qa.GroupInfo :~> a)
+  = GroupInfo (Pt.AbsFile Pt.Sandboxed) (Qa.GroupInfoR:~> a)
   | CreateGroup (Pt.AbsFile Pt.Sandboxed) (Unit :~> a)
-  | ModifyGroup (Pt.AbsFile Pt.Sandboxed) Qa.GroupPatch (Unit :~> a)
+  | ModifyGroup (Pt.AbsFile Pt.Sandboxed) Qa.GroupPatchR (Unit :~> a)
   | DeleteGroup (Pt.AbsFile Pt.Sandboxed) (Unit :~> a)
-  | PermissionList Boolean ((Array Qa.Permission) :~> a)
-  | PermissionInfo Qa.PermissionId (Qa.Permission :~> a)
-  | PermissionChildren Qa.PermissionId Boolean ((Array Qa.Permission) :~> a)
-  | SharePermission Qa.ShareRequest ((Array Qa.Permission) :~> a)
+  | PermissionList Boolean ((Array Qa.PermissionR) :~> a)
+  | PermissionInfo Qa.PermissionId (Qa.PermissionR :~> a)
+  | PermissionChildren Qa.PermissionId Boolean ((Array Qa.PermissionR) :~> a)
+  | SharePermission Qa.ShareRequestR ((Array Qa.PermissionR) :~> a)
   | DeletePermission Qa.PermissionId (Unit :~> a)
-  | TokenList ((Array Qa.Token) :~> a)
-  | TokenInfo Qa.TokenId (Qa.Token :~> a)
-  | CreateToken (Maybe Qa.TokenName) (Array Qa.Action) (Qa.Token :~> a)
+  | TokenList ((Array Qa.TokenR) :~> a)
+  | TokenInfo Qa.TokenId (Qa.TokenR :~> a)
+  | CreateToken (Maybe Qa.TokenName) (Array Qa.ActionR) (Qa.TokenR :~> a)
   | DeleteToken Qa.TokenId (Unit :~> a)
-  | AuthProviders ((Array Qa.Provider) :~> a)
+  | AuthProviders ((Array Qa.ProviderR) :~> a)
 
 -- | `C` for coproduct
 type QuasarAFC = Coproduct QuasarF QuasarAF
@@ -210,7 +210,7 @@ deleteMount path =
 
 groupInfo
   ∷ Pt.AbsFile Pt.Sandboxed
-  → QuasarAFCE Qa.GroupInfo
+  → QuasarAFCE Qa.GroupInfoR
 groupInfo pt =
   right $ GroupInfo pt id
 
@@ -222,7 +222,7 @@ createGroup pt =
 
 modifyGroup
   ∷ Pt.AbsFile Pt.Sandboxed
-  → Qa.GroupPatch
+  → Qa.GroupPatchR
   → QuasarAFCE Unit
 modifyGroup pt ptch =
   right $ ModifyGroup pt ptch id
@@ -234,7 +234,7 @@ addUsersToGroup
   → f Qa.UserId
   → QuasarAFCE Unit
 addUsersToGroup pt us =
-  modifyGroup pt $ Qa.GroupPatch { addUsers: foldMap pure us, removeUsers: [] }
+  modifyGroup pt { addUsers: foldMap pure us, removeUsers: [] }
 
 removeUsersFromGroup
   ∷ ∀ f
@@ -243,7 +243,7 @@ removeUsersFromGroup
   → f Qa.UserId
   → QuasarAFCE Unit
 removeUsersFromGroup pt us =
-  modifyGroup pt $ Qa.GroupPatch { addUsers: [], removeUsers: foldMap pure us }
+  modifyGroup pt { addUsers: [], removeUsers: foldMap pure us }
 
 
 deleteGroup
@@ -254,26 +254,26 @@ deleteGroup pt =
 
 permissionsList
   ∷ Boolean
-  → QuasarAFCE (Array Qa.Permission)
+  → QuasarAFCE (Array Qa.PermissionR)
 permissionsList isTransitive =
   right $ PermissionList isTransitive id
 
 permissionInfo
   ∷ Qa.PermissionId
-  → QuasarAFCE Qa.Permission
+  → QuasarAFCE Qa.PermissionR
 permissionInfo pid =
   right $ PermissionInfo pid id
 
 permissionChildren
   ∷ Qa.PermissionId
   → Boolean
-  → QuasarAFCE (Array Qa.Permission)
+  → QuasarAFCE (Array Qa.PermissionR)
 permissionChildren pid isTransitive =
   right $ PermissionChildren pid isTransitive id
 
 sharePermission
-  ∷ Qa.ShareRequest
-  → QuasarAFCE (Array Qa.Permission)
+  ∷ Qa.ShareRequestR
+  → QuasarAFCE (Array Qa.PermissionR)
 sharePermission req =
   right $ SharePermission req id
 
@@ -284,20 +284,20 @@ deletePermission pid =
   right $ DeletePermission pid id
 
 tokenList
-  ∷ QuasarAFCE (Array Qa.Token)
+  ∷ QuasarAFCE (Array Qa.TokenR)
 tokenList =
   right $ TokenList id
 
 tokenInfo
   ∷ Qa.TokenId
-  → QuasarAFCE Qa.Token
+  → QuasarAFCE Qa.TokenR
 tokenInfo tid =
   right $ TokenInfo tid id
 
 createToken
   ∷ Maybe Qa.TokenName
-  → Array Qa.Action
-  → QuasarAFCE Qa.Token
+  → Array Qa.ActionR
+  → QuasarAFCE Qa.TokenR
 createToken mbName actions =
   right $ CreateToken mbName actions id
 
@@ -308,6 +308,6 @@ deleteToken tid =
   right $ DeleteToken tid id
 
 authProviders
-  ∷ QuasarAFCE (Array Qa.Provider)
+  ∷ QuasarAFCE (Array Qa.ProviderR)
 authProviders =
   right $ AuthProviders id

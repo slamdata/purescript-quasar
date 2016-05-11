@@ -5,7 +5,7 @@ import Prelude
 import Control.Alt ((<|>))
 import Control.Bind ((>=>))
 
-import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, (.?), (:=), (~>), jsonEmptyObject, Json)
+import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe, isJust)
@@ -94,12 +94,15 @@ parseDir pt =
   <#> (Pt.rootDir </> _)
   # maybe (Left "Incorrect resource") pure
 
-newtype Action =
-  Action
-    { operation ∷ Operation
-    , resource ∷ Resource
-    , resourceType ∷ ResourceType
-    }
+type ActionR =
+  { operation ∷ Operation
+  , resource ∷ Resource
+  , resourceType ∷ ResourceType
+  }
+
+newtype Action = Action ActionR
+runAction ∷ Action → ActionR
+runAction (Action r) = r
 
 instance encodeJsonAction ∷ EncodeJson Action where
   encodeJson (Action obj) =
@@ -172,17 +175,22 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
     where
     checkUserId ∷ String → Either String String
     checkUserId str =
-      -- ¯\_(ツ)_/¯
+      -- Right now we don't know what's exact format of TokenId
+      -- I suggest not having `@` should be enough to say that
+      -- string isn't email.
       if isJust (Str.indexOf "@" str)
         then pure str
         else Left "Incorrect email"
 
-newtype GrantedBy =
-  GrantedBy
-    { tokens ∷ Array TokenId
-    , users ∷ Array UserId
-    , groups ∷ Array (Pt.AbsFile Pt.Sandboxed)
-    }
+type GrantedByR =
+  { tokens ∷ Array TokenId
+  , users ∷ Array UserId
+  , groups ∷ Array (Pt.AbsFile Pt.Sandboxed)
+  }
+
+newtype GrantedBy = GrantedBy GrantedByR
+runGrantedBy ∷ GrantedBy → GrantedByR
+runGrantedBy (GrantedBy r) = r
 
 instance encodeJsonGrantedBy ∷ EncodeJson GrantedBy where
   encodeJson (GrantedBy obj) =
@@ -209,22 +217,16 @@ instance decodeJsonGrantedBy ∷ DecodeJson GrantedBy where
       for woSchema parseFile
 
 
-newtype Permission =
-  Permission
-    { id ∷ PermissionId
-    , action ∷ Action
-    , grantedTo ∷ GrantedTo
-    , grantedBy ∷ GrantedBy
-    }
+type PermissionR =
+  { id ∷ PermissionId
+  , action ∷ Action
+  , grantedTo ∷ GrantedTo
+  , grantedBy ∷ GrantedByR
+  }
 
--- Probably useless
-instance encodeJsonPermission ∷ EncodeJson Permission where
-  encodeJson (Permission obj) =
-    "id" := obj.id
-    ~> "action" := obj.action
-    ~> "grantedTo" := obj.grantedTo
-    ~> "grantedBy" := obj.grantedBy
-    ~> jsonEmptyObject
+newtype Permission = Permission PermissionR
+runPermission ∷ Permission → PermissionR
+runPermission (Permission r) = r
 
 instance decodeJsonPermission ∷ DecodeJson Permission where
   decodeJson = decodeJson >=> \obj →
@@ -236,17 +238,19 @@ instance decodeJsonPermission ∷ DecodeJson Permission where
     <$> (obj .? "id")
     <*> (obj .? "action")
     <*> (obj .? "grantedTo")
-    <*> (obj .? "grantedBy")
+    <*> ((obj .? "grantedBy") <#> runGrantedBy)
     <#> Permission
 
 
-newtype GroupInfo =
-  GroupInfo
-    { members ∷ Array UserId
-    , allMembers ∷ Array UserId
-    , subGroups ∷ Array (Pt.RelFile Pt.Sandboxed)
-    }
+type GroupInfoR =
+  { members ∷ Array UserId
+  , allMembers ∷ Array UserId
+  , subGroups ∷ Array (Pt.RelFile Pt.Sandboxed)
+  }
 
+newtype GroupInfo = GroupInfo GroupInfoR
+runGroupInfo ∷ GroupInfo → GroupInfoR
+runGroupInfo (GroupInfo r) = r
 
 instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
   decodeJson = decodeJson >=> \obj →
@@ -266,11 +270,14 @@ instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
                      >>= Pt.sandbox Pt.currentDir)
 
 
-newtype GroupPatch =
-  GroupPatch
-    { addUsers ∷ Array UserId
-    , removeUsers ∷ Array UserId
-    }
+type GroupPatchR =
+  { addUsers ∷ Array UserId
+  , removeUsers ∷ Array UserId
+  }
+
+newtype GroupPatch = GroupPatch GroupPatchR
+runGroupPatch ∷ GroupPatch → GroupPatchR
+runGroupPatch (GroupPatch r) = r
 
 instance encodeJsonGroupPatch ∷ EncodeJson GroupPatch where
   encodeJson (GroupPatch obj) =
@@ -279,18 +286,21 @@ instance encodeJsonGroupPatch ∷ EncodeJson GroupPatch where
     ~> jsonEmptyObject
 
 
-newtype ShareRequest =
-  ShareRequest
-    { users ∷ Array UserId
-    , groups ∷ Array (Pt.AbsFile Pt.Sandboxed)
-    , actions ∷ Array Action
-    }
+type ShareRequestR =
+  { users ∷ Array UserId
+  , groups ∷ Array (Pt.AbsFile Pt.Sandboxed)
+  , actions ∷ Array ActionR
+  }
+
+newtype ShareRequest = ShareRequest ShareRequestR
+runShareRequest ∷ ShareRequest → ShareRequestR
+runShareRequest (ShareRequest r) = r
 
 instance encodeJsonShareRequest ∷ EncodeJson ShareRequest where
   encodeJson (ShareRequest obj) =
     "users" := obj.users
     ~> "groups" := map (append "group://" <<< Pt.printPath) obj.groups
-    ~> "actions" := obj.actions
+    ~> "actions" := (map Action $ obj.actions)
     ~> jsonEmptyObject
 
 
@@ -316,31 +326,17 @@ instance decodeJsonTokenName ∷ DecodeJson TokenName where
   decodeJson = map TokenName <<< decodeJson
 
 
-newtype Token =
-  Token
-    { id ∷ TokenId
-    , secret ∷ Maybe TokenHash
-    , name ∷ Maybe TokenName
-    , grantedBy ∷ GrantedBy
-    , actions ∷ Array Action
-    }
+type TokenR =
+  { id ∷ TokenId
+  , secret ∷ Maybe TokenHash
+  , name ∷ Maybe TokenName
+  , grantedBy ∷ GrantedByR
+  , actions ∷ Array ActionR
+  }
 
-instance encodeJsonToken ∷ EncodeJson Token where
-  encodeJson (Token obj) =
-    "id" := obj.id
-    ~> "grantedBy" := obj.grantedBy
-    ~> "actions" := obj.actions
-    ~> (mbName $ mbSecret jsonEmptyObject)
-    where
-    mbName ∷ Json → Json
-    mbName js = case obj.name of
-      Just o → "name" := obj.name ~> js
-      _ → js
-
-    mbSecret ∷ Json → Json
-    mbSecret js = case obj.secret of
-      Just o → "secret" := obj.secret ~> js
-      _ → js
+newtype Token = Token TokenR
+runToken ∷ Token → TokenR
+runToken (Token r) = r
 
 instance decodeJsonToken ∷ DecodeJson Token where
   decodeJson = decodeJson >=> \obj →
@@ -353,19 +349,22 @@ instance decodeJsonToken ∷ DecodeJson Token where
     <$> (obj .? "id")
     <*> ((obj .? "secret") <|> pure Nothing)
     <*> ((obj .? "name") <|> pure Nothing)
-    <*> (obj .? "grantedBy")
-    <*> (obj .? "actions")
+    <*> (obj .? "grantedBy" <#> runGrantedBy)
+    <*> (obj .? "actions" <#> (map runAction))
     <#> Token
 
 
-newtype OpenIDConfiguration =
-  OpenIDConfiguration
-    { issuer ∷ Issuer
-    , authorizationEndpoint ∷ String
-    , tokenEndpoint ∷ String
-    , userinfoEndpoint ∷ String
-    , jwks ∷ Array JSONWebKey
-    }
+type OpenIDConfigurationR =
+  { issuer ∷ Issuer
+  , authorizationEndpoint ∷ String
+  , tokenEndpoint ∷ String
+  , userinfoEndpoint ∷ String
+  , jwks ∷ Array JSONWebKey
+  }
+
+newtype OpenIDConfiguration = OpenIDConfiguration OpenIDConfigurationR
+runOpenIDConfiguration ∷ OpenIDConfiguration → OpenIDConfigurationR
+runOpenIDConfiguration (OpenIDConfiguration r) = r
 
 instance decodeJSONOIDC ∷ DecodeJson OpenIDConfiguration where
   decodeJson = decodeJson >=> \obj → do
@@ -378,16 +377,19 @@ instance decodeJSONOIDC ∷ DecodeJson OpenIDConfiguration where
       $ OpenIDConfiguration
           { issuer, authorizationEndpoint, tokenEndpoint, userinfoEndpoint, jwks }
 
-newtype Provider =
-  Provider
-    { displayName ∷ String
-    , clientID ∷ ClientID
-    , openIDConfiguration ∷ OpenIDConfiguration
-    }
+type ProviderR =
+  { displayName ∷ String
+  , clientID ∷ ClientID
+  , openIDConfiguration ∷ OpenIDConfigurationR
+  }
+
+newtype Provider = Provider ProviderR
+runProvider ∷ Provider → ProviderR
+runProvider (Provider r) = r
 
 instance decodeJsonProvider ∷ DecodeJson Provider where
   decodeJson = decodeJson >=> \obj → do
     displayName ← obj .? "display_name"
     clientID ← ClientID <$> obj .? "client_id"
-    openIDConfiguration ← obj .? "openid_configuration"
+    openIDConfiguration ← obj .? "openid_configuration" <#> runOpenIDConfiguration
     pure $ Provider { displayName, clientID, openIDConfiguration }
