@@ -17,6 +17,8 @@ limitations under the License.
 module Quasar.Advanced.QuasarAF.Interpreter.Affjax
   ( M
   , eval
+  , authHeader
+  , permissionsHeader
   , module Quasar.Advanced.QuasarAF.Interpreter.Config
   ) where
 
