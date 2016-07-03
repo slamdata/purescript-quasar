@@ -32,7 +32,7 @@ import Data.Path.Pathy as Pt
 
 import Quasar.Data (QData, JSONMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
-import Quasar.Error (type (:~>), QError, QResponse, lowerQError, printQError)
+import Quasar.Error (type (:~>), QError(..), QResponse, lowerQError, printQError)
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
 import Quasar.QuasarF (QuasarF(..))

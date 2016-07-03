@@ -41,18 +41,21 @@ instance decodeJsonOperation ∷ DecodeJson Operation where
       _ → Left "Incorrect permission"
 
 
-data ResourceType
+data AccessType
   = Structural
   | Content
+  | Mount
 
-instance encodeJsonResourceType ∷ EncodeJson ResourceType where
+instance encodeJsonAccessType ∷ EncodeJson AccessType where
   encodeJson Structural = encodeJson "Structural"
   encodeJson Content = encodeJson "Content"
+  encodeJson Mount = encodeJson "Mount"
 
-instance decodeJsonResourceType ∷ DecodeJson ResourceType where
+instance decodeJsonAccessType ∷ DecodeJson AccessType where
   decodeJson = decodeJson >=> case _ of
     "Structural" → pure Structural
     "Content" → pure Content
+    "Mount" → pure Mount
     _ → Left "Incorrect resource type"
 
 data Resource
@@ -61,17 +64,17 @@ data Resource
   | Group (Pt.AbsFile Pt.Sandboxed)
 
 instance encodeJsonResource ∷ EncodeJson Resource where
-  encodeJson (File pt) = encodeJson $ "file://" <> Pt.printPath pt
-  encodeJson (Dir pt) = encodeJson $ "file://" <> Pt.printPath pt
-  encodeJson (Group pt) = encodeJson $ "group://" <> Pt.printPath pt
+  encodeJson (File pt) = encodeJson $ "data:" <> Pt.printPath pt
+  encodeJson (Dir pt) = encodeJson $ "data:" <> Pt.printPath pt
+  encodeJson (Group pt) = encodeJson $ "group:" <> Pt.printPath pt
 
 
 instance decodeJsonResource ∷ DecodeJson Resource where
   decodeJson js = do
     str ← decodeJson js
     let
-      groupPath = Str.stripPrefix "group://" str
-      filePath = Str.stripPrefix "file://" str
+      groupPath = Str.stripPrefix "group:" str
+      filePath = Str.stripPrefix "data:" str
     case groupPath, filePath of
       Nothing, Nothing → Left "Incorrect resource"
       Just pt, _ →
@@ -97,7 +100,7 @@ parseDir pt =
 type ActionR =
   { operation ∷ Operation
   , resource ∷ Resource
-  , resourceType ∷ ResourceType
+  , accessType ∷ AccessType
   }
 
 newtype Action = Action ActionR
@@ -108,18 +111,18 @@ instance encodeJsonAction ∷ EncodeJson Action where
   encodeJson (Action obj) =
     "operation" := obj.operation
     ~> "resource" := obj.resource
-    ~> "resourceType" := obj.resourceType
+    ~> "accessType" := obj.accessType
     ~> jsonEmptyObject
 
 instance decodeJsonAction ∷ DecodeJson Action where
   decodeJson = decodeJson >=> \obj →
     { operation: _
     , resource: _
-    , resourceType: _
+    , accessType: _
     }
     <$> (obj .? "operation")
     <*> (obj .? "resource")
-    <*> (obj .? "resourceType")
+    <*> (obj .? "accessType")
     <#> Action
 
 
@@ -142,7 +145,12 @@ instance encodeJsonTokenId ∷ EncodeJson TokenId where
   encodeJson = runTokenId >>> encodeJson
 
 instance decodeJsonTokenId ∷ DecodeJson TokenId where
-  decodeJson = map TokenId <<< decodeJson
+  decodeJson j =
+    (map TokenId $ decodeJson j)
+    <|>
+    (map (TokenId
+          <<< Str.takeWhile (\c → [c] /= Str.toCharArray ".")
+          <<< show) $ decodeJson j ∷ Either String Number)
 
 newtype PermissionId = PermissionId String
 runPermissionId ∷ PermissionId → String
@@ -152,7 +160,12 @@ instance encodeJsonPermissionId ∷ EncodeJson PermissionId where
   encodeJson = runPermissionId >>> encodeJson
 
 instance decodeJsonPermissionId ∷ DecodeJson PermissionId where
-  decodeJson = map PermissionId <<< decodeJson
+  decodeJson j =
+    (map PermissionId $ decodeJson j)
+    <|>
+    (map (PermissionId
+          <<< Str.takeWhile (\c → [c] /= Str.toCharArray ".")
+          <<< show) $ decodeJson j ∷ Either String Number)
 
 
 data GrantedTo
@@ -196,7 +209,7 @@ instance encodeJsonGrantedBy ∷ EncodeJson GrantedBy where
   encodeJson (GrantedBy obj) =
     "tokens" := obj.tokens
     ~> "users" := obj.users
-    ~> "groups" := map (append "group://" <<< Pt.printPath) obj.groups
+    ~> "groups" := map (append "group:" <<< Pt.printPath) obj.groups
     ~> jsonEmptyObject
 
 instance decodeJsonGrantedBy ∷ DecodeJson GrantedBy where
@@ -205,6 +218,7 @@ instance decodeJsonGrantedBy ∷ DecodeJson GrantedBy where
     , users: _
     , groups: _
     }
+
     <$> (obj .? "tokens")
     <*> (obj .? "users")
     <*> ((obj .? "groups") >>= extractGroups)
@@ -213,15 +227,16 @@ instance decodeJsonGrantedBy ∷ DecodeJson GrantedBy where
     extractGroups ∷ Array String → Either String (Array (Pt.AbsFile Pt.Sandboxed))
     extractGroups as = do
       woSchema ←
-        for as $ (Str.stripPrefix "group://" >>> maybe (Left "Incorrect group") pure)
+        for as $ (Str.stripPrefix "" >>> maybe (Left "Incorrect group") pure)
+--        for as $ (Str.stripPrefix "group:" >>> maybe (Left "Incorrect group") pure)
       for woSchema parseFile
 
 
 type PermissionR =
   { id ∷ PermissionId
-  , action ∷ Action
-  , grantedTo ∷ GrantedTo
-  , grantedBy ∷ GrantedByR
+--  , action ∷ ActionR
+--  , grantedTo ∷ GrantedTo
+--  , grantedBy ∷ GrantedByR
   }
 
 newtype Permission = Permission PermissionR
@@ -229,23 +244,23 @@ runPermission ∷ Permission → PermissionR
 runPermission (Permission r) = r
 
 instance decodeJsonPermission ∷ DecodeJson Permission where
-  decodeJson = decodeJson >=> \obj →
+  decodeJson =  decodeJson >=> \obj →
     { id: _
-    , action: _
-    , grantedTo: _
-    , grantedBy: _
+--    , action: _
+--    , grantedTo: _
+--    , grantedBy: _
     }
     <$> (obj .? "id")
-    <*> (obj .? "action")
-    <*> (obj .? "grantedTo")
-    <*> ((obj .? "grantedBy") <#> runGrantedBy)
+--    <*> ((obj .? "action") <#> runAction)
+--    <*> (obj .? "grantedTo")
+--    <*> ((obj .? "grantedBy") <#> runGrantedBy)
     <#> Permission
 
 
 type GroupInfoR =
   { members ∷ Array UserId
   , allMembers ∷ Array UserId
-  , subGroups ∷ Array (Pt.RelFile Pt.Sandboxed)
+  , subGroups ∷ Array (Pt.AbsFile Pt.Sandboxed)
   }
 
 newtype GroupInfo = GroupInfo GroupInfoR
@@ -263,11 +278,13 @@ instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
     <*> ((obj .? "subGroups") >>= extractGroups)
     <#> GroupInfo
     where
-    extractGroups ∷ Array String → Either String (Array (Pt.RelFile Pt.Sandboxed))
+    extractGroups ∷ Array String → Either String (Array (Pt.AbsFile Pt.Sandboxed))
     extractGroups =
       traverse (\x → maybe (Left "Incorrect subgroup") pure
-                     $ Pt.parseRelFile x
-                     >>= Pt.sandbox Pt.currentDir)
+                     $ Pt.parseAbsFile x
+                     >>= Pt.sandbox Pt.rootDir
+                     <#> (\x → Pt.rootDir </> x)
+               )
 
 
 type GroupPatchR =
@@ -285,12 +302,24 @@ instance encodeJsonGroupPatch ∷ EncodeJson GroupPatch where
     ~> "removeUsers" := obj.removeUsers
     ~> jsonEmptyObject
 
+data ShareableSubject
+  = UserSubject UserId
+  | GroupSubject (Pt.AbsFile Pt.Sandboxed)
+
+instance encodJsonShareableSubject ∷ EncodeJson ShareableSubject where
+  encodeJson (UserSubject (UserId uid)) =
+    encodeJson $ "user:" <> uid
+  encodeJson (GroupSubject fp) =
+    encodeJson $ "group:" <> Pt.printPath fp
+
 
 type ShareRequestR =
-  { users ∷ Array UserId
+  { --subjects ∷ Array ShareableSubject
+    users ∷ Array UserId
   , groups ∷ Array (Pt.AbsFile Pt.Sandboxed)
   , actions ∷ Array ActionR
   }
+
 
 newtype ShareRequest = ShareRequest ShareRequestR
 runShareRequest ∷ ShareRequest → ShareRequestR
@@ -299,7 +328,7 @@ runShareRequest (ShareRequest r) = r
 instance encodeJsonShareRequest ∷ EncodeJson ShareRequest where
   encodeJson (ShareRequest obj) =
     "users" := obj.users
-    ~> "groups" := map (append "group://" <<< Pt.printPath) obj.groups
+    ~> "groups" := map (append "group:" <<< Pt.printPath) obj.groups
     ~> "actions" := (map Action $ obj.actions)
     ~> jsonEmptyObject
 
@@ -325,6 +354,9 @@ instance encodeJsonTokenName ∷ EncodeJson TokenName where
 instance decodeJsonTokenName ∷ DecodeJson TokenName where
   decodeJson = map TokenName <<< decodeJson
 
+instance eqTokenName ∷ Eq TokenName where
+  eq (TokenName a) (TokenName b) = a == b
+
 
 type TokenR =
   { id ∷ TokenId
@@ -348,7 +380,11 @@ instance decodeJsonToken ∷ DecodeJson Token where
     }
     <$> (obj .? "id")
     <*> ((obj .? "secret") <|> pure Nothing)
-    <*> ((obj .? "name") <|> pure Nothing)
+    <*> (((obj .? "name")
+            >>= \x → if runTokenName x == ""
+                     then pure Nothing
+                     else pure $ Just x)
+         <|> pure Nothing)
     <*> (obj .? "grantedBy" <#> runGrantedBy)
     <*> (obj .? "actions" <#> (map runAction))
     <#> Token

@@ -17,6 +17,8 @@ limitations under the License.
 module Quasar.Advanced.QuasarAF.Interpreter.Affjax
   ( M
   , eval
+  , authHeader
+  , permissionsHeader
   , module Quasar.Advanced.QuasarAF.Interpreter.Config
   ) where
 
@@ -76,8 +78,8 @@ evalQuasarAdvanced (GroupInfo pt k) = do
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runGroupInfo)
     $ _{ url =
-           config.basePath
-             <> Pt.printPath Paths.group
+            config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.group)
              <> Pt.printPath pt
        }
 evalQuasarAdvanced (CreateGroup pt k) = do
@@ -87,7 +89,7 @@ evalQuasarAdvanced (CreateGroup pt k) = do
     $ mkAuthedRequest unitResult
     $ _{ url =
            config.basePath
-             <> Pt.printPath Paths.group
+             <> (Str.drop 1 $ Pt.printPath Paths.group)
              <> Pt.printPath pt
        , method = Left POST
        }
@@ -98,7 +100,7 @@ evalQuasarAdvanced (ModifyGroup pt patch k) = do
     $ mkAuthedRequest unitResult
     $ _{ url =
            config.basePath
-             <> Pt.printPath Paths.group
+             <> (Str.drop 1 $ Pt.printPath Paths.group)
              <> Pt.printPath pt
        , method = Left PATCH
        , content = Just $ snd $ toRequest $ encodeJson $ Qa.GroupPatch patch
@@ -109,7 +111,7 @@ evalQuasarAdvanced (DeleteGroup pt k) = do
     $ mkAuthedRequest unitResult
     $ _{ url =
            config.basePath
-             <> Pt.printPath Paths.group
+             <> (Str.drop 1 $ Pt.printPath Paths.group)
              <> Pt.printPath pt
        , method = Left DELETE
        }
@@ -119,7 +121,7 @@ evalQuasarAdvanced (PermissionList isTransitive k) = do
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
     $ _{ url =
            config.basePath
-             <> Pt.printPath Paths.permission
+             <> (Str.drop 1 $ Pt.printPath Paths.permission)
              <> (if isTransitive then "?transitive" else "")
        }
 evalQuasarAdvanced (PermissionInfo pid k) = do
@@ -128,7 +130,7 @@ evalQuasarAdvanced (PermissionInfo pid k) = do
     $ mkAuthedRequest (jsonResult >>> map Qa.runPermission)
     $ _{ url =
            config.basePath
-             <> Pt.printPath Paths.permission
+             <> (Str.drop 1 $ Pt.printPath Paths.permission)
              <> Qa.runPermissionId pid
        }
 evalQuasarAdvanced (PermissionChildren pid isTransitive k) = do
@@ -137,7 +139,7 @@ evalQuasarAdvanced (PermissionChildren pid isTransitive k) = do
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
     $ _{ url =
            config.basePath
-             <> Pt.printPath Paths.permission
+             <> (Str.drop 1 $ Pt.printPath Paths.permission)
              <> Qa.runPermissionId pid
              <> "/children"
              <> (if isTransitive then "?transitive" else "")
@@ -146,7 +148,7 @@ evalQuasarAdvanced (SharePermission req k) = do
   config ← ask
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
-    $ _{ url = config.basePath <> Pt.printPath Paths.permission
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.permission)
        , method = Left POST
        , content = Just $ snd $ toRequest $ encodeJson $ Qa.ShareRequest req
        }
@@ -156,7 +158,7 @@ evalQuasarAdvanced (DeletePermission pid k) = do
     $ mkAuthedRequest unitResult
     $ _{ url =
            config.basePath
-             <> Pt.printPath Paths.permission
+             <> (Str.drop 1 $ Pt.printPath Paths.permission)
              <> Qa.runPermissionId pid
        , method = Left DELETE
        }
@@ -164,17 +166,17 @@ evalQuasarAdvanced (TokenList k) = do
   config ← ask
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runToken))
-    $ _{ url = config.basePath <> Pt.printPath Paths.token }
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token) }
 evalQuasarAdvanced (TokenInfo tid k) = do
   config ← ask
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
-    $ _{ url = config.basePath <> Pt.printPath Paths.token <> Qa.runTokenId tid }
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token) <> Qa.runTokenId tid }
 evalQuasarAdvanced (CreateToken mbName actions k) = do
   config ← ask
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
-    $ _{ url = config.basePath <> Pt.printPath Paths.token
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token)
        , method = Left POST
        , content =
            Just $ snd $ toRequest
@@ -186,7 +188,7 @@ evalQuasarAdvanced (DeleteToken tid k) = do
   config ← ask
   map k
     $ mkAuthedRequest unitResult
-    $ _{ url = config.basePath <> Pt.printPath Paths.token <> Qa.runTokenId tid
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token) <> Qa.runTokenId tid
        , method = Left DELETE
        }
 evalQuasarAdvanced (AuthProviders k) = do
