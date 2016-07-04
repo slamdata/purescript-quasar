@@ -252,10 +252,10 @@ deleteGroup
 deleteGroup pt =
   right $ DeleteGroup pt id
 
-permissionsList
+permissionList
   ∷ Boolean
   → QuasarAFCE (Array Qa.PermissionR)
-permissionsList isTransitive =
+permissionList isTransitive =
   right $ PermissionList isTransitive id
 
 permissionInfo

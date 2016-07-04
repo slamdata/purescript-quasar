@@ -24,6 +24,27 @@ data Operation
   | Delete
 
 
+instance eqOperation ∷ Eq Operation where
+  eq Add Add = true
+  eq Read Read = true
+  eq Modify Modify = true
+  eq Delete Delete = true
+  eq _ _ = false
+
+instance ordOperation ∷ Ord Operation where
+  compare Add Add = EQ
+  compare Modify Modify = EQ
+  compare Read Read = EQ
+  compare Delete Delete = EQ
+  compare Add _ = LT
+  compare _ Add = GT
+  compare Read _ = LT
+  compare _ Read = GT
+  compare Modify _ = LT
+  compare _ Modify = GT
+  compare Delete _ = LT
+  compare _ Delete = GT
+
 instance encodeJsonOperation ∷ EncodeJson Operation where
   encodeJson Add = encodeJson "Add"
   encodeJson Read = encodeJson "Read"
@@ -46,6 +67,22 @@ data AccessType
   | Content
   | Mount
 
+instance eqAccessType ∷ Eq AccessType where
+  eq Structural Structural = true
+  eq Content Content = true
+  eq Mount Mount = true
+
+instance ordAccessType ∷ Ord AccessType where
+  compare Structural Structural = EQ
+  compare Content Content = EQ
+  compare Mount Mount = EQ
+  compare Structural _ = LT
+  compare _ Structural = GT
+  compare Content _ = LT
+  compare _ Content = GT
+  compare Mount _ = LT
+  compare _ Mount = GT
+
 instance encodeJsonAccessType ∷ EncodeJson AccessType where
   encodeJson Structural = encodeJson "Structural"
   encodeJson Content = encodeJson "Content"
@@ -62,6 +99,23 @@ data Resource
   = File (Pt.AbsFile Pt.Sandboxed)
   | Dir (Pt.AbsDir Pt.Sandboxed)
   | Group (Pt.AbsFile Pt.Sandboxed)
+
+instance eqResource ∷ Eq Resource where
+  eq (File a) (File b) = Pt.printPath a == Pt.printPath b
+  eq (Dir a) (Dir b) = Pt.printPath a == Pt.printPath b
+  eq (Group a) (Group b) = Pt.printPath a == Pt.printPath b
+  eq _ _ = false
+
+instance ordResource ∷ Ord Resource where
+  compare (File a) (File b) = compare (Pt.printPath a) (Pt.printPath b)
+  compare (Dir a) (Dir b) = compare (Pt.printPath a) (Pt.printPath b)
+  compare (Group a) (Group b) = compare (Pt.printPath a) (Pt.printPath b)
+  compare (File _) _ = LT
+  compare _ (File _) = GT
+  compare (Dir _) _ = LT
+  compare _ (Dir _) = GT
+  compare (Group _) _ = LT
+  compare _ (Group _) = GT
 
 instance encodeJsonResource ∷ EncodeJson Resource where
   encodeJson (File pt) = encodeJson $ "data:" <> Pt.printPath pt
@@ -107,6 +161,18 @@ newtype Action = Action ActionR
 runAction ∷ Action → ActionR
 runAction (Action r) = r
 
+instance eqAction ∷ Eq Action where
+  eq (Action a) (Action b) =
+    a.operation == b.operation
+    && a.resource == b.resource
+    && a.accessType == b.accessType
+
+instance ordAction ∷ Ord Action where
+  compare (Action a) (Action b) =
+    compare a.operation b.operation
+    <> compare a.resource b.resource
+    <> compare a.accessType b.accessType
+
 instance encodeJsonAction ∷ EncodeJson Action where
   encodeJson (Action obj) =
     "operation" := obj.operation
@@ -130,6 +196,12 @@ newtype UserId = UserId String
 runUserId ∷ UserId → String
 runUserId (UserId s) = s
 
+instance eqUserId ∷ Eq UserId where
+  eq (UserId a) (UserId b) = a == b
+
+instance ordUserId ∷ Ord UserId where
+  compare (UserId a) (UserId b) = compare a b
+
 instance encodeJsonUserId ∷ EncodeJson UserId where
   encodeJson = runUserId >>> encodeJson
 
@@ -140,6 +212,12 @@ instance decodeJsonUserId ∷ DecodeJson UserId where
 newtype TokenId = TokenId String
 runTokenId ∷ TokenId → String
 runTokenId (TokenId s) = s
+
+instance eqTokenId ∷ Eq TokenId where
+  eq (TokenId a) (TokenId b) = eq a b
+
+instance ordTokenId ∷ Ord TokenId where
+  compare (TokenId a) (TokenId b) = compare a b
 
 instance encodeJsonTokenId ∷ EncodeJson TokenId where
   encodeJson = runTokenId >>> encodeJson
@@ -156,6 +234,12 @@ newtype PermissionId = PermissionId String
 runPermissionId ∷ PermissionId → String
 runPermissionId (PermissionId s) = s
 
+instance eqPermissionId ∷ Eq PermissionId where
+  eq (PermissionId a) (PermissionId b) = a == b
+
+instance ordPermissionId ∷ Ord PermissionId where
+  compare (PermissionId a) (PermissionId b) = compare a b
+
 instance encodeJsonPermissionId ∷ EncodeJson PermissionId where
   encodeJson = runPermissionId >>> encodeJson
 
@@ -167,11 +251,26 @@ instance decodeJsonPermissionId ∷ DecodeJson PermissionId where
           <<< Str.takeWhile (\c → [c] /= Str.toCharArray ".")
           <<< show) $ decodeJson j ∷ Either String Number)
 
-
 data GrantedTo
   = UserGranted UserId
   | GroupGranted (Pt.AbsFile Pt.Sandboxed)
   | TokenGranted TokenId
+
+instance eqGrangedTo ∷ Eq GrantedTo where
+  eq (UserGranted a) (UserGranted b) = a == b
+  eq (GroupGranted a) (GroupGranted b) = Pt.printPath a == Pt.printPath b
+  eq (TokenGranted a) (TokenGranted b) = a == b
+
+instance ordGrantedTo ∷ Ord GrantedTo where
+  compare (UserGranted a) (UserGranted b) = compare a b
+  compare (GroupGranted a) (GroupGranted b) = compare (Pt.printPath a) (Pt.printPath b)
+  compare (TokenGranted a) (TokenGranted b) = compare a b
+  compare (UserGranted _) _ = LT
+  compare _ (UserGranted _) = GT
+  compare (GroupGranted _) _ = LT
+  compare _ (GroupGranted _) = GT
+  compare (TokenGranted _) _ = LT
+  compare _ (TokenGranted _) = GT
 
 instance encodeJsonGrantedTo ∷ EncodeJson GrantedTo where
   encodeJson (UserGranted uid) = encodeJson uid
@@ -179,12 +278,12 @@ instance encodeJsonGrantedTo ∷ EncodeJson GrantedTo where
   encodeJson (TokenGranted tk) = encodeJson tk
 
 instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
-  decodeJson = decodeJson >=> \str →
-    (map GroupGranted $ parseFile str)
+  decodeJson j =
+    (decodeJson j >>= parseFile <#> GroupGranted)
     <|>
-    (map (UserGranted <<< UserId) $ checkUserId str)
+    (decodeJson j >>= checkUserId <#> UserId >>> UserGranted)
     <|>
-    (pure $ TokenGranted $ TokenId str)
+    (decodeJson j <#> TokenGranted)
     where
     checkUserId ∷ String → Either String String
     checkUserId str =
@@ -226,17 +325,14 @@ instance decodeJsonGrantedBy ∷ DecodeJson GrantedBy where
     where
     extractGroups ∷ Array String → Either String (Array (Pt.AbsFile Pt.Sandboxed))
     extractGroups as = do
-      woSchema ←
-        for as $ (Str.stripPrefix "" >>> maybe (Left "Incorrect group") pure)
---        for as $ (Str.stripPrefix "group:" >>> maybe (Left "Incorrect group") pure)
-      for woSchema parseFile
+      for as parseFile
 
 
 type PermissionR =
   { id ∷ PermissionId
---  , action ∷ ActionR
---  , grantedTo ∷ GrantedTo
---  , grantedBy ∷ GrantedByR
+  , action ∷ ActionR
+  , grantedTo ∷ GrantedTo
+  , grantedBy ∷ GrantedByR
   }
 
 newtype Permission = Permission PermissionR
@@ -246,14 +342,14 @@ runPermission (Permission r) = r
 instance decodeJsonPermission ∷ DecodeJson Permission where
   decodeJson =  decodeJson >=> \obj →
     { id: _
---    , action: _
---    , grantedTo: _
---    , grantedBy: _
+    , action: _
+    , grantedTo: _
+    , grantedBy: _
     }
     <$> (obj .? "id")
---    <*> ((obj .? "action") <#> runAction)
---    <*> (obj .? "grantedTo")
---    <*> ((obj .? "grantedBy") <#> runGrantedBy)
+    <*> ((obj .? "action") <#> runAction)
+    <*> (obj .? "grantedTo")
+    <*> ((obj .? "grantedBy") <#> runGrantedBy)
     <#> Permission
 
 
@@ -314,8 +410,7 @@ instance encodJsonShareableSubject ∷ EncodeJson ShareableSubject where
 
 
 type ShareRequestR =
-  { --subjects ∷ Array ShareableSubject
-    users ∷ Array UserId
+  { users ∷ Array UserId
   , groups ∷ Array (Pt.AbsFile Pt.Sandboxed)
   , actions ∷ Array ActionR
   }
