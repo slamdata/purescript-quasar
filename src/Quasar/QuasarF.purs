@@ -32,13 +32,13 @@ import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
-import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL)
+import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL, CompileResultR)
 
 data QuasarF a
   = ServerInfo (ServerInfo :~> a)
   | ReadQuery JSONMode DirPath SQL Vars (Maybe Pagination) (JArray :~> a)
   | WriteQuery DirPath FilePath SQL Vars (OutputMeta :~> a)
-  | CompileQuery DirPath SQL Vars (String :~> a)
+  | CompileQuery DirPath SQL Vars (CompileResultR :~> a)
   | FileMetadata FilePath (Unit :~> a)
   | DirMetadata DirPath ((Array Resource) :~> a)
   | ReadFile JSONMode FilePath (Maybe Pagination) (JArray :~> a)
@@ -110,7 +110,7 @@ compileQuery
   ∷ DirPath
   → SQL
   → Vars
-  → QuasarFE String
+  → QuasarFE CompileResultR
 compileQuery path sql vars =
   CompileQuery path sql vars id
 

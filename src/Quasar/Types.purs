@@ -18,8 +18,16 @@ module Quasar.Types where
 
 import Prelude
 
-import Data.Path.Pathy (AbsPath, AbsFile, AbsDir, Sandboxed)
+import Control.Alt ((<|>))
+import Control.Bind ((>=>))
+
+import Data.Argonaut (class DecodeJson, decodeJson, (.?), jsonParser)
+import Data.Either (Either(..))
+import Data.Maybe (maybe)
+import Data.Path.Pathy (AbsPath, AbsFile, AbsDir, Sandboxed, (</>))
+import Data.Path.Pathy as Pt
 import Data.StrMap (StrMap)
+import Data.Traversable (traverse)
 
 type AnyPath = AbsPath Sandboxed
 type DirPath = AbsDir Sandboxed
@@ -29,3 +37,34 @@ type SQL = String
 type Vars = StrMap String
 
 type Pagination = { offset ∷ Int, limit ∷ Int }
+
+type CompileResultR =
+  { inputs ∷ Array FilePath
+  , physicalPlanText ∷ String
+  }
+
+newtype CompileResult = CompileResult CompileResultR
+runCompileResult ∷ CompileResult → CompileResultR
+runCompileResult (CompileResult r) = r
+
+instance decodeJsonCompileResult ∷ DecodeJson CompileResult where
+  decodeJson = decodeJson >=> \obj →
+      { inputs: _
+      , physicalPlanText: _
+      }
+      <$> ((obj .? "inputs") >>= traverse parseFile)
+      <*> ((obj .? "physicalPlanText") <|> pure "")
+      <#> CompileResult
+
+parseFile ∷ String → Either String (Pt.AbsFile Pt.Sandboxed)
+parseFile pt =
+  Pt.parseAbsFile pt
+  >>= Pt.sandbox Pt.rootDir
+  <#> (Pt.rootDir </> _)
+  # maybe (Left "Incorrect resource") pure
+
+compileResultFromString ∷ String → Either String CompileResultR
+compileResultFromString s =
+  (jsonParser s >>= decodeJson <#> runCompileResult)
+  <|>
+  (pure { inputs: [ ], physicalPlanText: s})

@@ -56,6 +56,7 @@ import Quasar.QuasarF.Interpreter.Config (Config)
 import Quasar.QuasarF.Interpreter.Internal (mkURL, delete, unitResult, mkRequest, defaultRequest, get, jsonResult, put, toPageParams, strResult, toVarParams, ask)
 import Quasar.Query.OutputMeta as QueryOutputMeta
 import Quasar.ServerInfo as ServerInfo
+import Quasar.Types as QT
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
@@ -96,7 +97,7 @@ eval = case _ of
 
   CompileQuery path sql vars k → do
     url ← mkURL Paths.compile (Left path) (Tuple "q" sql : toVarParams vars)
-    k <$> mkRequest strResult (get url)
+    k <$> mkRequest (lmap error <$> QT.compileResultFromString <=< strResult) (get url)
 
   ReadFile mode path pagination k → do
     url ← mkURL Paths.data_ (Right path) (toPageParams pagination)

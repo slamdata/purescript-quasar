@@ -137,6 +137,7 @@ instance decodeJsonResource ∷ DecodeJson Resource where
         (map File $ lmap (const $ "Incorrect file resource") $ parseFile pt)
         <|>
         (map Dir $ lmap (const $ "Incorrect directory resource") $ parseDir pt)
+
 parseFile ∷ String → Either String (Pt.AbsFile Pt.Sandboxed)
 parseFile pt =
   Pt.parseAbsFile pt
@@ -320,12 +321,9 @@ instance decodeJsonGrantedBy ∷ DecodeJson GrantedBy where
 
     <$> (obj .? "tokens")
     <*> (obj .? "users")
-    <*> ((obj .? "groups") >>= extractGroups)
+    <*> ((obj .? "groups") >>= traverse parseFile)
     <#> GrantedBy
-    where
-    extractGroups ∷ Array String → Either String (Array (Pt.AbsFile Pt.Sandboxed))
-    extractGroups as = do
-      for as parseFile
+
 
 
 type PermissionR =

@@ -38,7 +38,7 @@ import Quasar.Mount (MountConfig)
 import Quasar.QuasarF (QuasarF(..))
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
-import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL)
+import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL, CompileResultR)
 import Quasar.Advanced.Types as Qa
 
 
@@ -117,7 +117,7 @@ compileQuery
   ∷ DirPath
   → SQL
   → Vars
-  → QuasarAFCE String
+  → QuasarAFCE CompileResultR
 compileQuery path sql vars =
   left $ CompileQuery path sql vars id
 
