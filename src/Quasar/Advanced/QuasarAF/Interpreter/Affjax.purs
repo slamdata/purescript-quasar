@@ -235,5 +235,5 @@ permissionsHeader [] = Nothing
 permissionsHeader hs =
   Just $
     Req.RequestHeader
-      "X-Extra-PermissionTokens"
+      "X-Extra-Permissions"
       (Str.joinWith "," (map Qa.runTokenHash hs))
