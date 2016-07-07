@@ -224,12 +224,8 @@ instance encodeJsonTokenId ∷ EncodeJson TokenId where
   encodeJson = runTokenId >>> encodeJson
 
 instance decodeJsonTokenId ∷ DecodeJson TokenId where
-  decodeJson j =
+  decodeJson j = Debug.Trace.spy $
     (map TokenId $ decodeJson j)
-    <|>
-    (map (TokenId
-          <<< Str.takeWhile (\c → [c] /= Str.toCharArray ".")
-          <<< show) $ decodeJson j ∷ Either String Number)
 
 newtype PermissionId = PermissionId String
 runPermissionId ∷ PermissionId → String
@@ -247,10 +243,6 @@ instance encodeJsonPermissionId ∷ EncodeJson PermissionId where
 instance decodeJsonPermissionId ∷ DecodeJson PermissionId where
   decodeJson j =
     (map PermissionId $ decodeJson j)
-    <|>
-    (map (PermissionId
-          <<< Str.takeWhile (\c → [c] /= Str.toCharArray ".")
-          <<< show) $ decodeJson j ∷ Either String Number)
 
 data GrantedTo
   = UserGranted UserId
@@ -280,11 +272,11 @@ instance encodeJsonGrantedTo ∷ EncodeJson GrantedTo where
 
 instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
   decodeJson j =
-    (decodeJson j >>= parseFile <#> GroupGranted)
+    (decodeJson j >>= parseGroup <#> GroupGranted)
     <|>
-    (decodeJson j >>= checkUserId <#> UserId >>> UserGranted)
+    (decodeJson j >>= checkUserId >>= parseUserId  <#> UserGranted)
     <|>
-    (decodeJson j <#> TokenGranted)
+    (decodeJson j >>= parseTokenId <#> TokenGranted)
     where
     checkUserId ∷ String → Either String String
     checkUserId str =
@@ -295,42 +287,25 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
         then pure str
         else Left "Incorrect email"
 
-type GrantedByR =
-  { tokens ∷ Array TokenId
-  , users ∷ Array UserId
-  , groups ∷ Array (Pt.AbsFile Pt.Sandboxed)
-  }
+    parseUserId ∷ String → Either String UserId
+    parseUserId str =
+      Str.stripPrefix "user:" str # maybe (Left "Incorrect user") (pure <<< UserId)
 
-newtype GrantedBy = GrantedBy GrantedByR
-runGrantedBy ∷ GrantedBy → GrantedByR
-runGrantedBy (GrantedBy r) = r
+    parseTokenId ∷ String → Either String TokenId
+    parseTokenId str =
+      Str.stripPrefix "token:" str # maybe (Left "Incorrect token") (pure <<< TokenId)
 
-instance encodeJsonGrantedBy ∷ EncodeJson GrantedBy where
-  encodeJson (GrantedBy obj) =
-    "tokens" := obj.tokens
-    ~> "users" := obj.users
-    ~> "groups" := map (append "group:" <<< Pt.printPath) obj.groups
-    ~> jsonEmptyObject
-
-instance decodeJsonGrantedBy ∷ DecodeJson GrantedBy where
-  decodeJson = decodeJson >=> \obj →
-    { tokens: _
-    , users: _
-    , groups: _
-    }
-
-    <$> (obj .? "tokens")
-    <*> (obj .? "users")
-    <*> ((obj .? "groups") >>= traverse parseFile)
-    <#> GrantedBy
-
+parseGroup ∷ String → Either String (Pt.AbsFile Pt.Sandboxed)
+parseGroup string =
+  Str.stripPrefix "group:" string
+  # maybe (Left "Incorrect group") pure
+  >>= parseFile
 
 
 type PermissionR =
   { id ∷ PermissionId
   , action ∷ ActionR
   , grantedTo ∷ GrantedTo
-  , grantedBy ∷ GrantedByR
   }
 
 newtype Permission = Permission PermissionR
@@ -342,12 +317,10 @@ instance decodeJsonPermission ∷ DecodeJson Permission where
     { id: _
     , action: _
     , grantedTo: _
-    , grantedBy: _
     }
     <$> (obj .? "id")
     <*> ((obj .? "action") <#> runAction)
     <*> (obj .? "grantedTo")
-    <*> ((obj .? "grantedBy") <#> runGrantedBy)
     <#> Permission
 
 
@@ -420,8 +393,8 @@ runShareRequest (ShareRequest r) = r
 
 instance encodeJsonShareRequest ∷ EncodeJson ShareRequest where
   encodeJson (ShareRequest obj) =
-    "users" := obj.users
-    ~> "groups" := map (append "group:" <<< Pt.printPath) obj.groups
+    "subjects" := ((map (append "user:" <<< runUserId) obj.users)
+                   <> map (append "group:" <<< Pt.printPath) obj.groups)
     ~> "actions" := (map Action $ obj.actions)
     ~> jsonEmptyObject
 
@@ -453,9 +426,8 @@ instance eqTokenName ∷ Eq TokenName where
 
 type TokenR =
   { id ∷ TokenId
-  , secret ∷ Maybe TokenHash
+  , secret ∷ TokenHash
   , name ∷ Maybe TokenName
-  , grantedBy ∷ GrantedByR
   , actions ∷ Array ActionR
   }
 
@@ -468,17 +440,15 @@ instance decodeJsonToken ∷ DecodeJson Token where
     { id: _
     , secret: _
     , name: _
-    , grantedBy: _
     , actions: _
     }
     <$> (obj .? "id")
-    <*> ((obj .? "secret") <|> pure Nothing)
+    <*> (obj .? "secret")
     <*> (((obj .? "name")
             >>= \x → if runTokenName x == ""
                      then pure Nothing
                      else pure $ Just x)
          <|> pure Nothing)
-    <*> (obj .? "grantedBy" <#> runGrantedBy)
     <*> (obj .? "actions" <#> (map runAction))
     <#> Token
 
