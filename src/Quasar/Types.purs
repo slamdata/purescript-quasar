@@ -40,7 +40,7 @@ type Pagination = { offset ∷ Int, limit ∷ Int }
 
 type CompileResultR =
   { inputs ∷ Array FilePath
-  , physicalPlanText ∷ String
+  , physicalPlan ∷ String
   }
 
 newtype CompileResult = CompileResult CompileResultR
@@ -50,10 +50,10 @@ runCompileResult (CompileResult r) = r
 instance decodeJsonCompileResult ∷ DecodeJson CompileResult where
   decodeJson = decodeJson >=> \obj →
       { inputs: _
-      , physicalPlanText: _
+      , physicalPlan: _
       }
       <$> ((obj .? "inputs") >>= traverse parseFile)
-      <*> ((obj .? "physicalPlanText") <|> pure "")
+      <*> ((obj .? "physicalPlan") <|> pure "")
       <#> CompileResult
 
 parseFile ∷ String → Either String (Pt.AbsFile Pt.Sandboxed)
@@ -67,4 +67,4 @@ compileResultFromString ∷ String → Either String CompileResultR
 compileResultFromString s =
   (jsonParser s >>= decodeJson <#> runCompileResult)
   <|>
-  (pure { inputs: [ ], physicalPlanText: s})
+  (pure { inputs: [ ], physicalPlan: s})
