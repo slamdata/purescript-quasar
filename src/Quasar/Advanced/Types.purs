@@ -12,10 +12,10 @@ import Data.Maybe (Maybe(..), maybe, isJust)
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Pt
 import Data.String as Str
-import Data.Traversable (for, traverse)
+import Data.Traversable (traverse)
 
 import OIDCCryptUtils.JSONWebKey (JSONWebKey)
-import OIDCCryptUtils.Types (Issuer(..), ClientID(..))
+import OIDCCryptUtils.Types (Issuer(..), ClientID(..), runClientID, runIssuer)
 
 data Operation
   = Add
@@ -25,7 +25,6 @@ data Operation
 
 
 instance eqOperation ∷ Eq Operation where
-  eq Add Add = true
   eq Read Read = true
   eq Modify Modify = true
   eq Delete Delete = true
@@ -35,7 +34,6 @@ instance ordOperation ∷ Ord Operation where
   compare Add Add = EQ
   compare Modify Modify = EQ
   compare Read Read = EQ
-  compare Delete Delete = EQ
   compare Add _ = LT
   compare _ Add = GT
   compare Read _ = LT
@@ -43,7 +41,6 @@ instance ordOperation ∷ Ord Operation where
   compare Modify _ = LT
   compare _ Modify = GT
   compare Delete _ = LT
-  compare _ Delete = GT
 
 instance encodeJsonOperation ∷ EncodeJson Operation where
   encodeJson Add = encodeJson "Add"
@@ -71,17 +68,16 @@ instance eqAccessType ∷ Eq AccessType where
   eq Structural Structural = true
   eq Content Content = true
   eq Mount Mount = true
+  eq _ _ = false
 
 instance ordAccessType ∷ Ord AccessType where
   compare Structural Structural = EQ
   compare Content Content = EQ
-  compare Mount Mount = EQ
   compare Structural _ = LT
   compare _ Structural = GT
   compare Content _ = LT
   compare _ Content = GT
   compare Mount _ = LT
-  compare _ Mount = GT
 
 instance encodeJsonAccessType ∷ EncodeJson AccessType where
   encodeJson Structural = encodeJson "Structural"
@@ -109,12 +105,10 @@ instance eqResource ∷ Eq Resource where
 instance ordResource ∷ Ord Resource where
   compare (File a) (File b) = compare (Pt.printPath a) (Pt.printPath b)
   compare (Dir a) (Dir b) = compare (Pt.printPath a) (Pt.printPath b)
-  compare (Group a) (Group b) = compare (Pt.printPath a) (Pt.printPath b)
   compare (File _) _ = LT
   compare _ (File _) = GT
   compare (Dir _) _ = LT
   compare _ (Dir _) = GT
-  compare (Group _) _ = LT
   compare _ (Group _) = GT
 
 instance encodeJsonResource ∷ EncodeJson Resource where
@@ -249,21 +243,20 @@ data GrantedTo
   | GroupGranted (Pt.AbsFile Pt.Sandboxed)
   | TokenGranted TokenId
 
-instance eqGrangedTo ∷ Eq GrantedTo where
+instance eqGrantedTo ∷ Eq GrantedTo where
   eq (UserGranted a) (UserGranted b) = a == b
   eq (GroupGranted a) (GroupGranted b) = Pt.printPath a == Pt.printPath b
   eq (TokenGranted a) (TokenGranted b) = a == b
+  eq _ _ = false
 
 instance ordGrantedTo ∷ Ord GrantedTo where
   compare (UserGranted a) (UserGranted b) = compare a b
   compare (GroupGranted a) (GroupGranted b) = compare (Pt.printPath a) (Pt.printPath b)
-  compare (TokenGranted a) (TokenGranted b) = compare a b
   compare (UserGranted _) _ = LT
   compare _ (UserGranted _) = GT
   compare (GroupGranted _) _ = LT
   compare _ (GroupGranted _) = GT
   compare (TokenGranted _) _ = LT
-  compare _ (TokenGranted _) = GT
 
 instance encodeJsonGrantedTo ∷ EncodeJson GrantedTo where
   encodeJson (UserGranted uid) = encodeJson uid
@@ -350,7 +343,7 @@ instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
       traverse (\x → maybe (Left "Incorrect subgroup") pure
                      $ Pt.parseAbsFile x
                      >>= Pt.sandbox Pt.rootDir
-                     <#> (\x → Pt.rootDir </> x)
+                     <#> (\y → Pt.rootDir </> y)
                )
 
 
@@ -476,6 +469,15 @@ instance decodeJSONOIDC ∷ DecodeJson OpenIDConfiguration where
       $ OpenIDConfiguration
           { issuer, authorizationEndpoint, tokenEndpoint, userinfoEndpoint, jwks }
 
+instance encodeJsonOIDC ∷ EncodeJson OpenIDConfiguration where
+  encodeJson (OpenIDConfiguration obj) =
+    "issuer" := runIssuer obj.issuer
+    ~> "authorization_endpoint" := obj.authorizationEndpoint
+    ~> "token_endpoint" := obj.tokenEndpoint
+    ~> "userinfo_endpoint" := obj.userinfoEndpoint
+    ~> "jwks" := obj.jwks
+    ~> jsonEmptyObject
+
 type ProviderR =
   { displayName ∷ String
   , clientID ∷ ClientID
@@ -492,3 +494,10 @@ instance decodeJsonProvider ∷ DecodeJson Provider where
     clientID ← ClientID <$> obj .? "client_id"
     openIDConfiguration ← obj .? "openid_configuration" <#> runOpenIDConfiguration
     pure $ Provider { displayName, clientID, openIDConfiguration }
+
+instance encodeJsonProvider ∷ EncodeJson Provider where
+  encodeJson (Provider obj) =
+    "display_name" := obj.displayName
+    ~> "client_id" := runClientID obj.clientID
+    ~> "openid_configuration" := OpenIDConfiguration obj.openIDConfiguration
+    ~> jsonEmptyObject
