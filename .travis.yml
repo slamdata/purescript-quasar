@@ -1,7 +1,7 @@
 language: node_js
 dist: trusty
 sudo: required
-node_js: 5
+node_js: 6
 install:
   - mkdir $HOME/bin
   - curl -O https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-3.0.6.tgz
@@ -13,15 +13,13 @@ install:
   - java -version
   - npm install
   - npm install -g bower
-  - bower install
+  - bower install --production
 script:
-  - npm run build
-  - npm test
+  - npm run -s build
+  - bower install
+  - npm run -s test
 after_success:
 - >-
   test $TRAVIS_TAG &&
-  node_modules/.bin/psc-publish > .pursuit.json &&
-  curl -X POST http://pursuit.purescript.org/packages \
-    -d @.pursuit.json \
-    -H 'Accept: application/json' \
-    -H "Authorization: token ${GITHUB_TOKEN}"
+  echo $GITHUB_TOKEN | pulp login &&
+  echo y | pulp publish --no-push

@@ -25,9 +25,6 @@ module Quasar.Mount.MongoDB
 
 import Prelude
 
-import Control.Bind ((<=<))
-import Control.Monad (unless)
-
 import Data.Array as Arr
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Bifunctor (lmap)

@@ -19,7 +19,7 @@ module Quasar.Advanced.QuasarAF
   , module Quasar.QuasarF
   , module Quasar.Error
   , module Quasar.Types
-  , module Quasar.Advanced.Types
+  , module QA
   ) where
 
 import Prelude
@@ -39,27 +39,27 @@ import Quasar.QuasarF (QuasarF(..))
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL, CompileResultR)
-import Quasar.Advanced.Types as Qa
-
+import Quasar.Advanced.Types as QA
 
 data QuasarAF a
-  = GroupInfo (Pt.AbsFile Pt.Sandboxed) (Qa.GroupInfoR:~> a)
+  = GroupInfo (Pt.AbsFile Pt.Sandboxed) (QA.GroupInfoR :~> a)
   | CreateGroup (Pt.AbsFile Pt.Sandboxed) (Unit :~> a)
-  | ModifyGroup (Pt.AbsFile Pt.Sandboxed) Qa.GroupPatchR (Unit :~> a)
+  | ModifyGroup (Pt.AbsFile Pt.Sandboxed) QA.GroupPatchR (Unit :~> a)
   | DeleteGroup (Pt.AbsFile Pt.Sandboxed) (Unit :~> a)
-  | PermissionList Boolean ((Array Qa.PermissionR) :~> a)
-  | PermissionInfo Qa.PermissionId (Qa.PermissionR :~> a)
-  | PermissionChildren Qa.PermissionId Boolean ((Array Qa.PermissionR) :~> a)
-  | SharePermission Qa.ShareRequestR ((Array Qa.PermissionR) :~> a)
-  | DeletePermission Qa.PermissionId (Unit :~> a)
-  | TokenList ((Array Qa.TokenR) :~> a)
-  | TokenInfo Qa.TokenId (Qa.TokenR :~> a)
-  | CreateToken (Maybe Qa.TokenName) (Array Qa.ActionR) (Qa.TokenR :~> a)
-  | DeleteToken Qa.TokenId (Unit :~> a)
-  | AuthProviders ((Array Qa.ProviderR) :~> a)
+  | PermissionList Boolean ((Array QA.PermissionR) :~> a)
+  | PermissionInfo QA.PermissionId (QA.PermissionR :~> a)
+  | PermissionChildren QA.PermissionId Boolean ((Array QA.PermissionR) :~> a)
+  | SharePermission QA.ShareRequestR ((Array QA.PermissionR) :~> a)
+  | DeletePermission QA.PermissionId (Unit :~> a)
+  | TokenList ((Array QA.TokenR) :~> a)
+  | TokenInfo QA.TokenId (QA.TokenR :~> a)
+  | CreateToken (Maybe QA.TokenName) (Array QA.ActionR) (QA.TokenR :~> a)
+  | DeleteToken QA.TokenId (Unit :~> a)
+  | AuthProviders ((Array QA.ProviderR) :~> a)
 
 -- | `C` for coproduct
 type QuasarAFC = Coproduct QuasarF QuasarAF
+
 -- | `E` for `either error` (`QResponse` is `Either QError` already)
 type QuasarAFCE res = QuasarAFC (QResponse res)
 
@@ -210,7 +210,7 @@ deleteMount path =
 
 groupInfo
   ∷ Pt.AbsFile Pt.Sandboxed
-  → QuasarAFCE Qa.GroupInfoR
+  → QuasarAFCE QA.GroupInfoR
 groupInfo pt =
   right $ GroupInfo pt id
 
@@ -222,7 +222,7 @@ createGroup pt =
 
 modifyGroup
   ∷ Pt.AbsFile Pt.Sandboxed
-  → Qa.GroupPatchR
+  → QA.GroupPatchR
   → QuasarAFCE Unit
 modifyGroup pt ptch =
   right $ ModifyGroup pt ptch id
@@ -231,7 +231,7 @@ addUsersToGroup
   ∷ ∀ f
   . Foldable f
   ⇒ Pt.AbsFile Pt.Sandboxed
-  → f Qa.UserId
+  → f QA.UserId
   → QuasarAFCE Unit
 addUsersToGroup pt us =
   modifyGroup pt { addUsers: foldMap pure us, removeUsers: [] }
@@ -240,7 +240,7 @@ removeUsersFromGroup
   ∷ ∀ f
   . Foldable f
   ⇒ Pt.AbsFile Pt.Sandboxed
-  → f Qa.UserId
+  → f QA.UserId
   → QuasarAFCE Unit
 removeUsersFromGroup pt us =
   modifyGroup pt { addUsers: [], removeUsers: foldMap pure us }
@@ -254,60 +254,60 @@ deleteGroup pt =
 
 permissionList
   ∷ Boolean
-  → QuasarAFCE (Array Qa.PermissionR)
+  → QuasarAFCE (Array QA.PermissionR)
 permissionList isTransitive =
   right $ PermissionList isTransitive id
 
 permissionInfo
-  ∷ Qa.PermissionId
-  → QuasarAFCE Qa.PermissionR
+  ∷ QA.PermissionId
+  → QuasarAFCE QA.PermissionR
 permissionInfo pid =
   right $ PermissionInfo pid id
 
 permissionChildren
-  ∷ Qa.PermissionId
+  ∷ QA.PermissionId
   → Boolean
-  → QuasarAFCE (Array Qa.PermissionR)
+  → QuasarAFCE (Array QA.PermissionR)
 permissionChildren pid isTransitive =
   right $ PermissionChildren pid isTransitive id
 
 sharePermission
-  ∷ Qa.ShareRequestR
-  → QuasarAFCE (Array Qa.PermissionR)
+  ∷ QA.ShareRequestR
+  → QuasarAFCE (Array QA.PermissionR)
 sharePermission req =
   right $ SharePermission req id
 
 deletePermission
-  ∷ Qa.PermissionId
+  ∷ QA.PermissionId
   → QuasarAFCE Unit
 deletePermission pid =
   right $ DeletePermission pid id
 
 tokenList
-  ∷ QuasarAFCE (Array Qa.TokenR)
+  ∷ QuasarAFCE (Array QA.TokenR)
 tokenList =
   right $ TokenList id
 
 tokenInfo
-  ∷ Qa.TokenId
-  → QuasarAFCE Qa.TokenR
+  ∷ QA.TokenId
+  → QuasarAFCE QA.TokenR
 tokenInfo tid =
   right $ TokenInfo tid id
 
 createToken
-  ∷ Maybe Qa.TokenName
-  → Array Qa.ActionR
-  → QuasarAFCE Qa.TokenR
+  ∷ Maybe QA.TokenName
+  → Array QA.ActionR
+  → QuasarAFCE QA.TokenR
 createToken mbName actions =
   right $ CreateToken mbName actions id
 
 deleteToken
-  ∷ Qa.TokenId
+  ∷ QA.TokenId
   → QuasarAFCE Unit
 deleteToken tid =
   right $ DeleteToken tid id
 
 authProviders
-  ∷ QuasarAFCE (Array Qa.ProviderR)
+  ∷ QuasarAFCE (Array QA.ProviderR)
 authProviders =
   right $ AuthProviders id

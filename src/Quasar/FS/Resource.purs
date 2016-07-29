@@ -51,7 +51,7 @@ fromJSON parent json
     obj .? "type" >>= case _ of
       "directory" → Right $ Directory (parent </> dir name)
       "file" → Right $ File (parent </> file name)
-      typ → Left $ "unknown resource type " ++ typ
+      typ → Left $ "unknown resource type " <> typ
 
 getPath ∷ Resource → AnyPath
 getPath (File p) = Right p

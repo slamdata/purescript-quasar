@@ -14,8 +14,8 @@ import Data.Path.Pathy as Pt
 import Data.String as Str
 import Data.Traversable (traverse)
 
-import OIDCCryptUtils.JSONWebKey (JSONWebKey)
-import OIDCCryptUtils.Types (Issuer(..), ClientID(..), runClientID, runIssuer)
+import OIDC.Crypt.JSONWebKey (JSONWebKey)
+import OIDC.Crypt.Types (Issuer(..), ClientID(..), runClientID, runIssuer)
 
 data Operation
   = Add
@@ -23,24 +23,8 @@ data Operation
   | Modify
   | Delete
 
-
-instance eqOperation ∷ Eq Operation where
-  eq Read Read = true
-  eq Modify Modify = true
-  eq Delete Delete = true
-  eq _ _ = false
-
-instance ordOperation ∷ Ord Operation where
-  compare Add Add = EQ
-  compare Modify Modify = EQ
-  compare Read Read = EQ
-  compare Add _ = LT
-  compare _ Add = GT
-  compare Read _ = LT
-  compare _ Read = GT
-  compare Modify _ = LT
-  compare _ Modify = GT
-  compare Delete _ = LT
+derive instance eqOperation ∷ Eq Operation
+derive instance ordOperation ∷ Ord Operation
 
 instance encodeJsonOperation ∷ EncodeJson Operation where
   encodeJson Add = encodeJson "Add"
@@ -64,20 +48,8 @@ data AccessType
   | Content
   | Mount
 
-instance eqAccessType ∷ Eq AccessType where
-  eq Structural Structural = true
-  eq Content Content = true
-  eq Mount Mount = true
-  eq _ _ = false
-
-instance ordAccessType ∷ Ord AccessType where
-  compare Structural Structural = EQ
-  compare Content Content = EQ
-  compare Structural _ = LT
-  compare _ Structural = GT
-  compare Content _ = LT
-  compare _ Content = GT
-  compare Mount _ = LT
+derive instance eqAccessType ∷ Eq AccessType
+derive instance ordAccessType ∷ Ord AccessType
 
 instance encodeJsonAccessType ∷ EncodeJson AccessType where
   encodeJson Structural = encodeJson "Structural"
@@ -91,31 +63,19 @@ instance decodeJsonAccessType ∷ DecodeJson AccessType where
     "Mount" → pure Mount
     _ → Left "Incorrect resource type"
 
+
 data Resource
   = File (Pt.AbsFile Pt.Sandboxed)
   | Dir (Pt.AbsDir Pt.Sandboxed)
   | Group (Pt.AbsFile Pt.Sandboxed)
 
-instance eqResource ∷ Eq Resource where
-  eq (File a) (File b) = Pt.printPath a == Pt.printPath b
-  eq (Dir a) (Dir b) = Pt.printPath a == Pt.printPath b
-  eq (Group a) (Group b) = Pt.printPath a == Pt.printPath b
-  eq _ _ = false
-
-instance ordResource ∷ Ord Resource where
-  compare (File a) (File b) = compare (Pt.printPath a) (Pt.printPath b)
-  compare (Dir a) (Dir b) = compare (Pt.printPath a) (Pt.printPath b)
-  compare (File _) _ = LT
-  compare _ (File _) = GT
-  compare (Dir _) _ = LT
-  compare _ (Dir _) = GT
-  compare _ (Group _) = GT
+derive instance eqResource ∷ Eq Resource
+derive instance ordResource ∷ Ord Resource
 
 instance encodeJsonResource ∷ EncodeJson Resource where
   encodeJson (File pt) = encodeJson $ "data:" <> Pt.printPath pt
   encodeJson (Dir pt) = encodeJson $ "data:" <> Pt.printPath pt
   encodeJson (Group pt) = encodeJson $ "group:" <> Pt.printPath pt
-
 
 instance decodeJsonResource ∷ DecodeJson Resource where
   decodeJson js = do
@@ -146,27 +106,24 @@ parseDir pt =
   <#> (Pt.rootDir </> _)
   # maybe (Left "Incorrect resource") pure
 
+
 type ActionR =
   { operation ∷ Operation
   , resource ∷ Resource
   , accessType ∷ AccessType
   }
 
-newtype Action = Action ActionR
+newtype Action = Action
+  { operation ∷ Operation
+  , resource ∷ Resource
+  , accessType ∷ AccessType
+  }
+
 runAction ∷ Action → ActionR
 runAction (Action r) = r
 
-instance eqAction ∷ Eq Action where
-  eq (Action a) (Action b) =
-    a.operation == b.operation
-    && a.resource == b.resource
-    && a.accessType == b.accessType
-
-instance ordAction ∷ Ord Action where
-  compare (Action a) (Action b) =
-    compare a.operation b.operation
-    <> compare a.resource b.resource
-    <> compare a.accessType b.accessType
+derive instance eqAction ∷ Eq Action
+derive instance ordAction ∷ Ord Action
 
 instance encodeJsonAction ∷ EncodeJson Action where
   encodeJson (Action obj) =
@@ -186,77 +143,56 @@ instance decodeJsonAction ∷ DecodeJson Action where
     <*> (obj .? "accessType")
     <#> Action
 
-
 newtype UserId = UserId String
+
 runUserId ∷ UserId → String
 runUserId (UserId s) = s
 
-instance eqUserId ∷ Eq UserId where
-  eq (UserId a) (UserId b) = a == b
-
-instance ordUserId ∷ Ord UserId where
-  compare (UserId a) (UserId b) = compare a b
+derive instance eqUserId ∷ Eq UserId
+derive instance ordUserId ∷ Ord UserId
 
 instance encodeJsonUserId ∷ EncodeJson UserId where
-  encodeJson = runUserId >>> encodeJson
+  encodeJson = encodeJson <<< runUserId
 
 instance decodeJsonUserId ∷ DecodeJson UserId where
   decodeJson = map UserId <<< decodeJson
 
 
 newtype TokenId = TokenId String
+
 runTokenId ∷ TokenId → String
 runTokenId (TokenId s) = s
 
-instance eqTokenId ∷ Eq TokenId where
-  eq (TokenId a) (TokenId b) = eq a b
-
-instance ordTokenId ∷ Ord TokenId where
-  compare (TokenId a) (TokenId b) = compare a b
+derive instance eqTokenId ∷ Eq TokenId
+derive instance ordTokenId ∷ Ord TokenId
 
 instance encodeJsonTokenId ∷ EncodeJson TokenId where
   encodeJson = runTokenId >>> encodeJson
 
 instance decodeJsonTokenId ∷ DecodeJson TokenId where
-  decodeJson j = Debug.Trace.spy $
-    (map TokenId $ decodeJson j)
+  decodeJson = map TokenId <<< decodeJson
 
 newtype PermissionId = PermissionId String
 runPermissionId ∷ PermissionId → String
 runPermissionId (PermissionId s) = s
 
-instance eqPermissionId ∷ Eq PermissionId where
-  eq (PermissionId a) (PermissionId b) = a == b
-
-instance ordPermissionId ∷ Ord PermissionId where
-  compare (PermissionId a) (PermissionId b) = compare a b
+derive instance eqPermissionId ∷ Eq PermissionId
+derive instance ordPermissionId ∷ Ord PermissionId
 
 instance encodeJsonPermissionId ∷ EncodeJson PermissionId where
-  encodeJson = runPermissionId >>> encodeJson
+  encodeJson = encodeJson <<< runPermissionId
 
 instance decodeJsonPermissionId ∷ DecodeJson PermissionId where
-  decodeJson j =
-    (map PermissionId $ decodeJson j)
+  decodeJson = map PermissionId <<< decodeJson
+
 
 data GrantedTo
   = UserGranted UserId
   | GroupGranted (Pt.AbsFile Pt.Sandboxed)
   | TokenGranted TokenId
 
-instance eqGrantedTo ∷ Eq GrantedTo where
-  eq (UserGranted a) (UserGranted b) = a == b
-  eq (GroupGranted a) (GroupGranted b) = Pt.printPath a == Pt.printPath b
-  eq (TokenGranted a) (TokenGranted b) = a == b
-  eq _ _ = false
-
-instance ordGrantedTo ∷ Ord GrantedTo where
-  compare (UserGranted a) (UserGranted b) = compare a b
-  compare (GroupGranted a) (GroupGranted b) = compare (Pt.printPath a) (Pt.printPath b)
-  compare (UserGranted _) _ = LT
-  compare _ (UserGranted _) = GT
-  compare (GroupGranted _) _ = LT
-  compare _ (GroupGranted _) = GT
-  compare (TokenGranted _) _ = LT
+derive instance eqGrantedTo ∷ Eq GrantedTo
+derive instance ordGrantedTo ∷ Ord GrantedTo
 
 instance encodeJsonGrantedTo ∷ EncodeJson GrantedTo where
   encodeJson (UserGranted uid) = encodeJson uid
@@ -323,9 +259,10 @@ type GroupInfoR =
   , subGroups ∷ Array (Pt.AbsFile Pt.Sandboxed)
   }
 
-newtype GroupInfo = GroupInfo GroupInfoR
+newtype GroupInfo = GroupInfoN GroupInfoR
+
 runGroupInfo ∷ GroupInfo → GroupInfoR
-runGroupInfo (GroupInfo r) = r
+runGroupInfo (GroupInfoN r) = r
 
 instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
   decodeJson = decodeJson >=> \obj →
@@ -336,7 +273,7 @@ instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
     <$> (obj .? "members")
     <*> (obj .? "allMembers")
     <*> ((obj .? "subGroups") >>= extractGroups)
-    <#> GroupInfo
+    <#> GroupInfoN
     where
     extractGroups ∷ Array String → Either String (Array (Pt.AbsFile Pt.Sandboxed))
     extractGroups =
@@ -404,6 +341,7 @@ instance decodeJsonTokenHash ∷ DecodeJson TokenHash where
 
 
 newtype TokenName = TokenName String
+
 runTokenName ∷ TokenName → String
 runTokenName (TokenName s) = s
 
@@ -413,9 +351,8 @@ instance encodeJsonTokenName ∷ EncodeJson TokenName where
 instance decodeJsonTokenName ∷ DecodeJson TokenName where
   decodeJson = map TokenName <<< decodeJson
 
-instance eqTokenName ∷ Eq TokenName where
-  eq (TokenName a) (TokenName b) = a == b
-
+derive instance eqTokenName ∷ Eq TokenName
+derive instance ordTokenName ∷ Ord TokenName
 
 type TokenR =
   { id ∷ TokenId

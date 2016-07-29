@@ -23,7 +23,6 @@ module Quasar.QuasarF.Interpreter.Affjax
 
 import Prelude
 
-import Control.Bind ((=<<), (<=<))
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free)
 
@@ -37,7 +36,6 @@ import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (applicationJSON)
-import Data.NaturalTransformation (Natural)
 import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
 import Data.String as Str
 import Data.Tuple (Tuple(..), fst, snd)
@@ -60,7 +58,7 @@ import Quasar.Types as QT
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
-eval ∷ ∀ r. Natural QuasarF (M r)
+eval ∷ ∀ r. QuasarF ~> M r
 eval = case _ of
 
   ServerInfo k → do

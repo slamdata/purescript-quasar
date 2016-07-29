@@ -18,8 +18,6 @@ module Quasar.Query.OutputMeta where
 
 import Prelude
 
-import Control.Bind ((<=<))
-
 import Data.Argonaut (Json, JArray, decodeJson, (.?))
 import Data.Either (Either(..))
 import Data.Maybe (Maybe, maybe)

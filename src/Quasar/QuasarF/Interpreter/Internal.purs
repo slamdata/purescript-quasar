@@ -31,7 +31,6 @@ module Quasar.QuasarF.Interpreter.Internal
 
 import Prelude
 
-import Control.Bind ((=<<), (<=<))
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free, liftF)
 
@@ -140,14 +139,14 @@ handleResult
   . (String → Either Error a)
   → Either Error (AX.AffjaxResponse String)
   → Either QError a
-handleResult f result =
-  case result of
+handleResult f =
+  case _ of
     Right { status: StatusCode code, response }
       | code >= 200 && code < 300 → lmap Error (f response)
       | code == 404 → Left NotFound
       | code == 403 → Left Forbidden
       | otherwise →
           Left $ Error $ error $
-            either (pure $ "An unknown error ocurred: " ++ show code ++ " " ++ show response) id $
-              (_ .? "error") =<< Json.decodeJson =<< Json.jsonParser response
+            either (pure $ "An unknown error ocurred: " <> show code <> " " <> show response) id $
+              (_ .? "error") =<< (Json.decodeJson =<< Json.jsonParser response)
     Left err → Left (Error err)

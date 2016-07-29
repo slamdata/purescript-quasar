@@ -21,12 +21,10 @@ import Prelude
 import Control.Monad.Reader.Class (class MonadReader, ask)
 import Control.Monad.State.Class (class MonadState, gets)
 
-import Data.NaturalTransformation (Natural)
-
 data ConfigF c a = GetConfig (c → a)
 
-evalReader ∷ ∀ c m. MonadReader c m ⇒ Natural (ConfigF c) m
+evalReader ∷ ∀ c m. MonadReader c m ⇒ ConfigF c ~> m
 evalReader (GetConfig k) = k <$> ask
 
-evalState ∷ ∀ c m. MonadState c m ⇒ Natural (ConfigF c) m
+evalState ∷ ∀ c m. MonadState c m ⇒ ConfigF c ~> m
 evalState (GetConfig k) = gets k

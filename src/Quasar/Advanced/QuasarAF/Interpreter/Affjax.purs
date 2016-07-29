@@ -33,7 +33,6 @@ import Data.Foldable (foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..), maybe)
-import Data.NaturalTransformation (Natural)
 import Data.Path.Pathy as Pt
 import Data.String as Str
 import Data.Tuple (snd)
@@ -43,8 +42,7 @@ import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
 
-import OIDCCryptUtils.Types as OIDC
-
+import OIDC.Crypt.Types as OIDC
 
 import Quasar.Advanced.Paths as Paths
 import Quasar.Advanced.QuasarAF (QuasarAFC, QuasarAF(..))
@@ -57,22 +55,21 @@ import Quasar.QuasarF.Interpreter.Internal (ask, mkRequest, jsonResult, defaultR
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
-eval ∷ ∀ r. Natural QuasarAFC (M r)
+eval ∷ ∀ r. QuasarAFC ~> M r
 eval = coproduct (evalQuasarCommunity <<< QCI.eval) evalQuasarAdvanced
 
 evalQuasarCommunity
   ∷ ∀ r
-  . Natural
-      (Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String)))
-      (M r)
+  . Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
+  ~> M r
 evalQuasarCommunity = foldFree (coproduct (liftF <<< left) authify)
   where
-  authify ∷ Natural (AXF.AffjaxFP RequestContent String) (M r)
+  authify ∷ AXF.AffjaxFP RequestContent String ~> M r
   authify (AXF.AffjaxFP req k) = do
     { idToken, permissions } ← ask
     liftF $ right (AXF.AffjaxFP (insertAuthHeaders idToken permissions req) k)
 
-evalQuasarAdvanced ∷ ∀ r. Natural QuasarAF (M r)
+evalQuasarAdvanced ∷ ∀ r. QuasarAF ~> M r
 evalQuasarAdvanced (GroupInfo pt k) = do
   config ← ask
   map k
