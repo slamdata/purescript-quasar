@@ -145,6 +145,7 @@ handleResult f result =
     Right { status: StatusCode code, response }
       | code >= 200 && code < 300 → lmap Error (f response)
       | code == 404 → Left NotFound
+      | code == 403 → Left Forbidden
       | otherwise →
           Left $ Error $ error $
             either (pure $ "An unknown error ocurred: " ++ show code ++ " " ++ show response) id $

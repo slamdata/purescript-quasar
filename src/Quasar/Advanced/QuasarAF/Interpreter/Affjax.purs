@@ -24,88 +24,216 @@ module Quasar.Advanced.QuasarAF.Interpreter.Affjax
 
 import Prelude
 
-import Control.Bind ((<=<))
 import Control.Monad.Free (Free, foldFree, liftF)
-import Control.Monad.Eff.Exception (Error, error)
+import Control.Monad.Eff.Exception (Error)
 
-import Data.Bifunctor (lmap)
-import Data.Either (Either)
+import Data.Argonaut (encodeJson, (:=), (~>), jsonEmptyObject)
+import Data.Either (Either(..))
+import Data.Foldable (foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
+import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.NaturalTransformation (Natural)
-import Data.Path.Pathy (printPath)
+import Data.Path.Pathy as Pt
 import Data.String as Str
-import Data.Traversable (traverse)
+import Data.Tuple (snd)
 
 import Network.HTTP.Affjax as AX
-import Network.HTTP.Affjax.Request (RequestContent)
+import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
 
 import OIDCCryptUtils.Types as OIDC
 
-import Quasar.Advanced.Auth as Auth
-import Quasar.Advanced.Auth.Provider as Provider
+
 import Quasar.Advanced.Paths as Paths
-import Quasar.Advanced.QuasarAF (QuasarAFP, QuasarAF(..))
+import Quasar.Advanced.QuasarAF (QuasarAFC, QuasarAF(..))
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
+import Quasar.Advanced.Types as Qa
 import Quasar.ConfigF as CF
+import Quasar.Error (QResponse)
 import Quasar.QuasarF.Interpreter.Affjax as QCI
-import Quasar.QuasarF.Interpreter.Internal (ask, mkRequest, jsonResult, defaultRequest)
+import Quasar.QuasarF.Interpreter.Internal (ask, mkRequest, jsonResult, defaultRequest, unitResult)
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
-eval ∷ ∀ r. Natural QuasarAFP (M r)
-eval = coproduct (evalC <<< QCI.eval) evalA
+eval ∷ ∀ r. Natural QuasarAFC (M r)
+eval = coproduct (evalQuasarCommunity <<< QCI.eval) evalQuasarAdvanced
 
-evalC
+evalQuasarCommunity
   ∷ ∀ r
   . Natural
       (Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String)))
       (M r)
-evalC = foldFree (coproduct (liftF <<< left) authify)
+evalQuasarCommunity = foldFree (coproduct (liftF <<< left) authify)
   where
   authify ∷ Natural (AXF.AffjaxFP RequestContent String) (M r)
   authify (AXF.AffjaxFP req k) = do
     { idToken, permissions } ← ask
     liftF $ right (AXF.AffjaxFP (insertAuthHeaders idToken permissions req) k)
 
-evalA ∷ ∀ r. Natural QuasarAF (M r)
-evalA = case _ of
+evalQuasarAdvanced ∷ ∀ r. Natural QuasarAF (M r)
+evalQuasarAdvanced (GroupInfo pt k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map Qa.runGroupInfo)
+    $ _{ url =
+            config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.group)
+             <> Pt.printPath pt
+       }
+evalQuasarAdvanced (CreateGroup pt k) = do
+  config ← ask
+  map k
+    -- Note, I'm not sure that this response is empty
+    $ mkAuthedRequest unitResult
+    $ _{ url =
+           config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.group)
+             <> Pt.printPath pt
+       , method = Left POST
+       }
+evalQuasarAdvanced (ModifyGroup pt patch k) = do
+  config ← ask
+  map k
+    -- same as L#86
+    $ mkAuthedRequest unitResult
+    $ _{ url =
+           config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.group)
+             <> Pt.printPath pt
+       , method = Left PATCH
+       , content = Just $ snd $ toRequest $ encodeJson $ Qa.GroupPatch patch
+       }
+evalQuasarAdvanced (DeleteGroup pt k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest unitResult
+    $ _{ url =
+           config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.group)
+             <> Pt.printPath pt
+       , method = Left DELETE
+       }
+evalQuasarAdvanced (PermissionList isTransitive k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
+    $ _{ url =
+           config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.permission)
+             <> (if isTransitive then "?transitive" else "")
+       }
+evalQuasarAdvanced (PermissionInfo pid k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map Qa.runPermission)
+    $ _{ url =
+           config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.permission)
+             <> Qa.runPermissionId pid
+       }
+evalQuasarAdvanced (PermissionChildren pid isTransitive k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
+    $ _{ url =
+           config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.permission)
+             <> Qa.runPermissionId pid
+             <> "/children"
+             <> (if isTransitive then "?transitive" else "")
+       }
+evalQuasarAdvanced (SharePermission req k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.permission)
+       , method = Left POST
+       , content = Just $ snd $ toRequest $ encodeJson $ Qa.ShareRequest req
+       }
+evalQuasarAdvanced (DeletePermission pid k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest unitResult
+    $ _{ url =
+           config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.permission)
+             <> Qa.runPermissionId pid
+       , method = Left DELETE
+       }
+evalQuasarAdvanced (TokenList k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runToken))
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token) }
+evalQuasarAdvanced (TokenInfo tid k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token) <> Qa.runTokenId tid }
+evalQuasarAdvanced (CreateToken mbName actions k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token)
+       , method = Left POST
+       , content =
+           Just $ snd $ toRequest
+             $ "name" := maybe "" Qa.runTokenName mbName
+             ~> "actions" := (map Qa.Action actions)
+             ~> jsonEmptyObject
+       }
+evalQuasarAdvanced (DeleteToken tid k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest unitResult
+    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token) <> Qa.runTokenId tid
+       , method = Left DELETE
+       }
+evalQuasarAdvanced (AuthProviders k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runProvider))
+    $ _{ url = config.basePath <> Str.drop 1 (Pt.printPath Paths.oidcProviders) }
 
-  AuthProviders k → do
-    { basePath, idToken, permissions } ← ask
-    k <$> mkRequest providersResult
-      (AXF.affjax $ insertAuthHeaders idToken permissions $ defaultRequest
-        { url = basePath <> Str.drop 1 (printPath Paths.oidcProviders) })
-
-  where
-
-  providersResult ∷ String → Either Error (Array Provider.Provider)
-  providersResult = lmap error <$> traverse Provider.fromJSON <=< jsonResult
+mkAuthedRequest
+  ∷ ∀ a r
+  . (String → Either Error a)
+  → (AX.AffjaxRequest RequestContent → AX.AffjaxRequest RequestContent)
+  → M r (QResponse a)
+mkAuthedRequest handleResult updateRequest = do
+  config ← ask
+  mkRequest handleResult
+    $ AXF.affjax
+    $ insertAuthHeaders
+        config.idToken
+        config.permissions
+    $ updateRequest
+    $ defaultRequest
 
 insertAuthHeaders
   ∷ ∀ a
   . Maybe OIDC.IdToken
-  → Array Auth.PermissionToken
+  → Array Qa.TokenHash
   → AX.AffjaxRequest a
   → AX.AffjaxRequest a
-insertAuthHeaders idToken ps req =
+insertAuthHeaders idToken hashes req =
   req
     { headers =
         req.headers
-          <> (maybe [] (pure <<< authHeader) idToken)
-          <> (maybe [] pure $ permissionsHeader ps)
+          <> (foldMap (pure <<< authHeader) idToken)
+          <> (foldMap pure $ permissionsHeader hashes)
     }
 
 authHeader ∷ OIDC.IdToken → Req.RequestHeader
 authHeader (OIDC.IdToken tok) =
   Req.RequestHeader "Authorization" ("Bearer " <> tok)
 
-permissionsHeader :: Array Auth.PermissionToken → Maybe Req.RequestHeader
+permissionsHeader :: Array Qa.TokenHash → Maybe Req.RequestHeader
 permissionsHeader [] = Nothing
-permissionsHeader ps =
+permissionsHeader hs =
   Just $
     Req.RequestHeader
-      "X-Extra-PermissionTokens"
-      (Str.joinWith "," (map Auth.runPermissionToken ps))
+      "X-Extra-Permissions"
+      (Str.joinWith "," (map Qa.runTokenHash hs))

@@ -18,20 +18,30 @@ module Quasar.Error where
 
 import Prelude
 
+import Data.Either (Either)
 import Control.Monad.Eff.Exception (Error, error, message)
 
 data QError
   = NotFound
+  | Forbidden
   | Error Error
 
 instance showQError ∷ Show QError where
   show NotFound = "NotFound"
+  show Forbidden = "Forbidden"
   show (Error err) = "(Error " <> show err <> ")"
 
 printQError ∷ QError → String
 printQError NotFound = "Resource not found"
+printQError Forbidden = "Resource is unavailable, authorization is required first"
 printQError (Error err) = message err
 
 lowerQError ∷ QError → Error
 lowerQError NotFound = error "Resource not found"
+lowerQError Forbidden = error "Resource is unavailable, authorization is required first"
 lowerQError (Error err) = err
+
+type QResponse resp = Either QError resp
+type QContinuation resp next = QResponse resp → next
+
+infixr 2 type QContinuation as :~>
