@@ -93,7 +93,7 @@ jumpOutOnError aff = do
     Right x' → pure x'
 
 main ∷ Eff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, process ∷ PROCESS, err ∷ EXCEPTION, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, ajax ∷ AJAX, assert ∷ ASSERT) Unit
-main = runAff throwException (const (pure unit)) $ jumpOutOnError do
+main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
   mongod ← spawnMongo
   quasar ← spawnQuasar
@@ -118,7 +118,7 @@ main = runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty
 
     log "\nCompileQuery:"
-    run isRight $ QF.compileQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"])
+    run isRight $ map _.physicalPlan <$> QF.compileQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"])
 
     log "\nGetMetadata:"
     run isRight $ QF.dirMetadata testDbAnyDir

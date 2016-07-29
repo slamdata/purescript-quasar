@@ -68,13 +68,13 @@ spawn
   → Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, console ∷ CONSOLE, err ∷ EXCEPTION | eff) CP.ChildProcess
   → Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, console ∷ CONSOLE, err ∷ EXCEPTION | eff) CP.ChildProcess
 spawn name startLine spawnProc = do
-  log $ "Starting " ++ name ++ "..."
+  log $ "Starting " <> name <> "..."
   var ← makeVar
   proc ← spawnProc
   liftEff $ Stream.onDataString (CP.stderr proc) Enc.UTF8 \s →
-    launchAff $ putVar var $ Just $ error $ "An error occurred: " ++ s
+    void $ launchAff $ putVar var $ Just $ error $ "An error occurred: " <> s
   liftEff $ Stream.onDataString (CP.stdout proc) Enc.UTF8 \s →
-    launchAff
+    void $ launchAff
       if isJust (Str.indexOf startLine s)
       then putVar var Nothing
       else pure unit

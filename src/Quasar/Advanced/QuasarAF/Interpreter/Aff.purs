@@ -28,12 +28,11 @@ import Control.Monad.Rec.Class (class MonadRec)
 
 import Data.Functor.Coproduct (coproduct)
 import Data.Maybe (Maybe)
-import Data.NaturalTransformation (Natural)
 
 import Network.HTTP.Affjax as AX
 import Network.HTTP.AffjaxF as AXF
 
-import OIDCCryptUtils.Types (IdToken)
+import OIDC.Crypt.Types (IdToken)
 
 import Quasar.Advanced.Types (TokenHash)
 import Quasar.Advanced.QuasarAF (QuasarAFC)
@@ -53,5 +52,6 @@ eval
     , MonadAff (ajax ∷ AX.AJAX | eff) m
     , MonadRec m
     )
-  ⇒ Natural QuasarAFC m
+  ⇒ QuasarAFC
+  ~> m
 eval = foldFree (coproduct CF.evalReader (liftAff <<< AXF.eval)) <<< IAX.eval

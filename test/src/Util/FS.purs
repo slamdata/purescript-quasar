@@ -18,8 +18,6 @@ module Test.Util.FS where
 
 import Prelude
 
-import Control.Bind ((=<<))
-import Control.Monad (unless)
 import Control.Monad.Aff (Aff, attempt, apathize)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Error.Class (throwError)
@@ -58,4 +56,3 @@ rmRec path = do
           traverse_ (\file → rmRec (path <> "/" <> file)) =<< FSA.readdir path
           FSA.rmdir path
     _ → pure unit
-

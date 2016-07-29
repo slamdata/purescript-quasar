@@ -18,7 +18,7 @@ module Quasar.Advanced.QuasarAF.Interpreter.Config where
 
 import Data.Maybe (Maybe)
 import Network.HTTP.Affjax (URL)
-import OIDCCryptUtils.Types (IdToken)
+import OIDC.Crypt.Types (IdToken)
 import Quasar.Advanced.Types (TokenHash)
 
 type Config r =

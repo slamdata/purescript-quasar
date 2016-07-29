@@ -27,7 +27,6 @@ import Control.Monad.Reader.Class (class MonadReader)
 import Control.Monad.Rec.Class (class MonadRec)
 
 import Data.Functor.Coproduct (coproduct)
-import Data.NaturalTransformation (Natural)
 
 import Network.HTTP.Affjax as AX
 import Network.HTTP.AffjaxF as AXF
@@ -43,5 +42,6 @@ eval
     , MonadAff (ajax ∷ AX.AJAX | eff) m
     , MonadRec m
     )
-  ⇒ Natural QuasarF m
+  ⇒ QuasarF
+  ~> m
 eval = foldFree (coproduct CF.evalReader (liftAff <<< AXF.eval)) <<< IAX.eval

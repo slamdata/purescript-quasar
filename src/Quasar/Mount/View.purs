@@ -18,9 +18,6 @@ module Quasar.Mount.View where
 
 import Prelude
 
-import Control.Bind (join, (<=<))
-import Control.Monad (unless)
-
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (~>), (:=))
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
