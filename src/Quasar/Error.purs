@@ -24,22 +24,26 @@ import Control.Monad.Eff.Exception (Error, error, message)
 data QError
   = NotFound
   | Forbidden
+  | PaymentRequired
   | Error Error
 
 instance showQError ∷ Show QError where
   show NotFound = "NotFound"
   show Forbidden = "Forbidden"
+  show PaymentRequired = "PaymentRequired"
   show (Error err) = "(Error " <> show err <> ")"
 
 printQError ∷ QError → String
-printQError NotFound = "Resource not found"
-printQError Forbidden = "Resource is unavailable, authorization is required first"
-printQError (Error err) = message err
+printQError = case _ of
+  NotFound → "Resource not found"
+  Forbidden → "Resource is unavailable, authorization is required first"
+  PaymentRequired → "Resource is unavailable, payment is required to use this feature"
+  Error err → message err
 
 lowerQError ∷ QError → Error
-lowerQError NotFound = error "Resource not found"
-lowerQError Forbidden = error "Resource is unavailable, authorization is required first"
-lowerQError (Error err) = err
+lowerQError = case _ of
+  Error err → err
+  qe → error (printQError qe)
 
 type QResponse resp = Either QError resp
 type QContinuation resp next = QResponse resp → next
