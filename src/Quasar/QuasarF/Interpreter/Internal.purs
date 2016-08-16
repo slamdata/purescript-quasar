@@ -146,6 +146,7 @@ handleResult f =
       | code == 404 → Left NotFound
       | code == 403 → Left Forbidden
       | code == 402 → Left PaymentRequired
+      | code == 401 → Left Unauthorized
       | otherwise →
           Left $ Error $ error $
             either (pure $ "An unknown error ocurred: " <> show code <> " " <> show response) id $
