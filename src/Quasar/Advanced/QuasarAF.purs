@@ -56,6 +56,7 @@ data QuasarAF a
   | CreateToken (Maybe QA.TokenName) (Array QA.ActionR) (QA.TokenR :~> a)
   | DeleteToken QA.TokenId (Unit :~> a)
   | AuthProviders ((Array QA.ProviderR) :~> a)
+  | Licensee (QA.Licensee :~> a)
 
 -- | `C` for coproduct
 type QuasarAFC = Coproduct QuasarF QuasarAF
@@ -78,6 +79,7 @@ instance functorQuasarAF ∷ Functor QuasarAF where
   map f (CreateToken mbName actions g) = CreateToken mbName actions (f <<< g)
   map f (DeleteToken tid g) = DeleteToken tid (f <<< g)
   map f (AuthProviders g) = AuthProviders (f <<< g)
+  map f (Licensee g) = Licensee (f <<< g)
 
 
 serverInfo
@@ -311,3 +313,8 @@ authProviders
   ∷ QuasarAFCE (Array QA.ProviderR)
 authProviders =
   right $ AuthProviders id
+
+licensee
+  ∷ QuasarAFCE QA.Licensee
+licensee =
+  right $ Licensee id
