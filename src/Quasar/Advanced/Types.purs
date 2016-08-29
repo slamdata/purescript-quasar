@@ -5,7 +5,7 @@ import Prelude
 import Control.Alt ((<|>))
 import Control.Bind ((>=>))
 
-import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, (.?), (:=), (~>), jsonEmptyObject)
+import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe, isJust)
@@ -438,3 +438,39 @@ instance encodeJsonProvider ∷ EncodeJson Provider where
     ~> "client_id" := runClientID obj.clientID
     ~> "openid_configuration" := OpenIDConfiguration obj.openIDConfiguration
     ~> jsonEmptyObject
+
+type Licensee =
+  { fullName ∷ String
+  , registeredTo ∷ String
+  , email ∷ String
+  , company ∷ String
+  , street ∷ String
+  , telNumber ∷ String
+  , faxNumber ∷ String
+  , city ∷ String
+  , zip ∷ String
+  , country ∷ String
+  }
+
+decodeLicensee ∷ Json → Either String Licensee
+decodeLicensee = decodeJson >=> \obj → do
+  { fullName: _
+  , registeredTo: _
+  , email: _
+  , company: _
+  , street: _
+  , telNumber: _
+  , faxNumber: _
+  , city: _
+  , zip: _
+  , country: _
+  } <$> obj .? "fullName"
+    <*> obj .? "registeredTo"
+    <*> obj .? "email"
+    <*> obj .? "company"
+    <*> obj .? "street"
+    <*> obj .? "telNumber"
+    <*> obj .? "faxNumber"
+    <*> obj .? "city"
+    <*> obj .? "zip"
+    <*> obj .? "country"

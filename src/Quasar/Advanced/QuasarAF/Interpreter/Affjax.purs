@@ -25,9 +25,10 @@ module Quasar.Advanced.QuasarAF.Interpreter.Affjax
 import Prelude
 
 import Control.Monad.Free (Free, foldFree, liftF)
-import Control.Monad.Eff.Exception (Error)
+import Control.Monad.Eff.Exception (Error, error)
 
 import Data.Argonaut (encodeJson, (:=), (~>), jsonEmptyObject)
+import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foldable (foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
@@ -193,6 +194,11 @@ evalQuasarAdvanced (AuthProviders k) = do
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runProvider))
     $ _{ url = config.basePath <> Str.drop 1 (Pt.printPath Paths.oidcProviders) }
+evalQuasarAdvanced (Licensee k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >=> map (lmap error) Qa.decodeLicensee)
+    $ _{ url = config.basePath <> "/server/licensee" }
 
 mkAuthedRequest
   ∷ ∀ a r
