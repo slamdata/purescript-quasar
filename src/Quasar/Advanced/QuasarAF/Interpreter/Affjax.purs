@@ -122,6 +122,14 @@ evalQuasarAdvanced (PermissionList isTransitive k) = do
              <> (Str.drop 1 $ Pt.printPath Paths.permission)
              <> (if isTransitive then "?transitive" else "")
        }
+evalQuasarAdvanced (AuthorityList k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
+    $ _{ url =
+           config.basePath
+             <> (Str.drop 1 $ Pt.printPath Paths.authority)
+       }
 evalQuasarAdvanced (PermissionInfo pid k) = do
   config ← ask
   map k

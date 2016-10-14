@@ -29,3 +29,6 @@ group = dir "security" </> file "group"
 
 permission ∷ RelDir Sandboxed
 permission = dir "security" </> dir "permission"
+
+authority ∷ RelDir Sandboxed
+authority = dir "security" </> dir "authority"

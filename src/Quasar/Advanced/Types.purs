@@ -7,7 +7,7 @@ import Control.Bind ((>=>))
 
 import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, isJust)
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Pt
@@ -16,6 +16,30 @@ import Data.Traversable (traverse)
 
 import OIDC.Crypt.JSONWebKey (JSONWebKey)
 import OIDC.Crypt.Types (Issuer(..), ClientID(..), runClientID, runIssuer)
+
+data Root = Root
+
+derive instance eqRoot∷ Eq Root
+derive instance ordRoot ∷ Ord Root
+
+printRoot ∷ Root → String
+printRoot = const "/"
+
+parseRoot ∷ String → Either String Root
+parseRoot =
+  case _ of
+    "/" → Right Root
+    _ → Left "Incorrect resource"
+
+
+type GroupPath = Either Root (Pt.AbsFile Pt.Sandboxed)
+
+printGroupPath ∷ GroupPath → String
+printGroupPath = either printRoot Pt.printPath
+
+parseGroupPath ∷ String → Either String GroupPath
+parseGroupPath s = (Right <$> parseFile s) <|> Left <$> parseRoot s
+
 
 data Operation
   = Add
@@ -67,7 +91,7 @@ instance decodeJsonAccessType ∷ DecodeJson AccessType where
 data Resource
   = File (Pt.AbsFile Pt.Sandboxed)
   | Dir (Pt.AbsDir Pt.Sandboxed)
-  | Group (Pt.AbsFile Pt.Sandboxed)
+  | Group GroupPath
 
 derive instance eqResource ∷ Eq Resource
 derive instance ordResource ∷ Ord Resource
@@ -75,7 +99,7 @@ derive instance ordResource ∷ Ord Resource
 instance encodeJsonResource ∷ EncodeJson Resource where
   encodeJson (File pt) = encodeJson $ "data:" <> Pt.printPath pt
   encodeJson (Dir pt) = encodeJson $ "data:" <> Pt.printPath pt
-  encodeJson (Group pt) = encodeJson $ "group:" <> Pt.printPath pt
+  encodeJson (Group gpt) = encodeJson $ "group:" <> printGroupPath gpt
 
 instance decodeJsonResource ∷ DecodeJson Resource where
   decodeJson js = do
@@ -86,7 +110,9 @@ instance decodeJsonResource ∷ DecodeJson Resource where
     case groupPath, filePath of
       Nothing, Nothing → Left "Incorrect resource"
       Just pt, _ →
-        map Group $ lmap (const $ "Incorrect group resource") $ parseFile pt
+        map Group
+          $ lmap (const $ "Incorrect group resource")
+          $ parseGroupPath pt
       _, Just pt →
         (map File $ lmap (const $ "Incorrect file resource") $ parseFile pt)
         <|>
@@ -188,7 +214,7 @@ instance decodeJsonPermissionId ∷ DecodeJson PermissionId where
 
 data GrantedTo
   = UserGranted UserId
-  | GroupGranted (Pt.AbsFile Pt.Sandboxed)
+  | GroupGranted GroupPath
   | TokenGranted TokenId
 
 derive instance eqGrantedTo ∷ Eq GrantedTo
@@ -196,7 +222,7 @@ derive instance ordGrantedTo ∷ Ord GrantedTo
 
 instance encodeJsonGrantedTo ∷ EncodeJson GrantedTo where
   encodeJson (UserGranted uid) = encodeJson uid
-  encodeJson (GroupGranted pt) = encodeJson $ Pt.printPath pt
+  encodeJson (GroupGranted gpt) = encodeJson $ printGroupPath gpt
   encodeJson (TokenGranted tk) = encodeJson tk
 
 instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
@@ -224,11 +250,11 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
     parseTokenId str =
       Str.stripPrefix "token:" str # maybe (Left "Incorrect token") (pure <<< TokenId)
 
-parseGroup ∷ String → Either String (Pt.AbsFile Pt.Sandboxed)
+parseGroup ∷ String → Either String GroupPath
 parseGroup string =
   Str.stripPrefix "group:" string
   # maybe (Left "Incorrect group") pure
-  >>= parseFile
+  >>= parseGroupPath
 
 
 type PermissionR =
@@ -301,18 +327,18 @@ instance encodeJsonGroupPatch ∷ EncodeJson GroupPatch where
 
 data ShareableSubject
   = UserSubject UserId
-  | GroupSubject (Pt.AbsFile Pt.Sandboxed)
+  | GroupSubject GroupPath
 
-instance encodJsonShareableSubject ∷ EncodeJson ShareableSubject where
+instance encodeJsonShareableSubject ∷ EncodeJson ShareableSubject where
   encodeJson (UserSubject (UserId uid)) =
     encodeJson $ "user:" <> uid
-  encodeJson (GroupSubject fp) =
-    encodeJson $ "group:" <> Pt.printPath fp
+  encodeJson (GroupSubject gpt) =
+    encodeJson $ printGroupPath gpt
 
 
 type ShareRequestR =
   { users ∷ Array UserId
-  , groups ∷ Array (Pt.AbsFile Pt.Sandboxed)
+  , groups ∷ Array GroupPath
   , actions ∷ Array ActionR
   }
 
@@ -324,7 +350,7 @@ runShareRequest (ShareRequest r) = r
 instance encodeJsonShareRequest ∷ EncodeJson ShareRequest where
   encodeJson (ShareRequest obj) =
     "subjects" := ((map (append "user:" <<< runUserId) obj.users)
-                   <> map (append "group:" <<< Pt.printPath) obj.groups)
+                   <> map (append "group:" <<< printGroupPath) obj.groups)
     ~> "actions" := (map Action $ obj.actions)
     ~> jsonEmptyObject
 
