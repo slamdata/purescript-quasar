@@ -46,6 +46,7 @@ data QuasarAF a
   | CreateGroup (Pt.AbsFile Pt.Sandboxed) (Unit :~> a)
   | ModifyGroup (Pt.AbsFile Pt.Sandboxed) QA.GroupPatchR (Unit :~> a)
   | DeleteGroup (Pt.AbsFile Pt.Sandboxed) (Unit :~> a)
+  | AuthorityList ((Array QA.PermissionR) :~> a)
   | PermissionList Boolean ((Array QA.PermissionR) :~> a)
   | PermissionInfo QA.PermissionId (QA.PermissionR :~> a)
   | PermissionChildren QA.PermissionId Boolean ((Array QA.PermissionR) :~> a)
@@ -69,6 +70,7 @@ instance functorQuasarAF ∷ Functor QuasarAF where
   map f (CreateGroup pt g) = CreateGroup pt (f <<< g)
   map f (ModifyGroup pt p g) = ModifyGroup pt p (f <<< g)
   map f (DeleteGroup pt g) = DeleteGroup pt (f <<< g)
+  map f (AuthorityList g) = AuthorityList (f <<< g)
   map f (PermissionList tr g) = PermissionList tr (f <<< g)
   map f (PermissionInfo pid g) = PermissionInfo pid (f <<< g)
   map f (PermissionChildren pid tr g) = PermissionChildren pid tr (f <<< g)
@@ -253,6 +255,11 @@ deleteGroup
   → QuasarAFCE Unit
 deleteGroup pt =
   right $ DeleteGroup pt id
+
+authorityList
+  ∷ QuasarAFCE (Array QA.PermissionR)
+authorityList =
+  right $ AuthorityList id
 
 permissionList
   ∷ Boolean
