@@ -63,11 +63,15 @@ instance decodeJsonAccessType ∷ DecodeJson AccessType where
     "Mount" → pure Mount
     _ → Left "Incorrect resource type"
 
+data Root = Root
+
+derive instance eqRoot∷ Eq Root
+derive instance ordRoot ∷ Ord Root
 
 data Resource
   = File (Pt.AbsFile Pt.Sandboxed)
   | Dir (Pt.AbsDir Pt.Sandboxed)
-  | Group (Pt.AbsFile Pt.Sandboxed)
+  | Group (Either Root (Pt.AbsFile Pt.Sandboxed))
 
 derive instance eqResource ∷ Eq Resource
 derive instance ordResource ∷ Ord Resource
@@ -75,7 +79,8 @@ derive instance ordResource ∷ Ord Resource
 instance encodeJsonResource ∷ EncodeJson Resource where
   encodeJson (File pt) = encodeJson $ "data:" <> Pt.printPath pt
   encodeJson (Dir pt) = encodeJson $ "data:" <> Pt.printPath pt
-  encodeJson (Group pt) = encodeJson $ "group:" <> Pt.printPath pt
+  encodeJson (Group (Right pt)) = encodeJson $ "group:" <> Pt.printPath pt
+  encodeJson (Group (Left Root)) = encodeJson $ "group:/"
 
 instance decodeJsonResource ∷ DecodeJson Resource where
   decodeJson js = do
@@ -86,11 +91,19 @@ instance decodeJsonResource ∷ DecodeJson Resource where
     case groupPath, filePath of
       Nothing, Nothing → Left "Incorrect resource"
       Just pt, _ →
-        map Group $ lmap (const $ "Incorrect group resource") $ parseFile pt
+        map Group
+          $ lmap (const $ "Incorrect group resource")
+          $ (Right <$> parseFile pt) <|> Left <$> parseRoot pt
       _, Just pt →
         (map File $ lmap (const $ "Incorrect file resource") $ parseFile pt)
         <|>
         (map Dir $ lmap (const $ "Incorrect directory resource") $ parseDir pt)
+
+parseRoot ∷ String → Either String Root
+parseRoot =
+  case _ of
+    "/" → Right Root
+    _ → Left "Incorrect resource"
 
 parseFile ∷ String → Either String (Pt.AbsFile Pt.Sandboxed)
 parseFile pt =
