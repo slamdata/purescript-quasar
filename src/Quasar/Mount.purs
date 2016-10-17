@@ -23,12 +23,14 @@ import Control.Alt ((<|>))
 import Data.Argonaut (Json)
 import Data.Either (Either(..))
 
+import Quasar.Mount.Couchbase as Couchbase
 import Quasar.Mount.MongoDB as MongoDB
 import Quasar.Mount.View as View
 
 data MountConfig
   = ViewConfig View.Config
   | MongoDBConfig MongoDB.Config
+  | CouchbaseConfig Couchbase.Config
 
 instance showMountConfig ∷ Show MountConfig where
   show (ViewConfig { query, vars })
@@ -40,6 +42,10 @@ instance showMountConfig ∷ Show MountConfig where
     <> ", user: " <> show user
     <> ", password: " <> show password
     <> ", props: " <> show props <> " })"
+  show (CouchbaseConfig { host, user, password })
+    = "(CouchbaseConfig { host: " <> show host
+    <> ", user: " <> show user
+    <> ", password: " <> show password <> " })"
 
 fromJSON ∷ Json → Either String MountConfig
 fromJSON json
@@ -50,3 +56,4 @@ fromJSON json
 toJSON ∷ MountConfig → Json
 toJSON (ViewConfig config) = View.toJSON config
 toJSON (MongoDBConfig config) = MongoDB.toJSON config
+toJSON (CouchbaseConfig config) = Couchbase.toJSON config
