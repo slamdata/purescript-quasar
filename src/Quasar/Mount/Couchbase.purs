@@ -16,11 +16,11 @@ limitations under the License.
 
 module Quasar.Mount.Couchbase
   ( Config
-  , Host
   , toJSON
   , fromJSON
   , toURI
   , fromURI
+  , module Exports
   ) where
 
 import Prelude
@@ -33,13 +33,14 @@ import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
 
+import Quasar.Mount.Common (Host, extractHost)
+import Quasar.Mount.Common (Host) as Exports
+
 type Config =
   { host ∷ Host
   , user ∷ Maybe String
   , password ∷ Maybe String
   }
-
-type Host = Tuple URI.Host (Maybe URI.Port)
 
 toJSON ∷ Config → Json
 toJSON config =
@@ -79,11 +80,3 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
 
 uriScheme ∷ URI.URIScheme
 uriScheme = URI.URIScheme "couchbase"
-
-extractHost ∷ Maybe URI.Authority → Either String Host
-extractHost (Just (URI.Authority _ hs)) =
-  case hs of
-    [h] -> Right h
-    [] -> Left "No host specified"
-    _ -> Left "Multiple hosts specified"
-extractHost _ = Left "No host specified"
