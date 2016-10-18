@@ -65,7 +65,7 @@ toURI { host, user, password } =
   props :: Array (Tuple String (Maybe String))
   props = []
     <> maybe [] (\u -> [Tuple "username" (Just u)]) user
-    <> maybe [] (\p -> [Tuple "password" (Just p)]) user
+    <> maybe [] (\p -> [Tuple "password" (Just p)]) password
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
