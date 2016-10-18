@@ -23,12 +23,18 @@ import Control.Alt ((<|>))
 import Data.Argonaut (Json)
 import Data.Either (Either(..))
 
+import Quasar.Mount.Couchbase as Couchbase
+import Quasar.Mount.MarkLogic as MarkLogic
 import Quasar.Mount.MongoDB as MongoDB
+import Quasar.Mount.Spark as Spark
 import Quasar.Mount.View as View
 
 data MountConfig
   = ViewConfig View.Config
   | MongoDBConfig MongoDB.Config
+  | CouchbaseConfig Couchbase.Config
+  | MarkLogicConfig MarkLogic.Config
+  | SparkConfig Spark.Config
 
 instance showMountConfig ∷ Show MountConfig where
   show (ViewConfig { query, vars })
@@ -40,13 +46,32 @@ instance showMountConfig ∷ Show MountConfig where
     <> ", user: " <> show user
     <> ", password: " <> show password
     <> ", props: " <> show props <> " })"
+  show (CouchbaseConfig { host, user, password })
+    = "(CouchbaseConfig { host: " <> show host
+    <> ", user: " <> show user
+    <> ", password: " <> show password <> " })"
+  show (MarkLogicConfig { host, path, user, password })
+    = "(MarkLogicConfig { host: " <> show host
+    <> ", path: " <> show path
+    <> ", user: " <> show user
+    <> ", password: " <> show password <> " })"
+  show (SparkConfig { sparkHost, hdfsHost, path })
+    = "(SparkConfig { sparkHost: " <> show sparkHost
+    <> ", hdfsHost: " <> show hdfsHost
+    <> ", path: " <> show path <> " })"
 
 fromJSON ∷ Json → Either String MountConfig
 fromJSON json
   = ViewConfig <$> View.fromJSON json
   <|> MongoDBConfig <$> MongoDB.fromJSON json
+  <|> CouchbaseConfig <$> Couchbase.fromJSON json
+  <|> MarkLogicConfig <$> MarkLogic.fromJSON json
+  <|> SparkConfig <$> Spark.fromJSON json
   <|> Left "Could not decode mount config"
 
 toJSON ∷ MountConfig → Json
 toJSON (ViewConfig config) = View.toJSON config
 toJSON (MongoDBConfig config) = MongoDB.toJSON config
+toJSON (CouchbaseConfig config) = Couchbase.toJSON config
+toJSON (MarkLogicConfig config) = MarkLogic.toJSON config
+toJSON (SparkConfig config) = Spark.toJSON config

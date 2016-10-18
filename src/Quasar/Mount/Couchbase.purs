@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Mount.MongoDB
+module Quasar.Mount.Couchbase
   ( Config
   , toJSON
   , fromJSON
@@ -25,61 +25,58 @@ module Quasar.Mount.MongoDB
 
 import Prelude
 
-import Data.Array as Arr
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
-import Data.NonEmpty (NonEmpty(..), oneOf)
 import Data.StrMap as SM
+import Data.Tuple (Tuple(..))
 import Data.URI as URI
 
-import Quasar.Mount.Common (Host, credentials, extractCredentials)
+import Quasar.Mount.Common (Host, extractHost)
 import Quasar.Mount.Common (Host) as Exports
-import Quasar.Types (AnyPath)
 
 type Config =
-  { hosts ∷ NonEmpty Array Host
-  , path ∷ Maybe AnyPath
+  { host ∷ Host
   , user ∷ Maybe String
   , password ∷ Maybe String
-  , props ∷ SM.StrMap (Maybe String)
   }
 
 toJSON ∷ Config → Json
 toJSON config =
   let uri = URI.printAbsoluteURI (toURI config)
-  in "mongodb" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
+  in "couchbase" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
   <=< lmap show <<< URI.runParseAbsoluteURI
   <=< (_ .? "connectionUri")
-  <=< (_ .? "mongodb")
+  <=< (_ .? "couchbase")
   <=< decodeJson
 
 toURI ∷ Config → URI.AbsoluteURI
-toURI { hosts, path, user, password, props } =
+toURI { host, user, password } =
   URI.AbsoluteURI
     (Just uriScheme)
-    (URI.HierarchicalPart (Just (URI.Authority (credentials user password) (oneOf hosts))) path)
-    (Just (URI.Query props))
+    (URI.HierarchicalPart (Just (URI.Authority Nothing (pure host))) Nothing)
+    (Just (URI.Query $ SM.fromFoldable props))
+  where
+  props :: Array (Tuple String (Maybe String))
+  props = []
+    <> maybe [] (\u -> [Tuple "username" (Just u)]) user
+    <> maybe [] (\p -> [Tuple "password" (Just p)]) password
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
-  unless (scheme == Just uriScheme) $ Left "Expected 'mongodb' URL scheme"
-  hosts ← extractHosts auth
-  let creds = extractCredentials auth
+  unless (scheme == Just uriScheme) $ Left "Expected 'couchbase' URL scheme"
+  host ← extractHost auth
   let props = maybe SM.empty (\(URI.Query qs) → qs) query
-  pure { hosts, path, user: creds.user, password: creds.password, props }
+  pure
+    { host
+    , user: join $ SM.lookup "username" props
+    , password: join $ SM.lookup "password" props
+    }
 
 uriScheme ∷ URI.URIScheme
-uriScheme = URI.URIScheme "mongodb"
-
-extractHosts ∷ Maybe URI.Authority → Either String (NonEmpty Array Host)
-extractHosts = maybe err Right <<< (toNonEmpty <=< map getHosts)
-  where
-  getHosts (URI.Authority _ hs) = hs
-  toNonEmpty hs = NonEmpty <$> Arr.head hs <*> Arr.tail hs
-  err = Left "Host list must not be empty"
+uriScheme = URI.URIScheme "couchbase"
