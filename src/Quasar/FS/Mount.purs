@@ -30,12 +30,18 @@ import Quasar.Types (AnyPath, FilePath, DirPath)
 data Mount
   = View FilePath
   | MongoDB DirPath
+  | Couchbase DirPath
+  | MarkLogic DirPath
+  | Spark DirPath
 
 derive instance eqMount ∷ Eq Mount
 
 instance showMount ∷ Show Mount where
   show (View p) = "(View " <> show p <> ")"
   show (MongoDB p) = "(MongoDB " <> show p <> ")"
+  show (Couchbase p) = "(Couchbase " <> show p <> ")"
+  show (MarkLogic p) = "(MarkLogic " <> show p <> ")"
+  show (Spark p) = "(Spark " <> show p <> ")"
 
 -- | Attempts to decode a mount listing value from Quasar's filesystem metadata,
 -- | for a mount in the specified parent directory.
@@ -47,12 +53,18 @@ fromJSON parent = decodeJson >=> \obj → do
   case typ, mount of
     "file", "view" → Right $ View (parent </> file name)
     "directory", "mongodb" → Right $ MongoDB (parent </> dir name)
+    "directory", "couchbase" → Right $ Couchbase (parent </> dir name)
+    "directory", "marklogic" → Right $ MarkLogic (parent </> dir name)
+    "directory", "spark" → Right $ Spark (parent </> dir name)
     _, _ → Left $
       "Unknown mount type '" <> mount <> "' for resource type '" <> typ <> "'"
 
 getPath ∷ Mount → AnyPath
 getPath (View p) = Right p
 getPath (MongoDB p) = Left p
+getPath (Couchbase p) = Left p
+getPath (MarkLogic p) = Left p
+getPath (Spark p) = Left p
 
 getName ∷ Mount → Either (Maybe DirName) FileName
 getName = pathName <<< getPath
