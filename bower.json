@@ -22,7 +22,7 @@
     "purescript-ejson": "^1.0.0",
     "purescript-free": "^1.2.0",
     "purescript-nonempty": "^1.1.0",
-    "purescript-oidc-crypt-utils": "^3.0.0",
+    "purescript-oidc-crypt-utils": "^4.0.0",
     "purescript-pathy": "^2.0.0",
     "purescript-uri": "^1.0.0"
   },
