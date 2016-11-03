@@ -36,6 +36,7 @@ import Control.Monad.Free (Free, liftF)
 
 import Data.Argonaut ((.?))
 import Data.Argonaut as Json
+import Data.Array as Array
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
 import Data.Functor.Coproduct (Coproduct, left, right)
@@ -54,9 +55,10 @@ import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.StatusCode (StatusCode(..))
+import Network.HTTP.ResponseHeader as RH
 
 import Quasar.ConfigF as CF
-import Quasar.QuasarF (QError(..), AnyPath, Pagination)
+import Quasar.QuasarF (QError(..), UnauthorizedDetails(..), AnyPath, Pagination)
 
 type AXFP = AXF.AffjaxFP RequestContent String
 
@@ -141,14 +143,21 @@ handleResult
   → Either QError a
 handleResult f =
   case _ of
-    Right { status: StatusCode code, response }
+    Right { status: StatusCode code, response, headers }
       | code >= 200 && code < 300 → lmap Error (f response)
       | code == 404 → Left NotFound
       | code == 403 → Left Forbidden
       | code == 402 → Left PaymentRequired
-      | code == 401 → Left Unauthorized
+      | code == 401 →
+          Left
+            $ Unauthorized
+            $ (UnauthorizedDetails <<< show)
+            <$> (Array.findIndex isWWWAuthenticate headers)
       | otherwise →
           Left $ Error $ error $
             either (pure $ "An unknown error ocurred: " <> show code <> " " <> show response) id $
               (_ .? "error") =<< (Json.decodeJson =<< Json.jsonParser response)
     Left err → Left (Error err)
+  where
+  isWWWAuthenticate ∷ RH.ResponseHeader → Boolean
+  isWWWAuthenticate = eq "WWW-Authenticate" <<< RH.responseHeaderName
