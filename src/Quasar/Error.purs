@@ -19,18 +19,22 @@ module Quasar.Error where
 import Prelude
 
 import Data.Either (Either)
+import Data.Maybe (Maybe(Just, Nothing))
 import Control.Monad.Eff.Exception (Error, error, message)
+
+newtype UnauthorizedDetails = UnauthorizedDetails String
 
 data QError
   = NotFound
-  | Unauthorized
+  | Unauthorized (Maybe UnauthorizedDetails)
   | Forbidden
   | PaymentRequired
   | Error Error
 
 instance showQError ∷ Show QError where
   show NotFound = "NotFound"
-  show Unauthorized = "Unauthorized"
+  show (Unauthorized Nothing) = "Unauthorized"
+  show (Unauthorized (Just (UnauthorizedDetails details))) = "Unauthorized: " <> details
   show Forbidden = "Forbidden"
   show PaymentRequired = "PaymentRequired"
   show (Error err) = "(Error " <> show err <> ")"
@@ -38,7 +42,7 @@ instance showQError ∷ Show QError where
 printQError ∷ QError → String
 printQError = case _ of
   NotFound → "Resource not found"
-  Unauthorized → "Resource is unavailable, authorization is required"
+  Unauthorized _ → "Resource is unavailable, authorization is required"
   Forbidden → "Resource is unavailable, the current authorization credentials do not grant access to the resource"
   PaymentRequired → "Resource is unavailable, payment is required to use this feature"
   Error err → message err

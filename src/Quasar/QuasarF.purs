@@ -27,7 +27,7 @@ import Data.Maybe (Maybe)
 
 import Quasar.Data (QData, JSONMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
-import Quasar.Error (type (:~>), QResponse, QError(..), lowerQError, printQError)
+import Quasar.Error (type (:~>), QResponse, QError(..), UnauthorizedDetails(..), lowerQError, printQError)
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig)
 import Quasar.Query.OutputMeta (OutputMeta)
