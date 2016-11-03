@@ -152,7 +152,7 @@ handleResult f =
           Left
             $ Unauthorized
             $ (UnauthorizedDetails <<< show)
-            <$> (Array.findIndex isWWWAuthenticate headers)
+            <$> (Array.index headers =<< Array.findIndex isWWWAuthenticate headers)
       | otherwise →
           Left $ Error $ error $
             either (pure $ "An unknown error ocurred: " <> show code <> " " <> show response) id $
@@ -160,4 +160,4 @@ handleResult f =
     Left err → Left (Error err)
   where
   isWWWAuthenticate ∷ RH.ResponseHeader → Boolean
-  isWWWAuthenticate = eq "WWW-Authenticate" <<< RH.responseHeaderName
+  isWWWAuthenticate = eq "www-authenticate" <<< Str.toLower <<< RH.responseHeaderName
