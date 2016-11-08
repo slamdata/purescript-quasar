@@ -3,7 +3,6 @@ module Quasar.Advanced.Types where
 import Prelude
 
 import Control.Alt ((<|>))
-import Control.Bind ((>=>))
 
 import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
@@ -105,8 +104,8 @@ instance decodeJsonResource ∷ DecodeJson Resource where
   decodeJson js = do
     str ← decodeJson js
     let
-      groupPath = Str.stripPrefix "group:" str
-      filePath = Str.stripPrefix "data:" str
+      groupPath = Str.stripPrefix (Str.Pattern "group:") str
+      filePath = Str.stripPrefix (Str.Pattern "data:") str
     case groupPath, filePath of
       Nothing, Nothing → Left "Incorrect resource"
       Just pt, _ →
@@ -238,21 +237,21 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
       -- Right now we don't know what's exact format of TokenId
       -- I suggest not having `@` should be enough to say that
       -- string isn't email.
-      if isJust (Str.indexOf "@" str)
+      if isJust (Str.indexOf (Str.Pattern "@") str)
         then pure str
         else Left "Incorrect email"
 
     parseUserId ∷ String → Either String UserId
     parseUserId str =
-      Str.stripPrefix "user:" str # maybe (Left "Incorrect user") (pure <<< UserId)
+      Str.stripPrefix (Str.Pattern "user:") str # maybe (Left "Incorrect user") (pure <<< UserId)
 
     parseTokenId ∷ String → Either String TokenId
     parseTokenId str =
-      Str.stripPrefix "token:" str # maybe (Left "Incorrect token") (pure <<< TokenId)
+      Str.stripPrefix (Str.Pattern "token:") str # maybe (Left "Incorrect token") (pure <<< TokenId)
 
 parseGroup ∷ String → Either String GroupPath
 parseGroup string =
-  Str.stripPrefix "group:" string
+  Str.stripPrefix (Str.Pattern "group:") string
   # maybe (Left "Incorrect group") pure
   >>= parseGroupPath
 

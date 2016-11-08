@@ -27,7 +27,7 @@ import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.String as Str
 import Data.StrMap as SM
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..), lookup)
 import Data.URI as URI
 
 import Quasar.Types (SQL, Vars)
@@ -55,28 +55,31 @@ toURI { query, vars } =
   URI.AbsoluteURI
     (Just uriScheme)
     (URI.HierarchicalPart Nothing Nothing)
-    (Just (URI.Query (SM.fromList props)))
+    (Just (URI.Query props))
   where
   props ∷ List (Tuple String (Maybe String))
   props
     = Tuple "q" (Just query)
-    : (bimap ("var." <> _) Just <$> SM.toList vars)
+    : (bimap ("var." <> _) Just <$> SM.toUnfoldable vars)
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme _ query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'sql2' URL scheme"
-  let queryMap = maybe SM.empty (\(URI.Query q) → q) query
+  let queryMap = maybe List.Nil (\(URI.Query q) → q) query
   query ← maybe (Left "Expected 'q' query variable") pure (extractQuery queryMap)
-  let vars = SM.fromList $ foldMap extractVar (SM.toList queryMap)
+  let vars = SM.fromFoldable $ foldMap extractVar queryMap
   pure { query, vars }
 
 uriScheme ∷ URI.URIScheme
 uriScheme = URI.URIScheme "sql2"
 
-extractQuery ∷ SM.StrMap (Maybe String) → Maybe String
-extractQuery =
-  Str.stripPrefix "(" <=< Str.stripSuffix ")" <=< join <<< SM.lookup "q"
+extractQuery ∷ List (Tuple String (Maybe String)) → Maybe String
+extractQuery
+  = Str.stripPrefix (Str.Pattern "(")
+  <=< Str.stripSuffix (Str.Pattern ")")
+  <=< join
+  <<< lookup "q"
 
 extractVar ∷ Tuple String (Maybe String) → List (Tuple String String)
 extractVar (Tuple key val) = maybe Nil List.singleton $
-  Tuple <$> Str.stripPrefix "var." key <*> val
+  Tuple <$> Str.stripPrefix (Str.Pattern "var.") key <*> val

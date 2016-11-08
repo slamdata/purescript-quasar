@@ -31,6 +31,7 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
+import Data.List as L
 import Data.URI as URI
 
 import Quasar.Mount.Common (Host, extractHost)
@@ -60,18 +61,18 @@ toURI { host, user, password } =
   URI.AbsoluteURI
     (Just uriScheme)
     (URI.HierarchicalPart (Just (URI.Authority Nothing (pure host))) Nothing)
-    (Just (URI.Query $ SM.fromFoldable props))
+    (Just (URI.Query props))
   where
-  props :: Array (Tuple String (Maybe String))
-  props = []
-    <> maybe [] (\u -> [Tuple "username" (Just u)]) user
-    <> maybe [] (\p -> [Tuple "password" (Just p)]) password
+  props :: L.List (Tuple String (Maybe String))
+  props = L.Nil
+    <> maybe L.Nil (\u -> pure $ Tuple "username" (Just u)) user
+    <> maybe L.Nil (\p -> pure $ Tuple "password" (Just p)) password
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'couchbase' URL scheme"
   host ← extractHost auth
-  let props = maybe SM.empty (\(URI.Query qs) → qs) query
+  let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
   pure
     { host
     , user: join $ SM.lookup "username" props

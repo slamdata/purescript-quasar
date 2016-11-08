@@ -121,7 +121,7 @@ mkPath base fsPath
   = Str.drop 1
   $ Str.joinWith "/"
   $ map encodeURIComponent
-  $ Str.split "/"
+  $ Str.split (Str.Pattern "/")
   $ either printPath printPath
   $ bimap (baseify (dir "/")) (baseify (file "")) fsPath
   where

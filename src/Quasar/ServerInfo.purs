@@ -18,8 +18,6 @@ module Quasar.ServerInfo where
 
 import Prelude
 
-import Control.Bind ((>=>))
-
 import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Either (Either)
 

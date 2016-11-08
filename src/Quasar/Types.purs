@@ -19,7 +19,6 @@ module Quasar.Types where
 import Prelude
 
 import Control.Alt ((<|>))
-import Control.Bind ((>=>))
 
 import Data.Argonaut (class DecodeJson, decodeJson, (.?), jsonParser)
 import Data.Either (Either(..))

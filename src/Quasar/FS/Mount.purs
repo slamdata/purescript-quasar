@@ -18,8 +18,6 @@ module Quasar.FS.Mount where
 
 import Prelude
 
-import Control.Bind ((>=>))
-
 import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Either (Either(..))
 import Data.Maybe (Maybe)

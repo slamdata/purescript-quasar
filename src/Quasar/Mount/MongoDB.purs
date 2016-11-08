@@ -25,8 +25,8 @@ module Quasar.Mount.MongoDB
 
 import Prelude
 
-import Data.Array as Arr
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
+import Data.Array as Arr
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
@@ -64,14 +64,14 @@ toURI { hosts, path, user, password, props } =
   URI.AbsoluteURI
     (Just uriScheme)
     (URI.HierarchicalPart (Just (URI.Authority (credentials user password) (oneOf hosts))) path)
-    (Just (URI.Query props))
+    (Just (URI.Query (SM.toUnfoldable props)))
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'mongodb' URL scheme"
   hosts ← extractHosts auth
   let creds = extractCredentials auth
-  let props = maybe SM.empty (\(URI.Query qs) → qs) query
+  let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
   pure { hosts, path, user: creds.user, password: creds.password, props }
 
 uriScheme ∷ URI.URIScheme
