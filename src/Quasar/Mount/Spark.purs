@@ -29,7 +29,7 @@ import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
-import Data.String (joinWith, split)
+import Data.String (Pattern(..), joinWith, split)
 import Data.URI as URI
 import Data.URI.Path (printPath, parseURIPathAbs)
 
@@ -73,7 +73,7 @@ toString { sparkHost, hdfsHost, path } =
       Nothing
 
 fromString ∷ String → Either String Config
-fromString str = case split "|" str of
+fromString str = case split (Pattern "|") str of
   [ spark, hdfs, root ] → do
     sparkHost ← extractHost' sparkURIScheme spark
     hdfsHost ← extractHost' hdfsURIScheme hdfs

@@ -45,7 +45,7 @@ extractCredentials auth =
   case auth >>= (\(URI.Authority userInfo _) → userInfo) of
     Nothing → { user: Nothing, password: Nothing }
     Just userInfo →
-      case Str.indexOf ":" userInfo of
+      case Str.indexOf (Str.Pattern ":") userInfo of
         Nothing → { user: Just userInfo, password: Nothing }
         Just ix →
           { user: Just (Str.take ix userInfo)

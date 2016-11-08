@@ -33,7 +33,7 @@ import Node.FS.Stats as FSS
 import Node.FS.Aff as FSA
 
 mkdirRec ∷ ∀ eff. String → Aff (fs ∷ FS | eff) Unit
-mkdirRec path = case Arr.uncons (Str.split "/" path) of
+mkdirRec path = case Arr.uncons (Str.split (Str.Pattern "/") path) of
   Nothing → pure unit
   Just { head, tail } → do
     apathize $ FSA.mkdir head

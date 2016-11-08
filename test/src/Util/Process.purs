@@ -26,7 +26,6 @@ import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (EXCEPTION, error)
 import Control.Monad.Error.Class (throwError)
 
-import Data.Functor (($>))
 import Data.Maybe (Maybe(..), isJust)
 import Data.Posix.Signal (Signal(SIGTERM))
 import Data.String as Str
@@ -47,7 +46,7 @@ spawnMongo = do
   spawn "MongoDB" "[initandlisten] waiting for connections" $ liftEff $
     CP.spawn
       "mongod"
-      (Str.split " " "--port 63174 --dbpath db")
+      (Str.split (Str.Pattern " ") "--port 63174 --dbpath db")
       (CP.defaultSpawnOptions { cwd = Just "test/tmp" })
 
 spawnQuasar ∷ ∀ eff. Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, err ∷ EXCEPTION | eff) CP.ChildProcess
@@ -58,7 +57,7 @@ spawnQuasar = do
   spawn "Quasar" "Press Enter to stop" $ liftEff $
     CP.spawn
       "java"
-      (Str.split " " "-jar ../../quasar/quasar.jar -c config.json")
+      (Str.split (Str.Pattern " ") "-jar ../../quasar/quasar.jar -c config.json")
       (CP.defaultSpawnOptions { cwd = Just "test/tmp/quasar" })
 
 spawn
@@ -75,7 +74,7 @@ spawn name startLine spawnProc = do
     void $ launchAff $ putVar var $ Just $ error $ "An error occurred: " <> s
   liftEff $ Stream.onDataString (CP.stdout proc) Enc.UTF8 \s →
     void $ launchAff
-      if isJust (Str.indexOf startLine s)
+      if isJust (Str.indexOf (Str.Pattern startLine) s)
       then putVar var Nothing
       else pure unit
   forkAff $ later' 10000 $ putVar var $ Just (error "Timed out")

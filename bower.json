@@ -17,19 +17,19 @@
     "package.json"
   ],
   "dependencies": {
-    "purescript-affjax-algebra": "^2.0.0",
-    "purescript-argonaut": "^1.0.0",
-    "purescript-ejson": "^1.0.0",
-    "purescript-free": "^1.2.0",
-    "purescript-nonempty": "^1.1.0",
-    "purescript-oidc-crypt-utils": "^4.0.0",
-    "purescript-pathy": "^2.0.0",
-    "purescript-uri": "^1.0.0"
+    "purescript-affjax-algebra": "^3.0.0",
+    "purescript-argonaut": "^2.0.0",
+    "purescript-ejson": "^2.0.0",
+    "purescript-free": "^3.0.0",
+    "purescript-nonempty": "^3.0.0",
+    "purescript-oidc-crypt-utils": "^5.0.0",
+    "purescript-pathy": "^3.0.0",
+    "purescript-uri": "^2.0.0"
   },
   "devDependencies": {
-    "purescript-assert": "^1.0.0",
-    "purescript-node-process": "^2.0.0",
-    "purescript-node-child-process": "^2.0.0",
-    "purescript-node-fs-aff": "^2.0.0"
+    "purescript-assert": "^2.0.0",
+    "purescript-node-process": "^3.0.0",
+    "purescript-node-child-process": "^3.0.0",
+    "purescript-node-fs-aff": "^3.0.0"
   }
 }
