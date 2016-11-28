@@ -66,9 +66,9 @@ fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme _ query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'sql2' URL scheme"
   let queryMap = maybe List.Nil (\(URI.Query q) → q) query
-  query ← maybe (Left "Expected 'q' query variable") pure (extractQuery queryMap)
+  query' ← maybe (Left "Expected 'q' query variable") pure (extractQuery queryMap)
   let vars = SM.fromFoldable $ foldMap extractVar queryMap
-  pure { query, vars }
+  pure { query: query', vars }
 
 uriScheme ∷ URI.URIScheme
 uriScheme = URI.URIScheme "sql2"
