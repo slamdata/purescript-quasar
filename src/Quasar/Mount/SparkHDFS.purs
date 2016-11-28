@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Mount.Spark
+module Quasar.Mount.SparkHDFS
   ( Config
   , toJSON
   , fromJSON
@@ -48,7 +48,7 @@ type Config =
 toJSON ∷ Config → Json
 toJSON config =
   let uri = toString config
-  in "spark" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
+  in "spark-hdfs" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
