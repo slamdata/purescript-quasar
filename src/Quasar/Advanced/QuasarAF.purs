@@ -65,24 +65,7 @@ type QuasarAFC = Coproduct QuasarF QuasarAF
 -- | `E` for `either error` (`QResponse` is `Either QError` already)
 type QuasarAFCE res = QuasarAFC (QResponse res)
 
-instance functorQuasarAF ∷ Functor QuasarAF where
-  map f (GroupInfo pt g) = GroupInfo pt (f <<< g)
-  map f (CreateGroup pt g) = CreateGroup pt (f <<< g)
-  map f (ModifyGroup pt p g) = ModifyGroup pt p (f <<< g)
-  map f (DeleteGroup pt g) = DeleteGroup pt (f <<< g)
-  map f (AuthorityList g) = AuthorityList (f <<< g)
-  map f (PermissionList tr g) = PermissionList tr (f <<< g)
-  map f (PermissionInfo pid g) = PermissionInfo pid (f <<< g)
-  map f (PermissionChildren pid tr g) = PermissionChildren pid tr (f <<< g)
-  map f (SharePermission req g) = SharePermission req (f <<< g)
-  map f (DeletePermission pid g) = DeletePermission pid (f <<< g)
-  map f (TokenList g) = TokenList (f <<< g)
-  map f (TokenInfo tid g) = TokenInfo tid (f <<< g)
-  map f (CreateToken mbName actions g) = CreateToken mbName actions (f <<< g)
-  map f (DeleteToken tid g) = DeleteToken tid (f <<< g)
-  map f (AuthProviders g) = AuthProviders (f <<< g)
-  map f (Licensee g) = Licensee (f <<< g)
-
+derive instance functorQuasarAF ∷ Functor QuasarAF
 
 serverInfo
   ∷ QuasarAFCE ServerInfo

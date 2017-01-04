@@ -52,23 +52,7 @@ data QuasarF a
   | MoveMount AnyPath AnyPath (Unit :~> a)
   | DeleteMount AnyPath (Unit :~> a)
 
-instance functorQuasarF ∷ Functor QuasarF where
-  map f (ServerInfo g) = ServerInfo (f <<< g)
-  map f (ReadQuery mode path sql vars pagination g) = ReadQuery mode path sql vars pagination (f <<< g)
-  map f (WriteQuery path file sql vars g) = WriteQuery path file sql vars (f <<< g)
-  map f (CompileQuery path sql vars g) = CompileQuery path sql vars (f <<< g)
-  map f (FileMetadata path g) = FileMetadata path (f <<< g)
-  map f (DirMetadata path g) = DirMetadata path (f <<< g)
-  map f (ReadFile mode path pagination g) = ReadFile mode path pagination (f <<< g)
-  map f (WriteFile path content g) = WriteFile path content (f <<< g)
-  map f (AppendFile path content g) = AppendFile path content (f <<< g)
-  map f (DeleteData path g) = DeleteData path (f <<< g)
-  map f (MoveData from to g) = MoveData from to (f <<< g)
-  map f (GetMount path g) = GetMount path (f <<< g)
-  map f (CreateMount path config g) = CreateMount path config (f <<< g)
-  map f (UpdateMount path config g) = UpdateMount path config (f <<< g)
-  map f (MoveMount from to g) = MoveMount from to (f <<< g)
-  map f (DeleteMount path g) = DeleteMount path (f <<< g)
+derive instance functorQuasarF ∷ Functor QuasarF
 
 -- `E` for `either error`
 type QuasarFE res = QuasarF (QResponse res)

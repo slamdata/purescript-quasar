@@ -19,7 +19,7 @@
   "dependencies": {
     "purescript-affjax-algebra": "^3.0.0",
     "purescript-argonaut": "^2.0.0",
-    "purescript-ejson": "^2.0.0",
+    "purescript-ejson": "^3.0.0",
     "purescript-free": "^3.0.0",
     "purescript-nonempty": "^3.0.0",
     "purescript-oidc-crypt-utils": "^5.0.0",
