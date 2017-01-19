@@ -16,6 +16,7 @@ limitations under the License.
 
 module Quasar.Mount.MarkLogic
   ( Config
+  , Format(..)
   , toJSON
   , fromJSON
   , toURI
@@ -28,7 +29,10 @@ import Prelude
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..))
+import Data.List as L
+import Data.Maybe (Maybe(..), maybe)
+import Data.StrMap as SM
+import Data.Tuple (Tuple(..))
 import Data.URI as URI
 
 import Quasar.Mount.Common (Host, credentials, extractCredentials, extractHost)
@@ -40,7 +44,12 @@ type Config =
   , path ∷ Maybe AnyPath
   , user ∷ Maybe String
   , password ∷ Maybe String
+  , format ∷ Format
   }
+
+data Format
+  = JSON
+  | XML
 
 toJSON ∷ Config → Json
 toJSON config =
@@ -56,18 +65,39 @@ fromJSON
   <=< decodeJson
 
 toURI ∷ Config → URI.AbsoluteURI
-toURI { host, path, user, password } =
+toURI { host, path, user, password, format } =
   URI.AbsoluteURI
     (Just uriScheme)
     (URI.HierarchicalPart (Just (URI.Authority (credentials user password) (pure host))) path)
-    Nothing
+    (Just (URI.Query props))
+  where
+  props ∷ L.List (Tuple String (Maybe String))
+  props = L.singleton (Tuple "format" (Just formatStr))
+
+  formatStr ∷ String
+  formatStr = case format of
+    JSON → "json"
+    XML  → "xml"
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'xcc' URL scheme"
   host ← extractHost auth
-  let creds = extractCredentials auth
-  pure { host, path, user: creds.user, password: creds.password }
+  let
+    creds = extractCredentials auth
+    props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
+  format ← case join $ SM.lookup "format" props of
+    Nothing → pure XML
+    Just "xml" → pure XML
+    Just "json" → pure JSON
+    Just f → Left $ "Unexpected format: " <> f
+  pure
+    { host
+    , path
+    , user: creds.user
+    , password: creds.password
+    , format
+    }
 
 uriScheme ∷ URI.URIScheme
 uriScheme = URI.URIScheme "xcc"
