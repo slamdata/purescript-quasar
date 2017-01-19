@@ -51,6 +51,9 @@ data Format
   = JSON
   | XML
 
+derive instance eqFormat ∷ Eq Format
+derive instance ordFormat ∷ Ord Format
+
 toJSON ∷ Config → Json
 toJSON config =
   let uri = URI.printAbsoluteURI (toURI config)
