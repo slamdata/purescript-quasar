@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Mount.SparkHDFS
+module Quasar.Mount.SparkLocal
   ( Config
   , toJSON
   , fromJSON
@@ -26,75 +26,49 @@ module Quasar.Mount.SparkHDFS
 import Prelude
 
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
-import Data.Bifunctor (bimap, lmap)
+import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (Pattern(..), joinWith, split)
 import Data.URI as URI
 import Data.URI.Path (printPath, parseURIPathAbs)
 
-import Quasar.Mount.Common (Host, extractHost)
 import Quasar.Mount.Common (Host) as Exports
 import Quasar.Types (AnyPath)
 
 import Text.Parsing.StringParser (runParser)
 
 type Config =
-  { sparkHost ∷ Host
-  , hdfsHost ∷ Host
-  , path ∷ Maybe AnyPath
-  }
+  { path ∷ Maybe AnyPath }
 
 toJSON ∷ Config → Json
 toJSON config =
   let uri = toString config
-  in "spark-hdfs" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
+  in "spark-local" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromString
   <=< (_ .? "connectionUri")
-  <=< (_ .? "spark") -- TODO check that this shouldn't be "Spark-local"
+  <=< (_ .? "spark-local")
   <=< decodeJson
 
 toString ∷ Config → String
-toString { sparkHost, hdfsHost, path } =
+toString { path } =
   joinWith "|"
-    [ URI.printAbsoluteURI (mkURI sparkURIScheme sparkHost)
-    , URI.printAbsoluteURI (mkURI hdfsURIScheme hdfsHost)
-    , maybe "/" printPath path
-    ]
-  where
-  mkURI ∷ URI.URIScheme → Host → URI.AbsoluteURI
-  mkURI scheme host =
-    URI.AbsoluteURI
-      (Just scheme)
-      (URI.HierarchicalPart (Just (URI.Authority Nothing (pure host))) Nothing)
-      Nothing
+    [ maybe "/" printPath path ]
 
 fromString ∷ String → Either String Config
 fromString str = case split (Pattern "|") str of
-  [ spark, hdfs, root ] → do
-    sparkHost ← extractHost' sparkURIScheme spark
-    hdfsHost ← extractHost' hdfsURIScheme hdfs
+  [ root ] → do
     path ← bimap show Just (runParser parseURIPathAbs root)
     pure
-      { sparkHost
-      , hdfsHost
-      , path
-      }
+      { path }
   _ →
-    Left "Expected 'spark' connectionUri format"
-  where
-  extractHost' ∷ URI.URIScheme → String → Either String Host
-  extractHost' scheme@(URI.URIScheme name) uri = do
-    URI.AbsoluteURI scheme' (URI.HierarchicalPart auth _) _ ←
-      lmap show $ URI.runParseAbsoluteURI uri
-    unless (scheme' == Just scheme) $ Left $ "Expected '" <> name <> "' URL scheme"
-    extractHost auth
+    Left "Expected 'spark-local' connectionUri format"
 
 sparkURIScheme ∷ URI.URIScheme
 sparkURIScheme = URI.URIScheme "spark"
 
-hdfsURIScheme ∷ URI.URIScheme
-hdfsURIScheme = URI.URIScheme "hdfs"
+localURIScheme ∷ URI.URIScheme
+localURIScheme = URI.URIScheme "local"
