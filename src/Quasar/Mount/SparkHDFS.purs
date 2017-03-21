@@ -54,7 +54,7 @@ fromJSON ∷ Json → Either String Config
 fromJSON
   = fromString
   <=< (_ .? "connectionUri")
-  <=< (_ .? "spark") -- TODO check that this shouldn't be "Spark-local"
+  <=< (_ .? "spark")
   <=< decodeJson
 
 toString ∷ Config → String
