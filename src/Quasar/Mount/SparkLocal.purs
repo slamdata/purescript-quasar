@@ -18,57 +18,49 @@ module Quasar.Mount.SparkLocal
   ( Config
   , toJSON
   , fromJSON
-  , toString
-  , fromString
+  , toURI
+  , fromURI
   , module Exports
   ) where
 
 import Prelude
 
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..), maybe)
-import Data.String (Pattern(..), joinWith, split)
+import Data.Maybe (Maybe(..))
 import Data.URI as URI
-import Data.URI.Path (printPath, parseURIPathAbs)
 
 import Quasar.Mount.Common (Host) as Exports
 import Quasar.Types (AnyPath)
-
-import Text.Parsing.StringParser (runParser)
 
 type Config =
   { path ∷ Maybe AnyPath }
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = toString config
+  let uri = URI.printAbsoluteURI (toURI config)
   in "spark-local" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
-  = fromString
+  = fromURI
+  <=< lmap show <<< URI.runParseAbsoluteURI
   <=< (_ .? "connectionUri")
   <=< (_ .? "spark-local")
   <=< decodeJson
 
-toString ∷ Config → String
-toString { path } =
-  joinWith "|"
-    [ maybe "/" printPath path ]
+toURI ∷ Config → URI.AbsoluteURI
+toURI { path } =
+  URI.AbsoluteURI
+    (Just uriScheme)
+    (URI.HierarchicalPart Nothing path)
+    Nothing
 
-fromString ∷ String → Either String Config
-fromString str = case split (Pattern "|") str of
-  [ root ] → do
-    path ← bimap show Just (runParser parseURIPathAbs root)
-    pure
-      { path }
-  _ →
-    Left "Expected 'spark-local' connectionUri format"
+fromURI ∷ URI.AbsoluteURI → Either String Config
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart _ path) _) = do
+  unless (scheme == Just uriScheme) $ Left "Expected 'spark' URL scheme"
+  pure { path }
 
-sparkURIScheme ∷ URI.URIScheme
-sparkURIScheme = URI.URIScheme "spark"
-
-localURIScheme ∷ URI.URIScheme
-localURIScheme = URI.URIScheme "local"
+uriScheme ∷ URI.URIScheme
+uriScheme = URI.URIScheme "spark"
