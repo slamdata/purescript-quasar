@@ -19,8 +19,6 @@ module Quasar.Mount.SparkLocal
   , toJSON
   , fromJSON
   , parseDirPath
-  -- , toPath
-  -- , fromPath
   , module Exports
   ) where
 
@@ -28,11 +26,11 @@ import Prelude
 import Data.Path.Pathy as P
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe, maybe)
 import Data.Path.Pathy (Abs, Dir, Path, Sandboxed, Unsandboxed, (</>))
 import Quasar.Mount.Common (Host) as Exports
 
-type Config = Maybe (Path Abs Dir Sandboxed)
+type Config = Path Abs Dir Sandboxed
 
 sandbox
   ∷ forall a
@@ -46,13 +44,13 @@ parseDirPath = sandbox <=< P.parseAbsDir
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = P.printPath <$> config
+  let uri = P.printPath config
   in "spark-local" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
-  = map Just
-  <<< maybe (Left "Couldn't sandbox") Right <<< parseDirPath
+  = maybe (Left "Couldn't sandbox") Right
+  <<< parseDirPath
   <=< (_ .? "connectionUri")
   <=< (_ .? "spark-local")
   <=< decodeJson
