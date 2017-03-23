@@ -32,12 +32,7 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.Path.Pathy (Abs, Dir, Path, Sandboxed, Unsandboxed, (</>))
 import Quasar.Mount.Common (Host) as Exports
 
-type Config = { path :: Maybe (Path Abs Dir Sandboxed) }
-
--- _.path
-
-pathToConfig :: Maybe (Path Abs Dir Sandboxed) -> Config
-pathToConfig path = { path }
+type Config = Maybe (Path Abs Dir Sandboxed)
 
 sandbox
   ∷ forall a
@@ -51,12 +46,12 @@ parseDirPath = sandbox <=< P.parseAbsDir
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = P.printPath <$> config.path
+  let uri = P.printPath <$> config
   in "spark-local" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
-fromJSON ∷ Json → Either String { path :: Maybe (Path Abs Dir Sandboxed) }
+fromJSON ∷ Json → Either String Config
 fromJSON
-  = map (pathToConfig <<< Just)
+  = map Just
   <<< maybe (Left "Couldn't sandbox") Right <<< parseDirPath
   <=< (_ .? "connectionUri")
   <=< (_ .? "spark-local")

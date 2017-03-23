@@ -61,7 +61,7 @@ instance showMountConfig ∷ Show MountConfig where
     = "(SparkHDFSConfig { sparkHost: " <> show sparkHost
     <> ", hdfsHost: " <> show hdfsHost
     <> ", path: " <> show path <> " })"
-  show (SparkLocalConfig { path })
+  show (SparkLocalConfig path )
     = "(SparkLocalConfig { path: " <> show path <> " })"
 
 fromJSON ∷ Json → Either String MountConfig
