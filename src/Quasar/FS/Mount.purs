@@ -56,7 +56,7 @@ fromJSON parent = decodeJson >=> \obj → do
     "directory", "couchbase" → Right $ Couchbase (parent </> dir name)
     "directory", "marklogic" → Right $ MarkLogic (parent </> dir name)
     "directory", "spark-hdfs" → Right $ SparkHDFS (parent </> dir name)
-    "directory", "spark-local" → Right $ SparkHDFS (parent </> dir name)
+    "directory", "spark-local" → Right $ SparkLocal (parent </> dir name)
     _, _ → Left $
       "Unknown mount type '" <> mount <> "' for resource type '" <> typ <> "'"
 
