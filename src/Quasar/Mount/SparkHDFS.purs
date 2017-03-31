@@ -61,7 +61,7 @@ fromJSON
   = fromURI
   <=< lmap show <<< URI.runParseAbsoluteURI
   <=< (_ .? "connectionUri")
-  <=< (_ .? "spark")
+  <=< (_ .? "spark-hdfs")
   <=< J.decodeJson
 
 toURI ∷ Config → URI.AbsoluteURI
