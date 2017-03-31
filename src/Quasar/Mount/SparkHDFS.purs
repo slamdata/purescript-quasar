@@ -64,12 +64,6 @@ fromJSON
   <=< (_ .? "spark")
   <=< J.decodeJson
 
-toJSONString ∷ ∀ a. J.EncodeJson a ⇒ a → String
-toJSONString = J.printJson <<< J.encodeJson
-
-fromJSONString ∷ ∀ a. J.DecodeJson a ⇒ String → Either String a
-fromJSONString = J.decodeJson <=< J.jsonParser
-
 toURI ∷ Config → URI.AbsoluteURI
 toURI cfg = mkURI sparkURIScheme cfg.sparkHost (Just (URI.Query $ requiredProps <> optionalProps))
   where
