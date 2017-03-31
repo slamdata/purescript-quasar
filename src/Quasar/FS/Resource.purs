@@ -42,6 +42,8 @@ instance showResource ∷ Show Resource where
   show (Directory p) = "(Directory " <> show p <> ")"
   show (Mount m) = "(Mount " <> show m <> ")"
 
+-- This only produces Directory or File. Is this what we want?
+-- See also `Quasar.FS.Mount.fromJson`.
 fromJSON ∷ DirPath → Json → Either String Resource
 fromJSON parent json
   = Mount <$> Mount.fromJSON parent json

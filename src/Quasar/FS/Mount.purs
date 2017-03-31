@@ -31,6 +31,7 @@ data Mount
   | Couchbase DirPath
   | MarkLogic DirPath
   | SparkHDFS DirPath
+  | SparkLocal DirPath
 
 derive instance eqMount ∷ Eq Mount
 
@@ -40,6 +41,7 @@ instance showMount ∷ Show Mount where
   show (Couchbase p) = "(Couchbase " <> show p <> ")"
   show (MarkLogic p) = "(MarkLogic " <> show p <> ")"
   show (SparkHDFS p) = "(SparkHDFS " <> show p <> ")"
+  show (SparkLocal p) = "(SparkLocal " <> show p <> ")"
 
 -- | Attempts to decode a mount listing value from Quasar's filesystem metadata,
 -- | for a mount in the specified parent directory.
@@ -53,7 +55,8 @@ fromJSON parent = decodeJson >=> \obj → do
     "directory", "mongodb" → Right $ MongoDB (parent </> dir name)
     "directory", "couchbase" → Right $ Couchbase (parent </> dir name)
     "directory", "marklogic" → Right $ MarkLogic (parent </> dir name)
-    "directory", "spark" → Right $ SparkHDFS (parent </> dir name)
+    "directory", "spark-hdfs" → Right $ SparkHDFS (parent </> dir name)
+    "directory", "spark-local" → Right $ SparkHDFS (parent </> dir name)
     _, _ → Left $
       "Unknown mount type '" <> mount <> "' for resource type '" <> typ <> "'"
 
@@ -63,6 +66,7 @@ getPath (MongoDB p) = Left p
 getPath (Couchbase p) = Left p
 getPath (MarkLogic p) = Left p
 getPath (SparkHDFS p) = Left p
+getPath (SparkLocal p) = Left p
 
 getName ∷ Mount → Either (Maybe DirName) FileName
 getName = pathName <<< getPath
