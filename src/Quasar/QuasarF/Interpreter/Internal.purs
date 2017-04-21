@@ -34,16 +34,17 @@ import Prelude
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free, liftF)
 
-import Data.Argonaut ((.?))
 import Data.Argonaut as Json
+import Data.Argonaut.Decode.Combinators ((.?), (.??))
 import Data.Array as Array
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
+import Data.Foldable (oneOf)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
 import Data.List as List
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Path.Pathy (Sandboxed, Rel, Path, Abs, RelDir, file, dir, printPath, rootDir, relativeTo, (</>))
 import Data.String as Str
 import Data.StrMap as SM
@@ -154,10 +155,28 @@ handleResult f =
             $ (UnauthorizedDetails <<< show)
             <$> (Array.index headers =<< Array.findIndex isWWWAuthenticate headers)
       | otherwise →
-          Left $ Error $ error $
-            either (pure $ "An unknown error ocurred: " <> show code <> " " <> show response) id $
-              (_ .? "error") =<< (Json.decodeJson =<< Json.jsonParser response)
+          let
+            parseResult = parseHumanReadableError =<< hush (Json.decodeJson =<< Json.jsonParser response)
+            fallbackError = Error $ error $ "An unknown error ocurred: " <> show code <> " " <> show response
+          in
+            Left (maybe fallbackError ErrorMessage parseResult)
     Left err → Left (Error err)
   where
   isWWWAuthenticate ∷ RH.ResponseHeader → Boolean
   isWWWAuthenticate = eq "www-authenticate" <<< Str.toLower <<< RH.responseHeaderName
+
+hush :: forall a b. Either a b -> Maybe b
+hush = either (const Nothing) Just
+
+-- | Try to parse the known Quasar error formats, to get at a human readable error message
+parseHumanReadableError :: Json.JObject -> Maybe {title :: Maybe String, message :: String}
+parseHumanReadableError json = oneOf (map hush [ json .? "error" <#> {title: Nothing, message: _}
+                                             , do e <- json .? "error"
+                                                  message <- e .? "message"
+                                                  pure {title: Nothing, message}
+                                             , do e <- json .? "error"
+                                                  detail <- e .? "detail"
+                                                  title <- e .?? "status"
+                                                  message <- detail .? "message"
+                                                  pure {title, message}
+                                             ])
