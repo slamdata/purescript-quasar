@@ -169,14 +169,17 @@ hush :: forall a b. Either a b -> Maybe b
 hush = either (const Nothing) Just
 
 -- | Try to parse the known Quasar error formats, to get at a human readable error message
-parseHumanReadableError :: Json.JObject -> Maybe {title :: Maybe String, message :: String}
-parseHumanReadableError json = oneOf (map hush [ json .? "error" <#> {title: Nothing, message: _}
-                                             , do e <- json .? "error"
-                                                  message <- e .? "message"
-                                                  pure {title: Nothing, message}
-                                             , do e <- json .? "error"
-                                                  detail <- e .? "detail"
-                                                  title <- e .?? "status"
-                                                  message <- detail .? "message"
-                                                  pure {title, message}
-                                             ])
+parseHumanReadableError :: Json.JObject -> Maybe {title :: Maybe String, message :: String, raw :: Json.JObject}
+parseHumanReadableError json =
+  oneOf (map hush
+    [ do message <- json .? "error"
+         pure {title: Nothing, message, raw: json}
+    , do e <- json .? "error"
+         message <- e .? "message"
+         pure {title: Nothing, message, raw: json}
+    , do e <- json .? "error"
+         detail <- e .? "detail"
+         title <- e .?? "status"
+         message <- detail .? "message"
+         pure {title, message, raw: json}
+    ])

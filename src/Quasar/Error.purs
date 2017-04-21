@@ -18,6 +18,7 @@ module Quasar.Error where
 
 import Prelude
 
+import Data.Argonaut (JObject)
 import Data.Either (Either)
 import Data.Maybe (Maybe(..), maybe)
 import Control.Monad.Eff.Exception (Error, error, message)
@@ -29,7 +30,7 @@ data QError
   | Unauthorized (Maybe UnauthorizedDetails)
   | Forbidden
   | PaymentRequired
-  | ErrorMessage {title :: Maybe String, message :: String}
+  | ErrorMessage {title :: Maybe String, message :: String, raw :: JObject}
   | Error Error
 
 instance showQError ∷ Show QError where
