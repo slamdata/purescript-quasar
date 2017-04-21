@@ -42,16 +42,15 @@ import Quasar.ConfigF as CF
 
 eval
   ∷ ∀ m eff r
-  . ( MonadReader
-        { basePath ∷ AX.URL
-        , idToken ∷ Maybe IdToken
-        , permissions ∷ Array TokenHash
-        | r
-        }
-        m
-    , MonadAff (ajax ∷ AX.AJAX | eff) m
-    , MonadRec m
-    )
+  . MonadReader
+      { basePath ∷ AX.URL
+      , idToken ∷ Maybe IdToken
+      , permissions ∷ Array TokenHash
+      | r
+      }
+      m
+  ⇒ MonadAff (ajax ∷ AX.AJAX | eff) m
+  ⇒ MonadRec m
   ⇒ QuasarAFC
   ~> m
 eval = foldFree (coproduct CF.evalReader (liftAff <<< AXF.eval)) <<< IAX.eval

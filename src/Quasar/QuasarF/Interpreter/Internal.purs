@@ -75,7 +75,7 @@ unitResult ∷ String → Either Error Unit
 unitResult = const (Right unit)
 
 toVarParams ∷ SM.StrMap String → List (Tuple String String)
-toVarParams = map (lmap ("var." <> _)) <<< SM.toList
+toVarParams = map (lmap ("var." <> _)) <<< SM.toUnfoldable
 
 toPageParams ∷ Maybe Pagination → List (Tuple String String)
 toPageParams Nothing = Nil
