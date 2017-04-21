@@ -64,12 +64,11 @@ run
   . Show a
   ⇒ (Either QError a → Boolean)
   → QuasarF (Either QError a)
-  → Aff (ajax ∷ AJAX, console ∷ CONSOLE, assert ∷ ASSERT | eff) (Either QError a)
+  → Aff (ajax ∷ AJAX, console ∷ CONSOLE, assert ∷ ASSERT | eff) Unit
 run pred qf = do
   x ← runReaderT (eval (left qf)) config
   log (show x)
   liftEff $ assert (pred x)
-  pure x
 
 config ∷ Config ()
 config =
@@ -92,7 +91,7 @@ jumpOutOnError aff = do
       Proc.exit 1
     Right x' → pure x'
 
-main ∷ Eff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, process ∷ PROCESS, err ∷ EXCEPTION, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, ajax ∷ AJAX, assert ∷ ASSERT) Unit
+main ∷ Eff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, process ∷ PROCESS, exception ∷ EXCEPTION, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, ajax ∷ AJAX, assert ∷ ASSERT) Unit
 main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
   mongod ← spawnMongo
@@ -161,8 +160,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ QF.deleteMount (Right testMount2)
 
   liftEff do
-    CP.kill SIGTERM mongod
-    CP.kill SIGTERM quasar
+    void $ CP.kill SIGTERM mongod
+    void $ CP.kill SIGTERM quasar
 
   case result of
     Left err → throwError err
