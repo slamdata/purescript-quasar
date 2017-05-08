@@ -18,10 +18,11 @@ module Quasar.Error where
 
 import Prelude
 
+import Control.Monad.Eff.Exception (Error, error, message)
 import Data.Argonaut (JObject)
 import Data.Either (Either)
+import Data.Foldable (intercalate)
 import Data.Maybe (Maybe(..), maybe)
-import Control.Monad.Eff.Exception (Error, error, message)
 
 newtype UnauthorizedDetails = UnauthorizedDetails String
 
@@ -30,7 +31,8 @@ data QError
   | Unauthorized (Maybe UnauthorizedDetails)
   | Forbidden
   | PaymentRequired
-  | ErrorMessage {title :: Maybe String, message :: String, raw :: JObject}
+  | ErrorMessage {title ∷ Maybe String, message ∷ String, raw ∷ JObject}
+  | MultipleErrors (Array QError)
   | Error Error
 
 instance showQError ∷ Show QError where
@@ -40,6 +42,7 @@ instance showQError ∷ Show QError where
   show Forbidden = "Forbidden"
   show PaymentRequired = "PaymentRequired"
   show (ErrorMessage {title, message}) = "(ErrorMesssage {title: " <> show title <> ", message: " <> show message <> "})"
+  show (MultipleErrors errs) = "(MultipleErrors " <> show errs <> ")"
   show (Error err) = "(Error " <> show err <> ")"
 
 printQError ∷ QError → String
@@ -49,6 +52,7 @@ printQError = case _ of
   Forbidden → "Resource is unavailable, the current authorization credentials do not grant access to the resource"
   PaymentRequired → "Resource is unavailable, payment is required to use this feature"
   ErrorMessage {title, message} → maybe "" (_ <> ": ") title <> message
+  MultipleErrors errs → "Multiple errors occured: " <> intercalate ", " (map printQError errs)
   Error err → message err
 
 lowerQError ∷ QError → Error
