@@ -44,6 +44,7 @@ data QuasarF a
   | ReadFile JSONMode FilePath (Maybe Pagination) (JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
   | AppendFile FilePath QData (Unit :~> a)
+  | InvokeFile JSONMode FilePath Vars (Maybe Pagination) (JArray :~> a)
   | DeleteData AnyPath (Unit :~> a)
   | MoveData AnyPath AnyPath (Unit :~> a)
   | GetMount AnyPath (MountConfig :~> a)
@@ -138,6 +139,23 @@ appendFile
   → QuasarFE Unit
 appendFile path content =
   AppendFile path content id
+
+invokeFile
+  ∷ JSONMode
+  → FilePath
+  → Vars
+  → Maybe Pagination
+  → QuasarFE JArray
+invokeFile mode path vars pagination =
+  InvokeFile mode path vars pagination id
+
+invokeFileEJson
+  ∷ FilePath
+  → Vars
+  → Maybe Pagination
+  → QuasarFE (Array EJson)
+invokeFileEJson path vars pagination =
+  invokeFile Precise path vars pagination <#> resultsAsEJson
 
 deleteData
   ∷ AnyPath

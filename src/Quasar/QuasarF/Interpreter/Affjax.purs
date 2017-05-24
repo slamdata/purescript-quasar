@@ -127,6 +127,14 @@ eval = case _ of
         , content = Just $ snd (toRequest content)
         })
 
+  InvokeFile mode path vars pagination k → do
+    url ← mkURL Paths.invoke (Right path) (toVarParams vars <> toPageParams pagination)
+    k <$> mkRequest jsonResult
+      (AXF.affjax defaultRequest
+        { url = url
+        , headers = [Req.Accept $ JSONMode.decorateMode applicationJSON mode]
+        })
+
   DeleteData path k → do
     k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.data_ path Nil)
 

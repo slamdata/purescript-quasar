@@ -159,6 +159,10 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     log "\nDeleteMount:"
     run isRight $ QF.deleteMount (Right testMount2)
 
+    log "\nInvokeFile:"
+    run isRight $ QF.createMount (Left testMount3) mountConfig3
+    run isRight $ QF.invokeFile Precise testProcess (SM.fromFoldable [Tuple "resource" "`/test/smallZips`"]) (Just { offset: 0, limit: 100 })
+
   liftEff do
     void $ CP.kill SIGTERM mongod
     void $ CP.kill SIGTERM quasar
@@ -177,6 +181,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
   testFile3 = testFile3Dir </> file "Ϡ⨁⟶≣ΜϞ"
   testMount = rootDir </> file "testMount"
   testMount2 = rootDir </> file "testMount2"
+  testMount3 = rootDir </> dir "testMount3"
+  testProcess = testMount3 </> file "test"
 
   isNotFound ∷ ∀ a. Either QError a → Boolean
   isNotFound e = case e of
@@ -196,4 +202,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
   mountConfig2 = ViewConfig
     { query: "select * from `/test/slamengine_commits`"
     , vars: SM.empty
+    }
+
+  mountConfig3 = ModuleConfig
+    { "module": "create function test(:resource) begin select * from :resource end;"
     }
