@@ -119,8 +119,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ map (\{ name, version } → name <> " " <> version) <$> QF.serverInfo
 
     log "\nReadQuery:"
-    run isRight $ QF.readQuery Readable testDbAnyDir "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
-    run isRight $ QF.readQuery Precise testDbAnyDir "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Readable testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Precise testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
 
     log "\nWriteQuery:"
     run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty
