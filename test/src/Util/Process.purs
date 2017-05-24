@@ -14,17 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Test.Util.Process (spawnMongo, spawnQuasar) where
+module Test.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit) where
 
 import Prelude
 
-import Control.Monad.Aff (Aff, launchAff, delay, forkAff)
+import Control.Monad.Aff (Aff, launchAff, delay, forkAff, apathize)
 import Control.Monad.Aff.AVar (AVAR, makeVar, takeVar, putVar)
 import Control.Monad.Aff.Console (log)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (EXCEPTION, error)
 import Control.Monad.Error.Class (throwError)
+import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), isJust)
 import Data.Posix.Signal (Signal(SIGTERM))
 import Data.String as Str
@@ -33,14 +34,10 @@ import Node.Buffer (BUFFER)
 import Node.ChildProcess as CP
 import Node.Encoding as Enc
 import Node.FS (FS)
-import Node.FS.Aff as FSA
 import Node.Stream as Stream
-import Test.Util.FS as FS
 
 spawnMongo ∷ ∀ eff. Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, fs ∷ FS, console ∷ CONSOLE, exception ∷ EXCEPTION | eff) CP.ChildProcess
 spawnMongo = do
-  FS.rmRec "test/tmp/db"
-  FS.mkdirRec "test/tmp/db"
   spawn "MongoDB" "[initandlisten] waiting for connections" $ liftEff $
     CP.spawn
       "mongod"
@@ -49,14 +46,27 @@ spawnMongo = do
 
 spawnQuasar ∷ ∀ eff. Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, exception ∷ EXCEPTION | eff) CP.ChildProcess
 spawnQuasar = do
-  FS.rmRec "test/tmp/quasar"
-  FS.mkdirRec "test/tmp/quasar"
-  FSA.readFile "test/quasar/config.json" >>= FSA.writeFile "test/tmp/quasar/config.json"
   spawn "Quasar" "Press Enter to stop" $ liftEff $
     CP.spawn
       "java"
       (Str.split (Str.Pattern " ") "-jar ../../../jars/quasar.jar -c config.json")
       (CP.defaultSpawnOptions { cwd = Just "test/tmp/quasar" })
+
+spawnQuasarInit ∷ ∀ eff. Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, exception ∷ EXCEPTION | eff) Unit
+spawnQuasarInit = do
+  log "Starting Quasar initUpdateMetaStore..."
+  var ← makeVar
+  _ ← liftEff do
+    cp ← CP.spawn
+      "java"
+      (Str.split (Str.Pattern " ") "-jar ../../../jars/quasar.jar initUpdateMetaStore -c config.json")
+      (CP.defaultSpawnOptions { cwd = Just "test/tmp/quasar" })
+    CP.onExit cp case _ of
+      CP.Normally _ →
+        void $ launchAff $ apathize $ putVar var (Right unit)
+      _ →
+        void $ launchAff $ apathize $ putVar var (Left unit)
+  either (const (throwError (error "Process exited abnormally"))) (const (pure unit)) =<< takeVar var
 
 spawn
   ∷ ∀ eff

@@ -49,7 +49,8 @@ import Node.Process (PROCESS)
 import Node.Process as Proc
 
 import Test.Assert (ASSERT, assert)
-import Test.Util.Process (spawnMongo, spawnQuasar)
+import Test.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit)
+import Test.Util.FS as FS
 
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..), JSONMode(..))
@@ -93,7 +94,15 @@ jumpOutOnError aff = do
 
 main ∷ Eff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, process ∷ PROCESS, exception ∷ EXCEPTION, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, ajax ∷ AJAX, assert ∷ ASSERT) Unit
 main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
+  FS.rmRec "test/tmp/db"
+  FS.rmRec "test/tmp/quasar"
+  FS.mkdirRec "test/tmp/db"
+  FS.mkdirRec "test/tmp/quasar"
 
+  FSA.readFile "test/quasar/config.json"
+    >>= FSA.writeFile "test/tmp/quasar/config.json"
+
+  spawnQuasarInit
   mongod ← spawnMongo
   quasar ← spawnQuasar
 
