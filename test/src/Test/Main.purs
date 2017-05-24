@@ -189,8 +189,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
   testFile3 = testFile3Dir </> file "Ϡ⨁⟶≣ΜϞ"
   testMount = rootDir </> file "testMount"
   testMount2 = rootDir </> file "testMount2"
-  testMount3 = rootDir </> dir "testMount3"
-  testProcess = testMount3 </> file "test"
+  testMount3 = rootDir </> dir "testMount3" </> dir ""
+  testProcess = rootDir </> dir "testMount3" </> file "test"
 
   isNotFound ∷ ∀ a. Either QError a → Boolean
   isNotFound e = case e of
