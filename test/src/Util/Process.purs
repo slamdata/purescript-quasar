@@ -55,7 +55,7 @@ spawnQuasar = do
   spawn "Quasar" "Press Enter to stop" $ liftEff $
     CP.spawn
       "java"
-      (Str.split (Str.Pattern " ") "-jar ../../quasar/quasar.jar -c config.json")
+      (Str.split (Str.Pattern " ") "-jar ../../../jars/quasar.jar -c config.json")
       (CP.defaultSpawnOptions { cwd = Just "test/tmp/quasar" })
 
 spawn
