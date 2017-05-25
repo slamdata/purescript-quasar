@@ -38,6 +38,7 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (applicationJSON)
 import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
 import Data.String as Str
+import Data.StrMap as SM
 import Data.Tuple (Tuple(..), fst, snd)
 
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
@@ -128,7 +129,7 @@ eval = case _ of
         })
 
   InvokeFile mode path vars pagination k → do
-    url ← mkURL Paths.invoke (Right path) (toVarParams vars <> toPageParams pagination)
+    url ← mkURL Paths.invoke (Right path) (SM.toUnfoldable vars <> toPageParams pagination)
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
         { url = url

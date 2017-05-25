@@ -169,7 +169,7 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nInvokeFile:"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
-    run isRight $ QF.invokeFile Precise testProcess (SM.fromFoldable [Tuple "resource" "`/test/smallZips`"]) (Just { offset: 0, limit: 100 })
+    run isRight $ QF.invokeFile Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
 
   liftEff do
     void $ CP.kill SIGTERM mongod
@@ -213,5 +213,5 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     }
 
   mountConfig3 = ModuleConfig
-    { "module": "create function test(:resource) begin select * from :resource end"
+    { "module": "create function test(:a, :b) begin :a + :b end"
     }

@@ -8,5 +8,12 @@
         "connectionUri": "mongodb://localhost:63174"
       }
     }
+  },
+  "metastore": {
+    "database": {
+      "h2": {
+        "file": "./metastore.db"
+      }
+    }
   }
 }
