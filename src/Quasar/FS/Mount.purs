@@ -54,7 +54,7 @@ fromJSON parent = decodeJson >=> \obj → do
   name ← obj .? "name"
   case typ, mount of
     "file", "view" → Right $ View (parent </> file name)
-    "directory", "mount" → Right $ Module (parent </> dir name)
+    "directory", "module" → Right $ Module (parent </> dir name)
     "directory", "mongodb" → Right $ MongoDB (parent </> dir name)
     "directory", "couchbase" → Right $ Couchbase (parent </> dir name)
     "directory", "marklogic" → Right $ MarkLogic (parent </> dir name)
