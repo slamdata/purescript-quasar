@@ -27,6 +27,7 @@ import Quasar.Types (AnyPath, FilePath, DirPath)
 
 data Mount
   = View FilePath
+  | Module DirPath
   | MongoDB DirPath
   | Couchbase DirPath
   | MarkLogic DirPath
@@ -37,6 +38,7 @@ derive instance eqMount ∷ Eq Mount
 
 instance showMount ∷ Show Mount where
   show (View p) = "(View " <> show p <> ")"
+  show (Module p) = "(Module " <> show p <> ")"
   show (MongoDB p) = "(MongoDB " <> show p <> ")"
   show (Couchbase p) = "(Couchbase " <> show p <> ")"
   show (MarkLogic p) = "(MarkLogic " <> show p <> ")"
@@ -52,6 +54,7 @@ fromJSON parent = decodeJson >=> \obj → do
   name ← obj .? "name"
   case typ, mount of
     "file", "view" → Right $ View (parent </> file name)
+    "directory", "mount" → Right $ Module (parent </> dir name)
     "directory", "mongodb" → Right $ MongoDB (parent </> dir name)
     "directory", "couchbase" → Right $ Couchbase (parent </> dir name)
     "directory", "marklogic" → Right $ MarkLogic (parent </> dir name)
@@ -62,6 +65,7 @@ fromJSON parent = decodeJson >=> \obj → do
 
 getPath ∷ Mount → AnyPath
 getPath (View p) = Right p
+getPath (Module p) = Left p
 getPath (MongoDB p) = Left p
 getPath (Couchbase p) = Left p
 getPath (MarkLogic p) = Left p

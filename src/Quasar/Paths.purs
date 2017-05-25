@@ -38,3 +38,6 @@ compile = dir "compile" </> dir "fs"
 
 serverInfo ∷ RelFile Sandboxed
 serverInfo = dir "server" </> file "info"
+
+invoke ∷ RelDir Sandboxed
+invoke = dir "invoke" </> dir "fs"
