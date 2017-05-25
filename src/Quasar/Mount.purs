@@ -71,6 +71,7 @@ instance showMountConfig ∷ Show MountConfig where
 fromJSON ∷ Json → Either String MountConfig
 fromJSON json
   = ViewConfig <$> View.fromJSON json
+  <|> ModuleConfig <$> Module.fromJSON json
   <|> MongoDBConfig <$> MongoDB.fromJSON json
   <|> CouchbaseConfig <$> Couchbase.fromJSON json
   <|> MarkLogicConfig <$> MarkLogic.fromJSON json
