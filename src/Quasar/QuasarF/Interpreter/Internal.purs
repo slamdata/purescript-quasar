@@ -34,11 +34,12 @@ import Prelude
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free, liftF)
 
-import Data.Argonaut ((.?))
 import Data.Argonaut as Json
+import Data.Argonaut.Decode.Combinators ((.?), (.??))
 import Data.Array as Array
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
+import Data.Foldable (oneOf)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
@@ -75,7 +76,7 @@ unitResult ∷ String → Either Error Unit
 unitResult = const (Right unit)
 
 toVarParams ∷ SM.StrMap String → List (Tuple String String)
-toVarParams = map (lmap ("var." <> _)) <<< SM.toList
+toVarParams = map (lmap ("var." <> _)) <<< SM.toUnfoldable
 
 toPageParams ∷ Maybe Pagination → List (Tuple String String)
 toPageParams Nothing = Nil
@@ -154,10 +155,46 @@ handleResult f =
             $ (UnauthorizedDetails <<< show)
             <$> (Array.index headers =<< Array.findIndex isWWWAuthenticate headers)
       | otherwise →
-          Left $ Error $ error $
-            either (pure $ "An unknown error ocurred: " <> show code <> " " <> show response) id $
-              (_ .? "error") =<< (Json.decodeJson =<< Json.jsonParser response)
+          let
+            parseResult = parseHumanReadableError =<< hush (Json.decodeJson =<< Json.jsonParser response)
+            fallbackError = Error $ error $ "An unknown error ocurred: " <> show code <> " " <> show response
+          in
+            Left (fromMaybe fallbackError parseResult)
     Left err → Left (Error err)
   where
   isWWWAuthenticate ∷ RH.ResponseHeader → Boolean
   isWWWAuthenticate = eq "www-authenticate" <<< Str.toLower <<< RH.responseHeaderName
+
+hush ∷ ∀ a b. Either a b → Maybe b
+hush = either (const Nothing) Just
+
+-- | Try to parse the known Quasar error formats, to get at a human readable error message
+parseHumanReadableError ∷ Json.JObject → Maybe QError
+parseHumanReadableError json =
+  oneOf (map hush
+    [ do message ← json .? "error"
+         pure (ErrorMessage {title: Nothing, message, raw: json})
+    , do e ← json .? "error"
+         message ← e .? "message"
+         pure (ErrorMessage {title: Nothing, message, raw: json})
+    , do e ← json .? "error"
+         detail ← e .? "detail"
+         title ← e .?? "status"
+         message ← detail .? "message"
+         pure (ErrorMessage {title, message, raw: json})
+    , do e ← json .? "error"
+         mErr ← e .? "status"
+         case mErr of
+           "Multiple errors" → do
+             detail ← e .? "detail"
+             errors ← detail .? "errors"
+             pure
+               $ MultipleErrors
+               $ Array.catMaybes
+               $ map (parseHumanReadableError <<< wrapError) errors
+           _ → do
+             Left "Parse error in multiple errors"
+    ])
+  where
+    wrapError ∷ Json.Json → Json.JObject
+    wrapError = SM.singleton "error"

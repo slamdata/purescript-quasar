@@ -8,13 +8,14 @@ import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, isJust)
+import Data.Newtype as Newtype
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Pt
 import Data.String as Str
 import Data.Traversable (traverse)
 
 import OIDC.Crypt.JSONWebKey (JSONWebKey)
-import OIDC.Crypt.Types (Issuer(..), ClientID(..), runClientID, runIssuer)
+import OIDC.Crypt.Types (Issuer(..), ClientId(..))
 
 data Root = Root
 
@@ -433,7 +434,7 @@ instance decodeJSONOIDC ∷ DecodeJson OpenIDConfiguration where
 
 instance encodeJsonOIDC ∷ EncodeJson OpenIDConfiguration where
   encodeJson (OpenIDConfiguration obj) =
-    "issuer" := runIssuer obj.issuer
+    "issuer" := Newtype.unwrap obj.issuer
     ~> "authorization_endpoint" := obj.authorizationEndpoint
     ~> "token_endpoint" := obj.tokenEndpoint
     ~> "userinfo_endpoint" := obj.userinfoEndpoint
@@ -442,7 +443,7 @@ instance encodeJsonOIDC ∷ EncodeJson OpenIDConfiguration where
 
 type ProviderR =
   { displayName ∷ String
-  , clientID ∷ ClientID
+  , clientId ∷ ClientId
   , openIDConfiguration ∷ OpenIDConfigurationR
   }
 
@@ -453,14 +454,14 @@ runProvider (Provider r) = r
 instance decodeJsonProvider ∷ DecodeJson Provider where
   decodeJson = decodeJson >=> \obj → do
     displayName ← obj .? "display_name"
-    clientID ← ClientID <$> obj .? "client_id"
+    clientId ← ClientId <$> obj .? "client_id"
     openIDConfiguration ← obj .? "openid_configuration" <#> runOpenIDConfiguration
-    pure $ Provider { displayName, clientID, openIDConfiguration }
+    pure $ Provider { displayName, clientId, openIDConfiguration }
 
 instance encodeJsonProvider ∷ EncodeJson Provider where
   encodeJson (Provider obj) =
     "display_name" := obj.displayName
-    ~> "client_id" := runClientID obj.clientID
+    ~> "client_id" := Newtype.unwrap obj.clientId
     ~> "openid_configuration" := OpenIDConfiguration obj.openIDConfiguration
     ~> jsonEmptyObject
 

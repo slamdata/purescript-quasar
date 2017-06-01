@@ -14,58 +14,66 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Test.Util.Process (spawnMongo, spawnQuasar) where
+module Test.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit) where
 
 import Prelude
 
-import Control.Monad.Aff (Aff, launchAff, later', forkAff)
+import Control.Monad.Aff (Aff, launchAff, delay, forkAff, apathize)
 import Control.Monad.Aff.AVar (AVAR, makeVar, takeVar, putVar)
 import Control.Monad.Aff.Console (log)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (EXCEPTION, error)
 import Control.Monad.Error.Class (throwError)
-
+import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), isJust)
 import Data.Posix.Signal (Signal(SIGTERM))
 import Data.String as Str
-
+import Data.Time.Duration (Milliseconds(..))
 import Node.Buffer (BUFFER)
 import Node.ChildProcess as CP
 import Node.Encoding as Enc
 import Node.FS (FS)
-import Node.FS.Aff as FSA
 import Node.Stream as Stream
 
-import Test.Util.FS as FS
-
-spawnMongo ∷ ∀ eff. Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, fs ∷ FS, console ∷ CONSOLE, err ∷ EXCEPTION | eff) CP.ChildProcess
+spawnMongo ∷ ∀ eff. Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, fs ∷ FS, console ∷ CONSOLE, exception ∷ EXCEPTION | eff) CP.ChildProcess
 spawnMongo = do
-  FS.rmRec "test/tmp/db"
-  FS.mkdirRec "test/tmp/db"
   spawn "MongoDB" "[initandlisten] waiting for connections" $ liftEff $
     CP.spawn
       "mongod"
       (Str.split (Str.Pattern " ") "--port 63174 --dbpath db")
       (CP.defaultSpawnOptions { cwd = Just "test/tmp" })
 
-spawnQuasar ∷ ∀ eff. Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, err ∷ EXCEPTION | eff) CP.ChildProcess
+spawnQuasar ∷ ∀ eff. Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, exception ∷ EXCEPTION | eff) CP.ChildProcess
 spawnQuasar = do
-  FS.rmRec "test/tmp/quasar"
-  FS.mkdirRec "test/tmp/quasar"
-  FSA.readFile "test/quasar/config.json" >>= FSA.writeFile "test/tmp/quasar/config.json"
   spawn "Quasar" "Press Enter to stop" $ liftEff $
     CP.spawn
       "java"
-      (Str.split (Str.Pattern " ") "-jar ../../quasar/quasar.jar -c config.json")
+      (Str.split (Str.Pattern " ") "-jar ../../../jars/quasar.jar -c config.json")
       (CP.defaultSpawnOptions { cwd = Just "test/tmp/quasar" })
+
+spawnQuasarInit ∷ ∀ eff. Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, exception ∷ EXCEPTION | eff) Unit
+spawnQuasarInit = do
+  log "Starting Quasar initUpdateMetaStore..."
+  var ← makeVar
+  _ ← liftEff do
+    cp ← CP.spawn
+      "java"
+      (Str.split (Str.Pattern " ") "-jar ../../../jars/quasar.jar initUpdateMetaStore -c config.json")
+      (CP.defaultSpawnOptions { cwd = Just "test/tmp/quasar" })
+    CP.onExit cp case _ of
+      CP.Normally _ →
+        void $ launchAff $ apathize $ putVar var (Right unit)
+      _ →
+        void $ launchAff $ apathize $ putVar var (Left unit)
+  either (const (throwError (error "Process exited abnormally"))) (const (pure unit)) =<< takeVar var
 
 spawn
   ∷ ∀ eff
   . String
   → String
-  → Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, console ∷ CONSOLE, err ∷ EXCEPTION | eff) CP.ChildProcess
-  → Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, console ∷ CONSOLE, err ∷ EXCEPTION | eff) CP.ChildProcess
+  → Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, console ∷ CONSOLE, exception ∷ EXCEPTION | eff) CP.ChildProcess
+  → Aff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, console ∷ CONSOLE, exception ∷ EXCEPTION | eff) CP.ChildProcess
 spawn name startLine spawnProc = do
   log $ "Starting " <> name <> "..."
   var ← makeVar
@@ -77,10 +85,12 @@ spawn name startLine spawnProc = do
       if isJust (Str.indexOf (Str.Pattern startLine) s)
       then putVar var Nothing
       else pure unit
-  forkAff $ later' 10000 $ putVar var $ Just (error "Timed out")
+  _ ← forkAff do
+    delay (Milliseconds 10000.0)
+    putVar var $ Just (error "Timed out")
   v ← takeVar var
   case v of
     Nothing → log "Started" $> proc
     Just err → do
-      liftEff $ CP.kill SIGTERM proc
+      _ ← liftEff $ CP.kill SIGTERM proc
       throwError err

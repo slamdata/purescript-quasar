@@ -25,6 +25,7 @@ import Data.Either (Either(..))
 
 import Quasar.Mount.Couchbase as Couchbase
 import Quasar.Mount.MarkLogic as MarkLogic
+import Quasar.Mount.Module as Module
 import Quasar.Mount.MongoDB as MongoDB
 import Quasar.Mount.SparkLocal as SparkLocal
 import Quasar.Mount.SparkHDFS as SparkHDFS
@@ -33,6 +34,7 @@ import Quasar.Mount.View as View
 
 data MountConfig
   = ViewConfig View.Config
+  | ModuleConfig Module.Config
   | MongoDBConfig MongoDB.Config
   | CouchbaseConfig Couchbase.Config
   | MarkLogicConfig MarkLogic.Config
@@ -44,6 +46,8 @@ instance showMountConfig ∷ Show MountConfig where
   show (ViewConfig { query, vars })
     = "(ViewConfig { query: " <> show query
     <> ", vars: " <> show vars <> " })"
+  show (ModuleConfig config)
+    = "(ModuleConfig { module: " <> config."module" <> " })"
   show (MongoDBConfig { hosts, path, user, password, props })
     = "(MongoDBConfig { hosts: " <> show hosts
     <> ", path: " <> show path
@@ -73,6 +77,7 @@ instance showMountConfig ∷ Show MountConfig where
 fromJSON ∷ Json → Either String MountConfig
 fromJSON json
   = ViewConfig <$> View.fromJSON json
+  <|> ModuleConfig <$> Module.fromJSON json
   <|> MongoDBConfig <$> MongoDB.fromJSON json
   <|> CouchbaseConfig <$> Couchbase.fromJSON json
   <|> MarkLogicConfig <$> MarkLogic.fromJSON json
@@ -83,6 +88,7 @@ fromJSON json
 
 toJSON ∷ MountConfig → Json
 toJSON (ViewConfig config) = View.toJSON config
+toJSON (ModuleConfig config) = Module.toJSON config
 toJSON (MongoDBConfig config) = MongoDB.toJSON config
 toJSON (CouchbaseConfig config) = Couchbase.toJSON config
 toJSON (MarkLogicConfig config) = MarkLogic.toJSON config
