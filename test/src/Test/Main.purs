@@ -49,7 +49,8 @@ import Node.Process (PROCESS)
 import Node.Process as Proc
 
 import Test.Assert (ASSERT, assert)
-import Test.Util.Process (spawnMongo, spawnQuasar)
+import Test.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit)
+import Test.Util.FS as FS
 
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..), JSONMode(..))
@@ -64,12 +65,11 @@ run
   . Show a
   ⇒ (Either QError a → Boolean)
   → QuasarF (Either QError a)
-  → Aff (ajax ∷ AJAX, console ∷ CONSOLE, assert ∷ ASSERT | eff) (Either QError a)
+  → Aff (ajax ∷ AJAX, console ∷ CONSOLE, assert ∷ ASSERT | eff) Unit
 run pred qf = do
   x ← runReaderT (eval (left qf)) config
   log (show x)
   liftEff $ assert (pred x)
-  pure x
 
 config ∷ Config ()
 config =
@@ -92,9 +92,17 @@ jumpOutOnError aff = do
       Proc.exit 1
     Right x' → pure x'
 
-main ∷ Eff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, process ∷ PROCESS, err ∷ EXCEPTION, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, ajax ∷ AJAX, assert ∷ ASSERT) Unit
+main ∷ Eff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, process ∷ PROCESS, exception ∷ EXCEPTION, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, ajax ∷ AJAX, assert ∷ ASSERT) Unit
 main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
+  FS.rmRec "test/tmp/db"
+  FS.rmRec "test/tmp/quasar"
+  FS.mkdirRec "test/tmp/db"
+  FS.mkdirRec "test/tmp/quasar"
 
+  FSA.readFile "test/quasar/config.json"
+    >>= FSA.writeFile "test/tmp/quasar/config.json"
+
+  spawnQuasarInit
   mongod ← spawnMongo
   quasar ← spawnQuasar
 
@@ -111,8 +119,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ map (\{ name, version } → name <> " " <> version) <$> QF.serverInfo
 
     log "\nReadQuery:"
-    run isRight $ QF.readQuery Readable testDbAnyDir "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
-    run isRight $ QF.readQuery Precise testDbAnyDir "SELECT _id as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Readable testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Precise testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
 
     log "\nWriteQuery:"
     run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty
@@ -138,7 +146,6 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     log "\nReadFile:"
     run isRight $ QF.readFile Precise testFile1 (Just { offset: 0, limit: 100 })
     run isRight $ QF.readFile Readable testFile3 (Just { offset: 0, limit: 1 })
-    run isNotFound $ QF.readFile Readable nonexistant Nothing
 
     log "\nDeleteData:"
     run isRight $ QF.deleteData (Right testFile1)
@@ -160,9 +167,13 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     log "\nDeleteMount:"
     run isRight $ QF.deleteMount (Right testMount2)
 
+    log "\nInvokeFile:"
+    run isRight $ QF.createMount (Left testMount3) mountConfig3
+    run isRight $ QF.invokeFile Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
+
   liftEff do
-    CP.kill SIGTERM mongod
-    CP.kill SIGTERM quasar
+    void $ CP.kill SIGTERM mongod
+    void $ CP.kill SIGTERM quasar
 
   case result of
     Left err → throwError err
@@ -178,6 +189,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
   testFile3 = testFile3Dir </> file "Ϡ⨁⟶≣ΜϞ"
   testMount = rootDir </> file "testMount"
   testMount2 = rootDir </> file "testMount2"
+  testMount3 = rootDir </> dir "testMount3" </> dir ""
+  testProcess = rootDir </> dir "testMount3" </> file "test"
 
   isNotFound ∷ ∀ a. Either QError a → Boolean
   isNotFound e = case e of
@@ -197,4 +210,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
   mountConfig2 = ViewConfig
     { query: "select * from `/test/slamengine_commits`"
     , vars: SM.empty
+    }
+
+  mountConfig3 = ModuleConfig
+    { "module": "create function test(:a, :b) begin :a + :b end"
     }

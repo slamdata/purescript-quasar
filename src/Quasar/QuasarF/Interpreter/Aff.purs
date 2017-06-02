@@ -38,10 +38,9 @@ import Quasar.QuasarF.Interpreter.Config (Config)
 
 eval
   ∷ ∀ m eff r
-  . ( MonadReader { basePath ∷ AX.URL | r } m
-    , MonadAff (ajax ∷ AX.AJAX | eff) m
-    , MonadRec m
-    )
+  . MonadReader { basePath ∷ AX.URL | r } m
+  ⇒ MonadAff (ajax ∷ AX.AJAX | eff) m
+  ⇒ MonadRec m
   ⇒ QuasarF
   ~> m
 eval = foldFree (coproduct CF.evalReader (liftAff <<< AXF.eval)) <<< IAX.eval

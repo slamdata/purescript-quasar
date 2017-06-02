@@ -37,7 +37,7 @@ mkdirRec path = case Arr.uncons (Str.split (Str.Pattern "/") path) of
   Nothing → pure unit
   Just { head, tail } → do
     apathize $ FSA.mkdir head
-    Arr.foldM mkSegment head tail
+    _ ← Arr.foldM mkSegment head tail
     success ← FSA.exists path
     unless success $ throwError $ error $ "Failed to create " <> path
   where
