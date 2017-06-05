@@ -67,10 +67,12 @@ instance showMountConfig ∷ Show MountConfig where
     = "(SparkHDFSConfig { sparkHost: " <> show sparkHost
     <> ", hdfsHost: " <> show hdfsHost
     <> ", path: " <> show path <> " })"
-  show (SparkFTPConfig { sparkHost, ftpHost, path })
+  show (SparkFTPConfig { sparkHost, ftpHost, path, user, password })
     = "(SparkFTPConfig { sparkHost: " <> show sparkHost
     <> ", ftpHost: " <> show ftpHost
-    <> ", path: " <> show path <> " })"
+    <> ", path: " <> show path
+    <> ", user: " <> show user
+    <> ", password: " <> show password <> " })"
   show (SparkLocalConfig path )
     = "(SparkLocalConfig { path: " <> show path <> " })"
 

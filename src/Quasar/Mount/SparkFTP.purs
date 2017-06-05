@@ -30,7 +30,7 @@ import Data.Argonaut as J
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
 import Data.List as L
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
@@ -38,20 +38,26 @@ import Data.URI.Path (printPath, parseURIPathAbs)
 
 import Global (encodeURIComponent, decodeURIComponent)
 
-import Quasar.Mount.Common (Host, extractHost)
+import Quasar.Mount.Common (Host, extractHost, credentials, extractCredentials)
 import Quasar.Mount.Common (Host) as Exports
 import Quasar.Types (AnyPath)
 
 import Text.Parsing.StringParser (runParser)
 
+defaultUser ∷ Maybe String
+defaultUser = Just "anonymous"
+
+defaultPassword ∷ Maybe String
+defaultPassword = Just "a"
+
 type Config =
   { sparkHost ∷ Host
   , ftpHost ∷ Host
   , path ∷ Maybe AnyPath
-  , props ∷ SM.StrMap (Maybe String)
+  , user ∷ Maybe String
   , password ∷ Maybe String
-  , username ∷ Maybe String
-  }
+  , props ∷ SM.StrMap (Maybe String)
+   }
 
 toJSON ∷ Config → Json
 toJSON config =
@@ -66,45 +72,47 @@ fromJSON
   <=< (_ .? "spark-hdfs")
   <=< J.decodeJson
 
+mkDefault ∷ Maybe String → Maybe String → Maybe String
+mkDefault def curr = fromMaybe def (Just curr)
+
 toURI ∷ Config → URI.AbsoluteURI
-toURI cfg = mkURI sparkURIScheme cfg.sparkHost (Just (URI.Query $ requiredProps <> optionalProps))
+toURI { sparkHost, ftpHost, path, user, password, props }
+  = mkURI sparkURIScheme sparkHost (Just (URI.Query $ requiredProps <> optionalProps)) (mkDefault defaultUser user) (mkDefault defaultPassword defaultPassword)
   where
   requiredProps ∷ L.List (Tuple String (Maybe String))
   requiredProps = L.fromFoldable
-    [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ URI.printAbsoluteURI $ mkURI hdfsURIScheme cfg.ftpHost Nothing
-    , Tuple "rootPath" $ Just $ maybe "/" printPath cfg.path
+    [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ URI.printAbsoluteURI $ mkURI hdfsURIScheme ftpHost Nothing (mkDefault defaultUser user) (mkDefault defaultPassword defaultPassword)
+    , Tuple "rootPath" $ Just $ maybe "/" printPath path
     ]
-
   optionalProps ∷ L.List (Tuple String (Maybe String))
-  optionalProps = SM.toUnfoldable cfg.props
+  optionalProps = SM.toUnfoldable props
+
+mkURI ∷ URI.URIScheme → Host → Maybe URI.Query → Maybe String → Maybe String → URI.AbsoluteURI
+mkURI scheme host params user password =
+  URI.AbsoluteURI
+    (Just scheme)
+    (URI.HierarchicalPart (Just (URI.Authority (credentials user password) (pure host))) Nothing)
+    params
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
   unless (scheme == Just sparkURIScheme) $ Left "Expected `spark` URL scheme"
   sparkHost ← extractHost auth
+  let creds = extractCredentials auth
   let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
 
   Tuple ftpHost props' ← case SM.pop "hdfsUrl" props of
     Just (Tuple (Just value) rest) → do
       value' ← extractHost' hdfsURIScheme $ decodeURIComponent value
       pure (Tuple value' rest)
-    _ → Left "Expected `hdfsUrl` query parameter"
+    _ → Left "Expected `ftpUrl` query parameter"
 
   Tuple path props'' ← case SM.pop "rootPath" props' of
     Just (Tuple (Just value) rest) → do
-      -- I think that aorund here I need to handle the username/password eg ftp://login:password@host:port
       value' ← bimap show Just $ runParser parseURIPathAbs value
       pure (Tuple value' rest)
     _ → Left "Expected `rootPath` query parameter"
-
-  pure { sparkHost, ftpHost, path, props: props'' }
-
-mkURI ∷ URI.URIScheme → Host → Maybe URI.Query → URI.AbsoluteURI
-mkURI scheme host params =
-  URI.AbsoluteURI
-    (Just scheme)
-    (URI.HierarchicalPart (Just (URI.Authority Nothing (pure host))) Nothing)
-    params
+  pure { sparkHost, ftpHost, path, props: props'', user: creds.user, password: creds.password }
 
 extractHost' ∷ URI.URIScheme → String → Either String Host
 extractHost' scheme@(URI.URIScheme name) uri = do
