@@ -32,7 +32,10 @@ instance showTestConfig ∷ Show TestConfig where
   show (TestConfig cfg) = show (MDB.toJSON cfg)
 
 check ∷ ∀ eff. SC eff Unit
-check = (quickCheck ∷ Gen Result → SC eff Unit) do
-  configIn ← genConfig
-  let configOut = MDB.fromJSON (MDB.toJSON configIn)
-  pure $ Right (TestConfig configIn) === TestConfig <$> configOut
+check = quickCheck prop
+  where
+  prop ∷ Gen Result
+  prop = do
+    configIn ← genConfig
+    let configOut = MDB.fromJSON (MDB.toJSON configIn)
+    pure $ Right (TestConfig configIn) === TestConfig <$> configOut
