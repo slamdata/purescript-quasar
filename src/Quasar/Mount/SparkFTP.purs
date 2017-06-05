@@ -25,30 +25,37 @@ module Quasar.Mount.SparkFTP
 
 import Prelude
 
+import Control.Alt ((<|>))
+import Control.MonadPlus (guard)
+
+
 import Data.Argonaut (Json, (.?), (:=), (~>))
 import Data.Argonaut as J
+import Data.Array ((!!))
+import Data.Array as Arr
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
 import Data.List as L
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.StrMap as SM
+import Data.String as Str
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
 import Data.URI.Path (printPath, parseURIPathAbs)
 
 import Global (encodeURIComponent, decodeURIComponent)
 
-import Quasar.Mount.Common (Host, extractHost, credentials, extractCredentials)
+import Quasar.Mount.Common (Host, extractHost, credentials)
 import Quasar.Mount.Common (Host) as Exports
 import Quasar.Types (AnyPath)
 
 import Text.Parsing.StringParser (runParser)
 
-defaultUser ∷ Maybe String
-defaultUser = Just "anonymous"
+defaultUser ∷ String
+defaultUser = "anonymous"
 
-defaultPassword ∷ Maybe String
-defaultPassword = Just "a"
+defaultPassword ∷ String
+defaultPassword = "a"
 
 type Config =
   { sparkHost ∷ Host
@@ -72,20 +79,38 @@ fromJSON
   <=< (_ .? "spark-hdfs")
   <=< J.decodeJson
 
-mkDefault ∷ Maybe String → Maybe String → Maybe String
-mkDefault def curr = fromMaybe def (Just curr)
-
 toURI ∷ Config → URI.AbsoluteURI
-toURI { sparkHost, ftpHost, path, user, password, props }
-  = mkURI sparkURIScheme sparkHost (Just (URI.Query $ requiredProps <> optionalProps)) (mkDefault defaultUser user) (mkDefault defaultPassword defaultPassword)
+toURI { sparkHost, ftpHost, path, user, password, props } =
+  mkURI sparkURIScheme sparkHost
+    (Just (URI.Query $ requiredProps <> optionalProps))
+    Nothing
+    Nothing
   where
   requiredProps ∷ L.List (Tuple String (Maybe String))
   requiredProps = L.fromFoldable
-    [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ URI.printAbsoluteURI $ mkURI hdfsURIScheme ftpHost Nothing (mkDefault defaultUser user) (mkDefault defaultPassword defaultPassword)
+    [ Tuple "hdfsUrl"
+      $ Just $ id --encodeURIComponent
+        $ URI.printAbsoluteURI
+        $ mkURI ftpURIScheme ftpHost
+            Nothing
+            (user <|> Just defaultUser)
+            (password <|> Just defaultPassword)
     , Tuple "rootPath" $ Just $ maybe "/" printPath path
     ]
   optionalProps ∷ L.List (Tuple String (Maybe String))
   optionalProps = SM.toUnfoldable props
+
+extractCredentials ∷ Maybe URI.Authority → { user ∷ Maybe String, password ∷ Maybe String }
+extractCredentials auth = fromMaybe { user: Nothing, password: Nothing } do
+  URI.Authority userInfo _ <- auth
+  ui <- userInfo
+  let substrs = Str.split (Str.Pattern ":") ui
+  guard $ Arr.length substrs == 2
+  user <- substrs !! 0
+  password <- substrs !! 1
+  guard $ user /= defaultUser && password /= defaultPassword
+  pure { user: Just user, password: Just password }
+
 
 mkURI ∷ URI.URIScheme → Host → Maybe URI.Query → Maybe String → Maybe String → URI.AbsoluteURI
 mkURI scheme host params user password =
@@ -103,7 +128,7 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
 
   Tuple ftpHost props' ← case SM.pop "hdfsUrl" props of
     Just (Tuple (Just value) rest) → do
-      value' ← extractHost' hdfsURIScheme $ decodeURIComponent value
+      value' ← extractHost' ftpURIScheme $ decodeURIComponent value
       pure (Tuple value' rest)
     _ → Left "Expected `ftpUrl` query parameter"
 
@@ -124,5 +149,5 @@ extractHost' scheme@(URI.URIScheme name) uri = do
 sparkURIScheme ∷ URI.URIScheme
 sparkURIScheme = URI.URIScheme "spark"
 
-hdfsURIScheme ∷ URI.URIScheme
-hdfsURIScheme = URI.URIScheme "hdfs"
+ftpURIScheme ∷ URI.URIScheme
+ftpURIScheme = URI.URIScheme "ftp"

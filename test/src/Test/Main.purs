@@ -51,6 +51,8 @@ import Node.Process as Proc
 import Test.Assert (ASSERT, assert)
 import Test.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit)
 import Test.Util.FS as FS
+import Test.Util.Mount as Mount
+import Test.Util.Effect (Effects)
 
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..), JSONMode(..))
@@ -92,8 +94,9 @@ jumpOutOnError aff = do
       Proc.exit 1
     Right x' → pure x'
 
-main ∷ Eff (avar ∷ AVAR, cp ∷ CP.CHILD_PROCESS, process ∷ PROCESS, exception ∷ EXCEPTION, fs ∷ FS, buffer ∷ BUFFER, console ∷ CONSOLE, ajax ∷ AJAX, assert ∷ ASSERT) Unit
+main ∷ Eff Effects Unit
 main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
+  Mount.test
   FS.rmRec "test/tmp/db"
   FS.rmRec "test/tmp/quasar"
   FS.mkdirRec "test/tmp/db"
@@ -166,7 +169,6 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nDeleteMount:"
     run isRight $ QF.deleteMount (Right testMount2)
-
     log "\nInvokeFile:"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
     run isRight $ QF.invokeFile Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
