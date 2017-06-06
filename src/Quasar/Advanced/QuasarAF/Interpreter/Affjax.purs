@@ -247,7 +247,7 @@ authHeader ∷ OIDC.IdToken → Req.RequestHeader
 authHeader (OIDC.IdToken tok) =
   Req.RequestHeader "Authorization" ("Bearer " <> tok)
 
-permissionsHeader :: Array Qa.TokenHash → Maybe Req.RequestHeader
+permissionsHeader ∷ Array Qa.TokenHash → Maybe Req.RequestHeader
 permissionsHeader [] = Nothing
 permissionsHeader hs =
   Just $

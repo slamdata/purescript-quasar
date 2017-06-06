@@ -63,7 +63,7 @@ toURI { host, user, password } =
     (URI.HierarchicalPart (Just (URI.Authority Nothing (pure host))) Nothing)
     (Just (URI.Query props))
   where
-  props :: L.List (Tuple String (Maybe String))
+  props ∷ L.List (Tuple String (Maybe String))
   props = L.Nil
     <> maybe L.Nil (\u -> pure $ Tuple "username" (Just u)) user
     <> maybe L.Nil (\p -> pure $ Tuple "password" (Just p)) password

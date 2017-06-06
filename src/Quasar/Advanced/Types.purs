@@ -467,7 +467,7 @@ instance encodeJsonProvider ∷ EncodeJson Provider where
     
 data LicenseStatus = LicenseValid
 
-decodeLicenseStatus :: Json → Either String LicenseStatus
+decodeLicenseStatus ∷ Json → Either String LicenseStatus
 decodeLicenseStatus =
   (if _ then Right LicenseValid else Left $ "status != " <> show licenseValid)
     <<< eq licenseValid
