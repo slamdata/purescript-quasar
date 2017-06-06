@@ -1,5 +1,5 @@
 {-
-Copyright 2016 SlamData, Inc.
+Copyright 2017 SlamData, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ sandbox
 sandbox =
   map (P.rootDir </> _) <<< P.sandbox P.rootDir
 
-parseDirPath :: String -> Maybe (Path Abs Dir Sandboxed)
+parseDirPath ∷ String -> Maybe (Path Abs Dir Sandboxed)
 parseDirPath = sandbox <=< P.parseAbsDir
 
 toJSON ∷ Config → Json

@@ -1,5 +1,5 @@
 {-
-Copyright 2016 SlamData, Inc.
+Copyright 2017 SlamData, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -53,6 +53,11 @@ data Format
 
 derive instance eqFormat ∷ Eq Format
 derive instance ordFormat ∷ Ord Format
+
+instance showFormat ∷ Show Format where
+  show = case _ of
+    JSON → "JSON"
+    XML → "XML"
 
 toJSON ∷ Config → Json
 toJSON config =

@@ -1,5 +1,5 @@
 {-
-Copyright 2016 SlamData, Inc.
+Copyright 2017 SlamData, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ toURI { host, user, password } =
     (URI.HierarchicalPart (Just (URI.Authority Nothing (pure host))) Nothing)
     (Just (URI.Query props))
   where
-  props :: L.List (Tuple String (Maybe String))
+  props ∷ L.List (Tuple String (Maybe String))
   props = L.Nil
     <> maybe L.Nil (\u -> pure $ Tuple "username" (Just u)) user
     <> maybe L.Nil (\p -> pure $ Tuple "password" (Just p)) password

@@ -1,5 +1,5 @@
 {-
-Copyright 2016 SlamData, Inc.
+Copyright 2017 SlamData, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -207,6 +207,12 @@ evalQuasarAdvanced (Licensee k) = do
   map k
     $ mkAuthedRequest (jsonResult >=> map (lmap error) Qa.decodeLicensee)
     $ _{ url = config.basePath <> "/server/licensee" }
+evalQuasarAdvanced (LicenseInfo k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (jsonResult >=> map (lmap error) Qa.decodeLicenseInfo)
+    $ _{ url = config.basePath <> "/server/licenseInfo" }
+
 
 mkAuthedRequest
   ∷ ∀ a r
@@ -241,7 +247,7 @@ authHeader ∷ OIDC.IdToken → Req.RequestHeader
 authHeader (OIDC.IdToken tok) =
   Req.RequestHeader "Authorization" ("Bearer " <> tok)
 
-permissionsHeader :: Array Qa.TokenHash → Maybe Req.RequestHeader
+permissionsHeader ∷ Array Qa.TokenHash → Maybe Req.RequestHeader
 permissionsHeader [] = Nothing
 permissionsHeader hs =
   Just $

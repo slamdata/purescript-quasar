@@ -1,5 +1,5 @@
 {-
-Copyright 2016 SlamData, Inc.
+Copyright 2017 SlamData, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ data QuasarAF a
   | DeleteToken QA.TokenId (Unit :~> a)
   | AuthProviders ((Array QA.ProviderR) :~> a)
   | Licensee (QA.Licensee :~> a)
+  | LicenseInfo (QA.LicenseInfo :~> a)
 
 -- | `C` for coproduct
 type QuasarAFC = Coproduct QuasarF QuasarAF
@@ -308,3 +309,8 @@ licensee
   ∷ QuasarAFCE QA.Licensee
 licensee =
   right $ Licensee id
+
+licenseInfo
+  ∷ QuasarAFCE QA.LicenseInfo
+licenseInfo =
+  right $ LicenseInfo id
