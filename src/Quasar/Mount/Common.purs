@@ -24,7 +24,7 @@ import Data.String as Str
 import Data.Tuple (Tuple)
 import Data.URI as URI
 
-type Host = Tuple URI.Huitst (Maybe URI.Port)
+type Host = Tuple URI.Host (Maybe URI.Port)
 
 credentials ∷ Maybe String → Maybe String → Maybe String
 credentials user password = do

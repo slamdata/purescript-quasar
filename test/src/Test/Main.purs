@@ -19,13 +19,12 @@ module Test.Main where
 import Prelude
 
 import Control.Monad.Aff (Aff, runAff, attempt)
-import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Aff.Console (log)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Console as Console
-import Control.Monad.Eff.Exception (EXCEPTION, throwException)
+import Control.Monad.Eff.Exception (throwException)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Reader.Trans (runReaderT)
 
@@ -41,9 +40,7 @@ import Data.Tuple (Tuple(..))
 
 import Network.HTTP.Affjax (AJAX)
 
-import Node.Buffer (BUFFER)
 import Node.ChildProcess as CP
-import Node.FS (FS)
 import Node.FS.Aff as FSA
 import Node.Process (PROCESS)
 import Node.Process as Proc
@@ -51,7 +48,6 @@ import Node.Process as Proc
 import Test.Assert (ASSERT, assert)
 import Test.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit)
 import Test.Util.FS as FS
-import Test.Util.Mount as Mount
 import Test.Util.Effect (Effects)
 
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
@@ -96,7 +92,6 @@ jumpOutOnError aff = do
 
 main ∷ Eff Effects Unit
 main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
-  Mount.test
   FS.rmRec "test/tmp/db"
   FS.rmRec "test/tmp/quasar"
   FS.mkdirRec "test/tmp/db"

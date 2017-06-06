@@ -14,26 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Test.Property.Main where
+module Test.Property.Mount.SparkFTP where
 
 import Prelude
 
-import Control.Monad.Eff.Console (log)
-import Quasar.Mount.MongoDB as MDB
-import Test.Property.Mount.MongoDB as Quasar.Mount.MongoDB
-import Test.Property.Mount.SparkFTP as Quasar.Mount.SparkFTP
-import Test.StrongCheck (SC)
+import Data.Either (Either(..))
+import Quasar.Mount.SparkFTP as SFTP
+import Quasar.Mount.SparkFTP.Gen (genConfig)
+import Test.StrongCheck (SC, Result, quickCheck, (===))
+import Test.StrongCheck.Gen (Gen)
 
-newtype TestConfig = TestConfig MDB.Config
+newtype TestConfig = TestConfig SFTP.Config
 
 derive instance eqTestConfig ∷ Eq TestConfig
 
 instance showTestConfig ∷ Show TestConfig where
-  show (TestConfig cfg) = show (MDB.toJSON cfg)
+  show (TestConfig cfg) = show (SFTP.toJSON cfg)
 
-main ∷ ∀ eff. SC eff Unit
-main = do
-  log "Check Quasar.Mount.MongoDB..."
-  Quasar.Mount.MongoDB.check
-  log "Check Quasar.Mount.SparkFTP..."
-  Quasar.Mount.SparkFTP.check
+check ∷ ∀ eff. SC eff Unit
+check = quickCheck prop
+  where
+  prop ∷ Gen Result
+  prop = do
+    configIn ← genConfig
+    let configOut = SFTP.fromJSON (SFTP.toJSON configIn)
+    pure $ Right (TestConfig configIn) === TestConfig <$> configOut

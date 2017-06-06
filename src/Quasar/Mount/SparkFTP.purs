@@ -43,7 +43,7 @@ import Data.Tuple (Tuple(..))
 import Data.URI as URI
 import Data.URI.Path (printPath, parseURIPathAbs)
 
-import Global (encodeURIComponent, decodeURIComponent)
+import Global (decodeURIComponent)
 
 import Quasar.Mount.Common (Host, extractHost, credentials)
 import Quasar.Mount.Common (Host) as Exports
@@ -89,7 +89,7 @@ toURI { sparkHost, ftpHost, path, user, password, props } =
   requiredProps ∷ L.List (Tuple String (Maybe String))
   requiredProps = L.fromFoldable
     [ Tuple "hdfsUrl"
-      $ Just $ id --encodeURIComponent
+      $ Just $ id
         $ URI.printAbsoluteURI
         $ mkURI ftpURIScheme ftpHost
             Nothing
