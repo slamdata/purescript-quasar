@@ -14,19 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Test.Property.Mount.MongoDB where
+module Test.Property.Mount.SparkLocal where
 
 import Prelude
 
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Quasar.Mount.MongoDB as MDB
-import Quasar.Mount.MongoDB.Gen (genConfig)
+import Quasar.Mount.SparkLocal as SL
+import Quasar.Mount.SparkLocal.Gen (genConfig)
 import Test.StrongCheck (SC, Result, quickCheck, (===))
 import Test.StrongCheck.Gen (Gen)
 
-newtype TestConfig = TestConfig MDB.Config
+newtype TestConfig = TestConfig SL.Config
 
 derive instance eqTestConfig ∷ Eq TestConfig
 derive instance genericTestConfig ∷ Generic TestConfig _
@@ -38,5 +38,5 @@ check = quickCheck prop
   prop ∷ Gen Result
   prop = do
     configIn ← genConfig
-    let configOut = MDB.fromJSON (MDB.toJSON configIn)
+    let configOut = SL.fromJSON (SL.toJSON configIn)
     pure $ Right (TestConfig configIn) === TestConfig <$> configOut

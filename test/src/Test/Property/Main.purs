@@ -20,7 +20,11 @@ import Prelude
 
 import Control.Monad.Eff.Console (log)
 import Quasar.Mount.MongoDB as MDB
+import Test.Property.Mount.Couchbase as Quasar.Mount.Couchbase
+import Test.Property.Mount.MarkLogic as Quasar.Mount.MarkLogic
 import Test.Property.Mount.MongoDB as Quasar.Mount.MongoDB
+import Test.Property.Mount.SparkHDFS as Quasar.Mount.SparkHDFS
+import Test.Property.Mount.SparkLocal as Quasar.Mount.SparkLocal
 import Test.StrongCheck (SC)
 
 newtype TestConfig = TestConfig MDB.Config
@@ -32,5 +36,18 @@ instance showTestConfig ∷ Show TestConfig where
 
 main ∷ ∀ eff. SC eff Unit
 main = do
+
+  log "Check Quasar.Mount.Couchbase..."
+  Quasar.Mount.Couchbase.check
+
+  log "Check Quasar.Mount.MarkLogic..."
+  Quasar.Mount.MarkLogic.check
+
   log "Check Quasar.Mount.MongoDB..."
   Quasar.Mount.MongoDB.check
+
+  log "Check Quasar.Mount.SparkHDFS..."
+  Quasar.Mount.SparkHDFS.check
+
+  log "Check Quasar.Mount.SparkLocal..."
+  Quasar.Mount.SparkLocal.check

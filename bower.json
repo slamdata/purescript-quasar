@@ -30,6 +30,7 @@
     "purescript-assert": "^3.0.0",
     "purescript-node-process": "^4.0.0",
     "purescript-node-child-process": "^4.0.0",
-    "purescript-node-fs-aff": "^4.0.0"
+    "purescript-node-fs-aff": "^4.0.0",
+    "purescript-generics-rep": "^5.1.0"
   }
 }

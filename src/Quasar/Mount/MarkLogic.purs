@@ -54,6 +54,11 @@ data Format
 derive instance eqFormat ∷ Eq Format
 derive instance ordFormat ∷ Ord Format
 
+instance showFormat ∷ Show Format where
+  show = case _ of
+    JSON → "JSON"
+    XML → "XML"
+
 toJSON ∷ Config → Json
 toJSON config =
   let uri = URI.printAbsoluteURI (toURI config)
