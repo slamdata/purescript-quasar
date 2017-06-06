@@ -23,8 +23,8 @@ import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Quasar.Mount.MarkLogic as ML
 import Quasar.Mount.MarkLogic.Gen (genConfig)
-import Test.StrongCheck (SC, Result, quickCheck, (===))
-import Test.StrongCheck.Gen (Gen)
+import Test.QuickCheck (QC, Result, quickCheck, (===))
+import Test.QuickCheck.Gen (Gen)
 
 newtype TestConfig = TestConfig ML.Config
 
@@ -32,7 +32,7 @@ derive instance eqTestConfig ∷ Eq TestConfig
 derive instance genericTestConfig ∷ Generic TestConfig _
 instance showTestConfig ∷ Show TestConfig where show = genericShow
 
-check ∷ ∀ eff. SC eff Unit
+check ∷ ∀ eff. QC eff Unit
 check = quickCheck prop
   where
   prop ∷ Gen Result

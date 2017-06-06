@@ -25,7 +25,7 @@ import Test.Property.Mount.MarkLogic as Quasar.Mount.MarkLogic
 import Test.Property.Mount.MongoDB as Quasar.Mount.MongoDB
 import Test.Property.Mount.SparkHDFS as Quasar.Mount.SparkHDFS
 import Test.Property.Mount.SparkLocal as Quasar.Mount.SparkLocal
-import Test.StrongCheck (SC)
+import Test.QuickCheck (QC)
 
 newtype TestConfig = TestConfig MDB.Config
 
@@ -34,7 +34,7 @@ derive instance eqTestConfig ∷ Eq TestConfig
 instance showTestConfig ∷ Show TestConfig where
   show (TestConfig cfg) = show (MDB.toJSON cfg)
 
-main ∷ ∀ eff. SC eff Unit
+main ∷ ∀ eff. QC eff Unit
 main = do
 
   log "Check Quasar.Mount.Couchbase..."
