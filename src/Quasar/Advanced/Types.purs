@@ -465,15 +465,15 @@ instance encodeJsonProvider ∷ EncodeJson Provider where
     ~> "openid_configuration" := OpenIDConfiguration obj.openIDConfiguration
     ~> jsonEmptyObject
     
-data LicenseStatus = LicenseValid
+data LicenseStatus = LicenseValid | LicenseExpired
 
 decodeLicenseStatus ∷ Json → Either String LicenseStatus
 decodeLicenseStatus =
-  (if _ then Right LicenseValid else Left $ "status != " <> show licenseValid)
-    <<< eq licenseValid
-    <=< decodeJson
-  where
-  licenseValid = "LICENSE_VALID"
+  decodeJson >=>
+    case _ of
+      "LICENSE_VALID" → Right LicenseValid
+      "LICENSE_EXPIRED" → Right LicenseExpired
+      _ → Left $ "\"status\" wasn't \"LICENSE_VALID\" or \"licenseExpired\""
 
 type LicenseInfo'
   = { expirationDate ∷ String
