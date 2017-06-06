@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Alt ((<|>))
 
-import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, (.?), (:=), (~>), jsonEmptyObject)
+import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, JString, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, isJust)
@@ -464,6 +464,36 @@ instance encodeJsonProvider ∷ EncodeJson Provider where
     ~> "client_id" := Newtype.unwrap obj.clientId
     ~> "openid_configuration" := OpenIDConfiguration obj.openIDConfiguration
     ~> jsonEmptyObject
+    
+data LicenseStatus = LicenseValid | LicenseExpired
+
+decodeLicenseStatus ∷ JString → Either String LicenseStatus
+decodeLicenseStatus =
+  case _ of
+    "LICENSE_VALID" → Right LicenseValid
+    "LICENSE_EXPIRED" → Right LicenseExpired
+    _ → Left "\"status\" wasn't \"LICENSE_VALID\" or \"licenseExpired\""
+
+type LicenseInfo'
+  = { expirationDate ∷ String
+    , daysRemaining ∷ Int
+    , status ∷ LicenseStatus
+    }
+
+decodeLicenseInfo' ∷ Json → Either String LicenseInfo'
+decodeLicenseInfo' = decodeJson >=> \obj →
+  { expirationDate: _
+  , daysRemaining: _
+  , status: _
+  } <$> obj .? "expiration-date"
+    <*> obj .? "days-remaining"
+    <*> (obj .? "status" >>= decodeLicenseStatus)
+
+type LicenseInfo = { slamdataLicense ∷ LicenseInfo' }
+
+decodeLicenseInfo ∷ Json → Either String LicenseInfo
+decodeLicenseInfo = decodeJson >=> \obj →
+  { slamdataLicense: _ } <$> (obj .? "slamdata-license" >>= decodeLicenseInfo')
 
 type Licensee =
   { fullName ∷ String

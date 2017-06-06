@@ -39,7 +39,7 @@ sandbox
 sandbox =
   map (P.rootDir </> _) <<< P.sandbox P.rootDir
 
-parseDirPath :: String -> Maybe (Path Abs Dir Sandboxed)
+parseDirPath ∷ String -> Maybe (Path Abs Dir Sandboxed)
 parseDirPath = sandbox <=< P.parseAbsDir
 
 toJSON ∷ Config → Json
