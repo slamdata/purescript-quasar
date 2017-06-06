@@ -19,24 +19,16 @@ module Quasar.Mount.MongoDB.Gen where
 import Prelude
 
 import Control.Monad.Gen (class MonadGen)
-import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
-import Data.Maybe (Maybe(..))
 import Data.StrMap.Gen as SMG
-import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost, genAnyPath)
+import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost, genCredentials, genAnyPath)
 import Quasar.Mount.MongoDB as MDB
 
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MDB.Config
-genConfig = do
-  hosts ← GenC.genNonEmpty genHost
-  path ← GenC.genMaybe genAnyPath
-  withCreds ← Gen.chooseBool
-  props ← SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
-  case withCreds of
-    true → do
-      user ← Just <$> genAlphaNumericString
-      password ← Just <$> genAlphaNumericString
-      pure { hosts, path, user, password, props }
-    false →
-      pure { hosts, path, user: Nothing, password: Nothing, props }
+genConfig =
+  { hosts: _, path: _, credentials: _, props: _ }
+    <$> GenC.genNonEmpty genHost
+    <*> GenC.genMaybe genAnyPath
+    <*> GenC.genMaybe genCredentials
+    <*> SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
