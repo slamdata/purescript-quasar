@@ -473,7 +473,7 @@ decodeLicenseStatus =
     case _ of
       "LICENSE_VALID" → Right LicenseValid
       "LICENSE_EXPIRED" → Right LicenseExpired
-      _ → Left $ "\"status\" wasn't \"LICENSE_VALID\" or \"licenseExpired\""
+      _ → Left "\"status\" wasn't \"LICENSE_VALID\" or \"licenseExpired\""
 
 type LicenseInfo'
   = { expirationDate ∷ String
