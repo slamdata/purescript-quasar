@@ -464,6 +464,37 @@ instance encodeJsonProvider ∷ EncodeJson Provider where
     ~> "client_id" := Newtype.unwrap obj.clientId
     ~> "openid_configuration" := OpenIDConfiguration obj.openIDConfiguration
     ~> jsonEmptyObject
+    
+data LicenseStatus = LicenseValid
+
+decodeLicenseStatus :: Json → Either String LicenseStatus
+decodeLicenseStatus =
+  (if _ then Right LicenseValid else Left $ "status != " <> show licenseValid)
+    <<< eq licenseValid
+    <=< decodeJson
+  where
+  licenseValid = "LICENSE_VALID"
+
+type LicenseInfo'
+  = { expirationDate ∷ String
+    , daysRemaining ∷ Int
+    , status ∷ LicenseStatus
+    }
+
+decodeLicenseInfo' ∷ Json → Either String LicenseInfo'
+decodeLicenseInfo' = decodeJson >=> \obj →
+  { expirationDate: _
+  , daysRemaining: _
+  , status: _
+  } <$> obj .? "expiration-date"
+    <*> obj .? "days-remaining"
+    <*> (obj .? "status" >>= decodeLicenseStatus)
+
+type LicenseInfo = { slamdataLicense ∷ LicenseInfo' }
+
+decodeLicenseInfo ∷ Json → Either String LicenseInfo
+decodeLicenseInfo = decodeJson >=> \obj →
+  { slamdataLicense: _ } <$> (obj .? "expiration-date" >>= decodeLicenseInfo')
 
 type Licensee =
   { fullName ∷ String
