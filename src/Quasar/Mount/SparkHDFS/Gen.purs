@@ -21,6 +21,7 @@ import Prelude
 import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
+import Data.Maybe (Maybe(..))
 import Data.StrMap.Gen as SMG
 import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost, genAnyPath)
 import Quasar.Mount.SparkHDFS as SHDFS
@@ -30,5 +31,5 @@ genConfig =
   { sparkHost: _, hdfsHost: _, path: _, props: _ }
     <$> genHost
     <*> genHost
-    <*> GenC.genMaybe genAnyPath
+    <*> (Just <$> genAnyPath)
     <*> SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
