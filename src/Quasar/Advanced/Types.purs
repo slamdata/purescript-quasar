@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Alt ((<|>))
 
-import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, (.?), (:=), (~>), jsonEmptyObject)
+import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, JString, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, isJust)
@@ -467,13 +467,12 @@ instance encodeJsonProvider ∷ EncodeJson Provider where
     
 data LicenseStatus = LicenseValid | LicenseExpired
 
-decodeLicenseStatus ∷ Json → Either String LicenseStatus
+decodeLicenseStatus ∷ JString → Either String LicenseStatus
 decodeLicenseStatus =
-  decodeJson >=>
-    case _ of
-      "LICENSE_VALID" → Right LicenseValid
-      "LICENSE_EXPIRED" → Right LicenseExpired
-      _ → Left "\"status\" wasn't \"LICENSE_VALID\" or \"licenseExpired\""
+  case _ of
+    "LICENSE_VALID" → Right LicenseValid
+    "LICENSE_EXPIRED" → Right LicenseExpired
+    _ → Left "\"status\" wasn't \"LICENSE_VALID\" or \"licenseExpired\""
 
 type LicenseInfo'
   = { expirationDate ∷ String
