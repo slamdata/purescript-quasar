@@ -14,19 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Test.Property.Mount.MongoDB where
+module Test.Property.Mount.MarkLogic where
 
 import Prelude
 
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Quasar.Mount.MongoDB as MDB
-import Quasar.Mount.MongoDB.Gen (genConfig)
+import Quasar.Mount.MarkLogic as ML
+import Quasar.Mount.MarkLogic.Gen (genConfig)
 import Test.QuickCheck (QC, Result, quickCheck, (===))
 import Test.QuickCheck.Gen (Gen)
 
-newtype TestConfig = TestConfig MDB.Config
+newtype TestConfig = TestConfig ML.Config
 
 derive instance eqTestConfig ∷ Eq TestConfig
 derive instance genericTestConfig ∷ Generic TestConfig _
@@ -38,5 +38,5 @@ check = quickCheck prop
   prop ∷ Gen Result
   prop = do
     configIn ← genConfig
-    let configOut = MDB.fromJSON (MDB.toJSON configIn)
+    let configOut = ML.fromJSON (ML.toJSON configIn)
     pure $ Right (TestConfig configIn) === TestConfig <$> configOut

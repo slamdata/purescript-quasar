@@ -14,25 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.FS.DirMetadata
-  ( DirMetadata
-  , fromJSON
-  ) where
+module Quasar.Mount.SparkLocal.Gen where
 
-import Prelude
+import Control.Monad.Gen (class MonadGen)
+import Control.Monad.Rec.Class (class MonadRec)
+import Quasar.Mount.Common.Gen (genDirPath)
+import Quasar.Mount.SparkLocal as SL
 
-import Data.Argonaut (Json, decodeJson, (.?))
-import Data.Either (Either)
-import Data.Traversable (traverse)
-
-import Quasar.FS.Resource (Resource)
-import Quasar.FS.Resource as Resource
-import Quasar.Types (DirPath)
-
-type DirMetadata = Array Resource
-
-fromJSON ∷ DirPath → Json → Either String DirMetadata
-fromJSON parent json = do
-  obj ← decodeJson json
-  children ← obj .? "children"
-  traverse (Resource.fromJSON parent) children
+genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m SL.Config
+genConfig = genDirPath

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Mount.MongoDB.Gen where
+module Quasar.Mount.MarkLogic.Gen where
 
 import Prelude
 
@@ -23,20 +23,22 @@ import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.Maybe (Maybe(..))
-import Data.StrMap.Gen as SMG
 import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost, genAnyPath)
-import Quasar.Mount.MongoDB as MDB
+import Quasar.Mount.MarkLogic as ML
 
-genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MDB.Config
+genFormat ∷ ∀ m. MonadGen m ⇒ m ML.Format
+genFormat = Gen.choose (pure ML.JSON) (pure ML.XML)
+
+genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m ML.Config
 genConfig = do
-  hosts ← GenC.genNonEmpty genHost
+  host ← genHost
   path ← GenC.genMaybe genAnyPath
   withCreds ← Gen.chooseBool
-  props ← SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
+  format ← genFormat
   case withCreds of
     true → do
       user ← Just <$> genAlphaNumericString
       password ← Just <$> genAlphaNumericString
-      pure { hosts, path, user, password, props }
+      pure { host, path, user, password, format }
     false →
-      pure { hosts, path, user: Nothing, password: Nothing, props }
+      pure { host, path, user: Nothing, password: Nothing, format }
