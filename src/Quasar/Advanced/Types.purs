@@ -494,7 +494,7 @@ type LicenseInfo = { slamdataLicense ∷ LicenseInfo' }
 
 decodeLicenseInfo ∷ Json → Either String LicenseInfo
 decodeLicenseInfo = decodeJson >=> \obj →
-  { slamdataLicense: _ } <$> (obj .? "expiration-date" >>= decodeLicenseInfo')
+  { slamdataLicense: _ } <$> (obj .? "slamdata-license" >>= decodeLicenseInfo')
 
 type Licensee =
   { fullName ∷ String
