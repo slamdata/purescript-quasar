@@ -22,7 +22,6 @@ import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
-import Data.Maybe (Maybe(..))
 import Data.StrMap.Gen as SMG
 import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost, genAnyPath)
 import Quasar.Mount.SparkFTP as SFTP
@@ -31,7 +30,7 @@ genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m SFTP.Config
 genConfig = do
   sparkHost ← genHost
   ftpHost ← genHost
-  path ← GenC.genMaybe genAnyPath
+  path ← genAnyPath
   withCreds ← Gen.chooseBool
   props ← SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
   user ← genAlphaNumericString

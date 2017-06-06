@@ -32,7 +32,7 @@ import Data.Argonaut (Json, (.?), (:=), (~>))
 import Data.Argonaut as J
 import Data.Array ((!!))
 import Data.Array as Arr
-import Data.Bifunctor (bimap, lmap)
+import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.List as L
 import Data.Maybe (Maybe(..), maybe)
@@ -53,7 +53,7 @@ import Text.Parsing.StringParser (runParser)
 type Config =
   { sparkHost ∷ Host
   , ftpHost ∷ Host
-  , path ∷ Maybe AnyPath
+  , path ∷ AnyPath
   , user ∷ String
   , password ∷ String
   , props ∷ SM.StrMap (Maybe String)
@@ -85,20 +85,19 @@ toURI { sparkHost, ftpHost, path, user, password, props } =
       $ Just $ id
         $ URI.printAbsoluteURI
         $ mkURI ftpURIScheme ftpHost Nothing user password
-    , Tuple "rootPath" $ Just $ maybe "/" printPath path
+    , Tuple "rootPath" $ Just $ printPath path
     ]
   optionalProps ∷ L.List (Tuple String (Maybe String))
   optionalProps = SM.toUnfoldable props
 
-
 extractCredentials ∷ Maybe URI.Authority → Either String { user ∷ String, password ∷ String }
 extractCredentials auth = maybe (Left "Failed to extract credentials from URI") Right do
-  URI.Authority userInfo _ <- auth
-  ui <- userInfo
+  URI.Authority userInfo _ ← auth
+  ui ← userInfo
   let substrs = Str.split (Str.Pattern ":") ui
   guard $ Arr.length substrs == 2
-  user <- substrs !! 0
-  password <- substrs !! 1
+  user ← substrs !! 0
+  password ← substrs !! 1
   pure { user, password }
 
 
@@ -113,7 +112,7 @@ fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
   unless (scheme == Just sparkURIScheme) $ Left "Expected `spark` URL scheme"
   sparkHost ← extractHost auth
-  creds <- extractCredentials auth
+  creds ← extractCredentials auth
   let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
 
   Tuple ftpHost props' ← case SM.pop "hdfsUrl" props of
@@ -124,7 +123,7 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
 
   Tuple path props'' ← case SM.pop "rootPath" props' of
     Just (Tuple (Just value) rest) → do
-      value' ← bimap show Just $ runParser parseURIPathAbs value
+      value' ← lmap show $ runParser parseURIPathAbs value
       pure (Tuple value' rest)
     _ → Left "Expected `rootPath` query parameter"
   pure { sparkHost, ftpHost, path, props: props'', user: creds.user, password: creds.password }
