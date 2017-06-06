@@ -19,7 +19,6 @@ module Quasar.Mount.SparkFTP.Gen where
 import Prelude
 
 import Control.Monad.Gen (class MonadGen)
-import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.StrMap.Gen as SMG
@@ -27,12 +26,10 @@ import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost, genAnyPath)
 import Quasar.Mount.SparkFTP as SFTP
 
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m SFTP.Config
-genConfig = do
-  sparkHost ← genHost
-  ftpHost ← genHost
-  path ← genAnyPath
-  withCreds ← Gen.chooseBool
-  props ← SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
-  user ← genAlphaNumericString
-  password ← genAlphaNumericString
-  pure { sparkHost, ftpHost, path, user, password, props }
+genConfig = { sparkHost: _, ftpHost: _, path: _, user: _, password: _, props: _ }
+  <$> genHost
+  <*> genHost
+  <*> genAnyPath
+  <*> genAlphaNumericString
+  <*> genAlphaNumericString
+  <*> SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
