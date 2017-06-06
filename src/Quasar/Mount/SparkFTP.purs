@@ -25,7 +25,6 @@ module Quasar.Mount.SparkFTP
 
 import Prelude
 
-import Control.Alt ((<|>))
 import Control.MonadPlus (guard)
 
 
@@ -36,7 +35,7 @@ import Data.Array as Arr
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
 import Data.List as L
-import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.String as Str
 import Data.Tuple (Tuple(..))
@@ -51,18 +50,12 @@ import Quasar.Types (AnyPath)
 
 import Text.Parsing.StringParser (runParser)
 
-defaultUser ∷ String
-defaultUser = "anonymous"
-
-defaultPassword ∷ String
-defaultPassword = "a"
-
 type Config =
   { sparkHost ∷ Host
   , ftpHost ∷ Host
   , path ∷ Maybe AnyPath
-  , user ∷ Maybe String
-  , password ∷ Maybe String
+  , user ∷ String
+  , password ∷ String
   , props ∷ SM.StrMap (Maybe String)
    }
 
@@ -83,47 +76,44 @@ toURI ∷ Config → URI.AbsoluteURI
 toURI { sparkHost, ftpHost, path, user, password, props } =
   mkURI sparkURIScheme sparkHost
     (Just (URI.Query $ requiredProps <> optionalProps))
-    Nothing
-    Nothing
+    user
+    password
   where
   requiredProps ∷ L.List (Tuple String (Maybe String))
   requiredProps = L.fromFoldable
     [ Tuple "hdfsUrl"
       $ Just $ id
         $ URI.printAbsoluteURI
-        $ mkURI ftpURIScheme ftpHost
-            Nothing
-            (user <|> Just defaultUser)
-            (password <|> Just defaultPassword)
+        $ mkURI ftpURIScheme ftpHost Nothing user password
     , Tuple "rootPath" $ Just $ maybe "/" printPath path
     ]
   optionalProps ∷ L.List (Tuple String (Maybe String))
   optionalProps = SM.toUnfoldable props
 
-extractCredentials ∷ Maybe URI.Authority → { user ∷ Maybe String, password ∷ Maybe String }
-extractCredentials auth = fromMaybe { user: Nothing, password: Nothing } do
+
+extractCredentials ∷ Maybe URI.Authority → Either String { user ∷ String, password ∷ String }
+extractCredentials auth = maybe (Left "Failed to extract credentials from URI") Right do
   URI.Authority userInfo _ <- auth
   ui <- userInfo
   let substrs = Str.split (Str.Pattern ":") ui
   guard $ Arr.length substrs == 2
   user <- substrs !! 0
   password <- substrs !! 1
-  guard $ user /= defaultUser && password /= defaultPassword
-  pure { user: Just user, password: Just password }
+  pure { user, password }
 
 
-mkURI ∷ URI.URIScheme → Host → Maybe URI.Query → Maybe String → Maybe String → URI.AbsoluteURI
+mkURI ∷ URI.URIScheme → Host → Maybe URI.Query → String → String → URI.AbsoluteURI
 mkURI scheme host params user password =
   URI.AbsoluteURI
     (Just scheme)
-    (URI.HierarchicalPart (Just (URI.Authority (credentials user password) (pure host))) Nothing)
+    (URI.HierarchicalPart (Just (URI.Authority (credentials (Just user) (Just password)) (pure host))) Nothing)
     params
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
   unless (scheme == Just sparkURIScheme) $ Left "Expected `spark` URL scheme"
   sparkHost ← extractHost auth
-  let creds = extractCredentials auth
+  creds <- extractCredentials auth
   let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
 
   Tuple ftpHost props' ← case SM.pop "hdfsUrl" props of
@@ -151,3 +141,4 @@ sparkURIScheme = URI.URIScheme "spark"
 
 ftpURIScheme ∷ URI.URIScheme
 ftpURIScheme = URI.URIScheme "ftp"
+

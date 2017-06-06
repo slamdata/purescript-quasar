@@ -19,19 +19,20 @@ module Test.Property.Mount.SparkFTP where
 import Prelude
 
 import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Quasar.Mount.SparkFTP as SFTP
 import Quasar.Mount.SparkFTP.Gen (genConfig)
-import Test.StrongCheck (SC, Result, quickCheck, (===))
-import Test.StrongCheck.Gen (Gen)
+import Test.QuickCheck (QC, Result, quickCheck, (===))
+import Test.QuickCheck.Gen (Gen)
 
 newtype TestConfig = TestConfig SFTP.Config
 
 derive instance eqTestConfig ∷ Eq TestConfig
+derive instance genericTestConfig ∷ Generic TestConfig _
+instance showTestConfig ∷ Show TestConfig where show = genericShow
 
-instance showTestConfig ∷ Show TestConfig where
-  show (TestConfig cfg) = show (SFTP.toJSON cfg)
-
-check ∷ ∀ eff. SC eff Unit
+check ∷ ∀ eff. QC eff Unit
 check = quickCheck prop
   where
   prop ∷ Gen Result

@@ -24,13 +24,18 @@
     "purescript-nonempty": "^4.0.0",
     "purescript-oidc-crypt-utils": "^7.0.0",
     "purescript-pathy": "^4.0.0",
-    "purescript-uri": "^3.0.0"
+    "purescript-uri": "^3.0.0",
+    "purescript-strings": "3c844982b2f0c0fc35681d61a6e72de1d58a27bc"
   },
   "devDependencies": {
     "purescript-assert": "^3.0.0",
     "purescript-node-process": "^4.0.0",
     "purescript-node-child-process": "^4.0.0",
     "purescript-node-fs-aff": "^4.0.0",
-    "purescript-debug": "^3.0.0"
+    "purescript-generics-rep": "^5.1.0",
+    "purescript-quickcheck": "^4.3.0"
+  },
+  "resolutions": {
+    "purescript-strings": "3c844982b2f0c0fc35681d61a6e72de1d58a27bc"
   }
 }

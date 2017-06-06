@@ -34,10 +34,6 @@ genConfig = do
   path ← GenC.genMaybe genAnyPath
   withCreds ← Gen.chooseBool
   props ← SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
-  case withCreds of
-    true → do
-      user ← Just <$> genAlphaNumericString
-      password ← Just <$> genAlphaNumericString
-      pure { sparkHost, ftpHost, path, user, password, props }
-    false →
-      pure { sparkHost, ftpHost, path, user: Nothing, password: Nothing, props }
+  user ← genAlphaNumericString
+  password ← genAlphaNumericString
+  pure { sparkHost, ftpHost, path, user, password, props }
