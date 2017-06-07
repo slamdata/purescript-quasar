@@ -48,21 +48,19 @@ instance showMountConfig ∷ Show MountConfig where
     <> ", vars: " <> show vars <> " })"
   show (ModuleConfig config)
     = "(ModuleConfig { module: " <> config."module" <> " })"
-  show (MongoDBConfig { hosts, path, user, password, props })
+  show (MongoDBConfig { hosts, auth, props })
     = "(MongoDBConfig { hosts: " <> show hosts
-    <> ", path: " <> show path
-    <> ", user: " <> show user
-    <> ", password: " <> show password
+    <> ", auth: " <> show auth
     <> ", props: " <> show props <> " })"
   show (CouchbaseConfig { host, user, password })
     = "(CouchbaseConfig { host: " <> show host
     <> ", user: " <> show user
     <> ", password: " <> show password <> " })"
-  show (MarkLogicConfig { host, path, user, password })
+  show (MarkLogicConfig { host, path, credentials, format })
     = "(MarkLogicConfig { host: " <> show host
     <> ", path: " <> show path
-    <> ", user: " <> show user
-    <> ", password: " <> show password <> " })"
+    <> ", credentials: " <> show credentials
+    <> ", format: " <> show format <> " })"
   show (SparkHDFSConfig { sparkHost, hdfsHost, path })
     = "(SparkHDFSConfig { sparkHost: " <> show sparkHost
     <> ", hdfsHost: " <> show hdfsHost

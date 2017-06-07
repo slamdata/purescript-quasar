@@ -35,15 +35,14 @@ import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
 
-import Quasar.Mount.Common (Host, credentials, extractCredentials, extractHost)
-import Quasar.Mount.Common (Host) as Exports
+import Quasar.Mount.Common (Host, Credentials, combineCredentials, extractCredentials, extractHost)
+import Quasar.Mount.Common (Host, Credentials(..)) as Exports
 import Quasar.Types (AnyPath)
 
 type Config =
   { host ∷ Host
   , path ∷ Maybe AnyPath
-  , user ∷ Maybe String
-  , password ∷ Maybe String
+  , credentials ∷ Maybe Credentials
   , format ∷ Format
   }
 
@@ -73,10 +72,10 @@ fromJSON
   <=< decodeJson
 
 toURI ∷ Config → URI.AbsoluteURI
-toURI { host, path, user, password, format } =
+toURI { host, path, credentials, format } =
   URI.AbsoluteURI
     (Just uriScheme)
-    (URI.HierarchicalPart (Just (URI.Authority (credentials user password) (pure host))) path)
+    (URI.HierarchicalPart (Just (URI.Authority (combineCredentials <$> credentials) (pure host))) path)
     (Just (URI.Query props))
   where
   props ∷ L.List (Tuple String (Maybe String))
@@ -92,20 +91,14 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'xcc' URL scheme"
   host ← extractHost auth
   let
-    creds = extractCredentials auth
+    credentials = extractCredentials auth
     props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
   format ← case join $ SM.lookup "format" props of
     Nothing → pure XML
     Just "xml" → pure XML
     Just "json" → pure JSON
     Just f → Left $ "Unexpected format: " <> f
-  pure
-    { host
-    , path
-    , user: creds.user
-    , password: creds.password
-    , format
-    }
+  pure { host, path, credentials, format}
 
 uriScheme ∷ URI.URIScheme
 uriScheme = URI.URIScheme "xcc"

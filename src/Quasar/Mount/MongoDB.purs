@@ -16,6 +16,7 @@ limitations under the License.
 
 module Quasar.Mount.MongoDB
   ( Config
+  , Auth(..)
   , toJSON
   , fromJSON
   , toURI
@@ -32,17 +33,26 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.NonEmpty (NonEmpty(..), oneOf)
 import Data.StrMap as SM
+import Data.Newtype (class Newtype, unwrap)
 import Data.URI as URI
 
-import Quasar.Mount.Common (Host, credentials, extractCredentials)
-import Quasar.Mount.Common (Host) as Exports
+import Quasar.Mount.Common (Host, Credentials, combineCredentials, extractCredentials)
+import Quasar.Mount.Common (Host, Credentials(..)) as Exports
 import Quasar.Types (AnyPath)
+
+newtype Auth = Auth { path ∷ AnyPath, credentials ∷ Credentials }
+
+derive instance newtypeAuth ∷ Newtype Auth _
+derive instance eqAuth ∷ Eq Auth
+derive instance ordAuth ∷ Ord Auth
+
+instance showAuth ∷ Show Auth where
+  show (Auth { path, credentials }) =
+    "(Auth { path: " <> show path <> ", credentials: " <> show credentials <> " })"
 
 type Config =
   { hosts ∷ NonEmpty Array Host
-  , path ∷ Maybe AnyPath
-  , user ∷ Maybe String
-  , password ∷ Maybe String
+  , auth ∷ Maybe Auth
   , props ∷ SM.StrMap (Maybe String)
   }
 
@@ -60,19 +70,28 @@ fromJSON
   <=< decodeJson
 
 toURI ∷ Config → URI.AbsoluteURI
-toURI { hosts, path, user, password, props } =
+toURI { hosts, auth, props } =
   URI.AbsoluteURI
     (Just uriScheme)
-    (URI.HierarchicalPart (Just (URI.Authority (credentials user password) (oneOf hosts))) path)
+    (URI.HierarchicalPart
+      (Just
+        (URI.Authority
+          (combineCredentials <<< _.credentials <<< unwrap <$> auth)
+          (oneOf hosts)))
+      (_.path <<< unwrap <$> auth))
     (Just (URI.Query (SM.toUnfoldable props)))
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'mongodb' URL scheme"
   hosts ← extractHosts auth
-  let creds = extractCredentials auth
+  auth' ← case extractCredentials auth, path of
+    Just credentials, Just p → pure $ Just (Auth { path: p, credentials })
+    Nothing, Nothing → pure $ Nothing
+    Just _, Nothing → Left "User credentials were specified, but no auth database"
+    Nothing, Just _ → Left "An auth database was specified, but no user credentials"
   let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
-  pure { hosts, path, user: creds.user, password: creds.password, props }
+  pure { hosts, auth: auth', props }
 
 uriScheme ∷ URI.URIScheme
 uriScheme = URI.URIScheme "mongodb"

@@ -33,6 +33,7 @@ import Data.String as S
 import Data.String.Gen as SG
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
+import Quasar.Mount.Common (Credentials(..))
 import Quasar.Mount.MongoDB as MDB
 import Quasar.Types (AnyPath, DirPath, FilePath)
 
@@ -58,6 +59,12 @@ genPort = Gen.chooseInt 50000 65535
 
 genHost ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MDB.Host
 genHost = Tuple <$> genHostURI <*> GenC.genMaybe genPort
+
+genCredentials ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m Credentials
+genCredentials =
+  Credentials <$> ({ user: _, password: _ }
+    <$> genAlphaNumericString
+    <*> Gen.choose (pure "") genAlphaNumericString)
 
 genDirPath ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m DirPath
 genDirPath = Gen.sized \size → do

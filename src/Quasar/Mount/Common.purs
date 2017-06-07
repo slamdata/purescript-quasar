@@ -20,17 +20,12 @@ import Prelude
 
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype)
 import Data.String as Str
 import Data.Tuple (Tuple)
 import Data.URI as URI
 
 type Host = Tuple URI.Host (Maybe URI.Port)
-
-credentials ∷ Maybe String → Maybe String → Maybe String
-credentials user password = do
-  u ← user
-  p ← password
-  pure (u <> ":" <> p)
 
 extractHost ∷ Maybe URI.Authority → Either String Host
 extractHost (Just (URI.Authority _ hs)) =
@@ -40,14 +35,31 @@ extractHost (Just (URI.Authority _ hs)) =
     _ → Left "Multiple hosts specified"
 extractHost _ = Left "No host specified"
 
-extractCredentials ∷ Maybe URI.Authority → { user ∷ Maybe String, password ∷ Maybe String }
-extractCredentials auth =
-  case auth >>= (\(URI.Authority userInfo _) → userInfo) of
-    Nothing → { user: Nothing, password: Nothing }
-    Just userInfo →
-      case Str.indexOf (Str.Pattern ":") userInfo of
-        Nothing → { user: Just userInfo, password: Nothing }
-        Just ix →
-          { user: Just (Str.take ix userInfo)
-          , password: Just (Str.drop (ix + 1) userInfo)
-          }
+newtype Credentials = Credentials { user ∷ String, password ∷ String }
+
+derive instance newtypeCredentials ∷ Newtype Credentials _
+derive instance eqCredentials ∷ Eq Credentials
+derive instance ordCredentials ∷ Ord Credentials
+
+instance showCredentials ∷ Show Credentials where
+  show (Credentials { user, password }) =
+    "(Credentials { user: " <> show user <> ", password: " <> show password <> " })"
+
+combineCredentials ∷ Credentials → String
+combineCredentials (Credentials { user, password })
+  | Str.null password = user
+  | otherwise = user <> ":" <> password
+
+extractCredentials ∷ Maybe URI.Authority → Maybe Credentials
+extractCredentials auth = do
+  userInfo ← (\(URI.Authority mui _) → mui) =<< auth
+  pure $ Credentials $
+    case Str.indexOf (Str.Pattern ":") userInfo of
+      Nothing →
+        { user: userInfo
+        , password: ""
+        }
+      Just ix →
+        { user: Str.take ix userInfo
+        , password: Str.drop (ix + 1) userInfo
+        }
