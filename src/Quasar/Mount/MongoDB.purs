@@ -34,15 +34,14 @@ import Data.NonEmpty (NonEmpty(..), oneOf)
 import Data.StrMap as SM
 import Data.URI as URI
 
-import Quasar.Mount.Common (Host, credentials, extractCredentials)
-import Quasar.Mount.Common (Host) as Exports
+import Quasar.Mount.Common (Host, Credentials, combineCredentials, extractCredentials)
+import Quasar.Mount.Common (Host, Credentials(..)) as Exports
 import Quasar.Types (AnyPath)
 
 type Config =
   { hosts ∷ NonEmpty Array Host
   , path ∷ Maybe AnyPath
-  , user ∷ Maybe String
-  , password ∷ Maybe String
+  , credentials ∷ Maybe Credentials
   , props ∷ SM.StrMap (Maybe String)
   }
 
@@ -60,19 +59,19 @@ fromJSON
   <=< decodeJson
 
 toURI ∷ Config → URI.AbsoluteURI
-toURI { hosts, path, user, password, props } =
+toURI { hosts, path, credentials, props } =
   URI.AbsoluteURI
     (Just uriScheme)
-    (URI.HierarchicalPart (Just (URI.Authority (credentials user password) (oneOf hosts))) path)
+    (URI.HierarchicalPart (Just (URI.Authority (combineCredentials <$> credentials) (oneOf hosts))) path)
     (Just (URI.Query (SM.toUnfoldable props)))
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'mongodb' URL scheme"
   hosts ← extractHosts auth
-  let creds = extractCredentials auth
+  let credentials = extractCredentials auth
   let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
-  pure { hosts, path, user: creds.user, password: creds.password, props }
+  pure { hosts, path, credentials, props }
 
 uriScheme ∷ URI.URIScheme
 uriScheme = URI.URIScheme "mongodb"

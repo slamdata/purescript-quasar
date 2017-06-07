@@ -27,7 +27,7 @@ import Prelude
 
 import Data.Argonaut (Json, (.?), (:=), (~>))
 import Data.Argonaut as J
-import Data.Bifunctor (bimap, lmap)
+import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.List as L
 import Data.Maybe (Maybe(..), maybe)
@@ -47,7 +47,7 @@ import Text.Parsing.StringParser (runParser)
 type Config =
   { sparkHost ∷ Host
   , hdfsHost ∷ Host
-  , path ∷ Maybe AnyPath
+  , path ∷ AnyPath
   , props ∷ SM.StrMap (Maybe String)
   }
 
@@ -70,7 +70,7 @@ toURI cfg = mkURI sparkURIScheme cfg.sparkHost (Just (URI.Query $ requiredProps 
   requiredProps ∷ L.List (Tuple String (Maybe String))
   requiredProps = L.fromFoldable
     [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ URI.printAbsoluteURI $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
-    , Tuple "rootPath" $ Just $ maybe "/" printPath cfg.path
+    , Tuple "rootPath" $ Just $ printPath cfg.path
     ]
 
   optionalProps ∷ L.List (Tuple String (Maybe String))
@@ -90,7 +90,7 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
 
   Tuple path props'' ← case SM.pop "rootPath" props' of
     Just (Tuple (Just value) rest) → do
-      value' ← bimap show Just $ runParser parseURIPathAbs value
+      value' ← lmap show $ runParser parseURIPathAbs value
       pure (Tuple value' rest)
     _ → Left "Expected `rootPath` query parameter"
 
