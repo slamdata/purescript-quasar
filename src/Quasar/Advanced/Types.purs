@@ -472,28 +472,34 @@ decodeLicenseStatus =
   case _ of
     "LICENSE_VALID" → Right LicenseValid
     "LICENSE_EXPIRED" → Right LicenseExpired
-    _ → Left "\"status\" wasn't \"LICENSE_VALID\" or \"licenseExpired\""
+    _ → Left "\"status\" wasn't \"LICENSE_VALID\" or \"LICENSE_EXPIRED\""
 
-type LicenseInfo'
+data LicenseType = Advanced | AdvancedTrial
+
+decodeLicenseType ∷ JString → Either String LicenseType
+decodeLicenseType =
+  case _ of
+    "advancedTrial" → Right AdvancedTrial
+    "advanced" → Right Advanced
+    _ → Left "\"type\" wasn't \"advancedTrial\" or \"advanced\""
+
+type LicenseInfo
   = { expirationDate ∷ String
     , daysRemaining ∷ Int
     , status ∷ LicenseStatus
+    , type ∷ LicenseType
     }
-
-decodeLicenseInfo' ∷ Json → Either String LicenseInfo'
-decodeLicenseInfo' = decodeJson >=> \obj →
-  { expirationDate: _
-  , daysRemaining: _
-  , status: _
-  } <$> obj .? "expiration-date"
-    <*> obj .? "days-remaining"
-    <*> (obj .? "status" >>= decodeLicenseStatus)
-
-type LicenseInfo = { slamdataLicense ∷ LicenseInfo' }
 
 decodeLicenseInfo ∷ Json → Either String LicenseInfo
 decodeLicenseInfo = decodeJson >=> \obj →
-  { slamdataLicense: _ } <$> (obj .? "slamdata-license" >>= decodeLicenseInfo')
+  { expirationDate: _
+  , daysRemaining: _
+  , type: _
+  , status: _
+  } <$> obj .? "expirationDate"
+    <*> obj .? "daysRemaining"
+    <*> (obj .? "type" >>= decodeLicenseType)
+    <*> (obj .? "status" >>= decodeLicenseStatus)
 
 type Licensee =
   { fullName ∷ String
