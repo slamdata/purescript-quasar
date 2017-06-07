@@ -46,10 +46,9 @@ instance showMountConfig ∷ Show MountConfig where
     <> ", vars: " <> show vars <> " })"
   show (ModuleConfig config)
     = "(ModuleConfig { module: " <> config."module" <> " })"
-  show (MongoDBConfig { hosts, path, credentials, props })
+  show (MongoDBConfig { hosts, auth, props })
     = "(MongoDBConfig { hosts: " <> show hosts
-    <> ", path: " <> show path
-    <> ", credentials: " <> show credentials
+    <> ", auth: " <> show auth
     <> ", props: " <> show props <> " })"
   show (CouchbaseConfig { host, user, password })
     = "(CouchbaseConfig { host: " <> show host
