@@ -28,20 +28,32 @@ import Prelude
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.Maybe (Maybe(..), maybe)
-import Data.StrMap as SM
-import Data.Tuple (Tuple(..))
 import Data.List as L
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Data.Newtype (unwrap)
+import Data.Path.Pathy ((</>))
+import Data.Path.Pathy as P
+import Data.StrMap as SM
+import Data.Time.Duration (Seconds(..))
+import Data.Tuple (Tuple(..))
 import Data.URI as URI
+import Data.Number as Num
 
 import Quasar.Mount.Common (Host, extractHost)
 import Quasar.Mount.Common (Host) as Exports
 
 type Config =
   { host ∷ Host
-  , user ∷ Maybe String
-  , password ∷ Maybe String
+  , bucketName ∷ String
+  , password ∷ String
+  , docTypeKey ∷ String
+  , queryTimeout ∷ Maybe Seconds
   }
+
+-- TODO: add unit tests for these:
+-- couchbase://<host>[:<port>]/<bucket-name>?password=<password>&docTypeKey=<type>[&queryTimeoutSeconds=<seconds>]
+-- couchbase://localhost/testBucket?password=&docTypeKey=
+-- couchbase://localhost:99999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20
 
 toJSON ∷ Config → Json
 toJSON config =
@@ -57,26 +69,37 @@ fromJSON
   <=< decodeJson
 
 toURI ∷ Config → URI.AbsoluteURI
-toURI { host, user, password } =
+toURI { host, bucketName, password, docTypeKey, queryTimeout } =
   URI.AbsoluteURI
     (Just uriScheme)
-    (URI.HierarchicalPart (Just (URI.Authority Nothing (pure host))) Nothing)
+    (URI.HierarchicalPart
+      (Just (URI.Authority Nothing (pure host)))
+      (Just (Right (P.rootDir </> P.file bucketName))))
     (Just (URI.Query props))
   where
   props ∷ L.List (Tuple String (Maybe String))
   props = L.Nil
-    <> maybe L.Nil (\u -> pure $ Tuple "username" (Just u)) user
-    <> maybe L.Nil (\p -> pure $ Tuple "password" (Just p)) password
+    <> pure (Tuple "password" (Just password))
+    <> pure (Tuple "docTypeKey" (Just docTypeKey))
+    <> maybe L.Nil (pure <<< Tuple "queryTimeoutSeconds" <<< Just <<< show <<< unwrap) queryTimeout
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'couchbase' URL scheme"
   host ← extractHost auth
+  bucketName ← case path of
+    Nothing → Left "Path is missing from URL"
+    Just (Left p)
+      | p == P.rootDir → pure ""
+      | otherwise → Left "Expected a file path"
+    Just (Right p) → pure $ P.runFileName $ P.fileName p
   let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
   pure
     { host
-    , user: join $ SM.lookup "username" props
-    , password: join $ SM.lookup "password" props
+    , bucketName
+    , password: fromMaybe "" $ join (SM.lookup "password" props)
+    , docTypeKey: fromMaybe "" $ join (SM.lookup "docTypeKey" props)
+    , queryTimeout: map Seconds <<< Num.fromString =<< join (SM.lookup "queryTimeoutSeconds" props)
     }
 
 uriScheme ∷ URI.URIScheme

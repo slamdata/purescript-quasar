@@ -50,10 +50,12 @@ instance showMountConfig ∷ Show MountConfig where
     = "(MongoDBConfig { hosts: " <> show hosts
     <> ", auth: " <> show auth
     <> ", props: " <> show props <> " })"
-  show (CouchbaseConfig { host, user, password })
+  show (CouchbaseConfig { host, bucketName, password, docTypeKey, queryTimeout })
     = "(CouchbaseConfig { host: " <> show host
-    <> ", user: " <> show user
-    <> ", password: " <> show password <> " })"
+    <> ", bucketName: " <> show bucketName
+    <> ", password: " <> show password
+    <> ", docTypeKey: " <> show docTypeKey
+    <> ", queryTimeout: " <> show queryTimeout <> " })"
   show (MarkLogicConfig { host, path, credentials, format })
     = "(MarkLogicConfig { host: " <> show host
     <> ", path: " <> show path
