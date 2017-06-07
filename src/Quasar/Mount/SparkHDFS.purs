@@ -40,14 +40,14 @@ import Global (encodeURIComponent, decodeURIComponent)
 
 import Quasar.Mount.Common (Host, extractHost)
 import Quasar.Mount.Common (Host) as Exports
-import Quasar.Types (AnyPath)
+import Quasar.Types (DirPath)
 
 import Text.Parsing.StringParser (runParser)
 
 type Config =
   { sparkHost ∷ Host
   , hdfsHost ∷ Host
-  , path ∷ AnyPath
+  , path ∷ DirPath
   , props ∷ SM.StrMap (Maybe String)
   }
 
@@ -70,7 +70,7 @@ toURI cfg = mkURI sparkURIScheme cfg.sparkHost (Just (URI.Query $ requiredProps 
   requiredProps ∷ L.List (Tuple String (Maybe String))
   requiredProps = L.fromFoldable
     [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ URI.printAbsoluteURI $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
-    , Tuple "rootPath" $ Just $ printPath cfg.path
+    , Tuple "rootPath" $ Just $ printPath (Left cfg.path)
     ]
 
   optionalProps ∷ L.List (Tuple String (Maybe String))
@@ -91,7 +91,10 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
   Tuple path props'' ← case SM.pop "rootPath" props' of
     Just (Tuple (Just value) rest) → do
       value' ← lmap show $ runParser parseURIPathAbs value
-      pure (Tuple value' rest)
+      dirPath ← case value' of
+        Left dp → pure dp
+        Right _ → Left "Expected `rootPath` to be a directory path"
+      pure (Tuple dirPath rest)
     _ → Left "Expected `rootPath` query parameter"
 
   pure { sparkHost, hdfsHost, path, props: props'' }
