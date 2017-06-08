@@ -30,7 +30,7 @@ import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.List as L
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
-import Data.Newtype (unwrap)
+import Data.Newtype (un)
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as P
 import Data.StrMap as SM
@@ -76,7 +76,7 @@ toURI { host, bucketName, password, docTypeKey, queryTimeout } =
   props = L.Nil
     <> pure (Tuple "password" (Just password))
     <> pure (Tuple "docTypeKey" (Just docTypeKey))
-    <> maybe L.Nil (pure <<< Tuple "queryTimeoutSeconds" <<< Just <<< show <<< unwrap) queryTimeout
+    <> maybe L.Nil (pure <<< Tuple "queryTimeoutSeconds" <<< Just <<< show <<< un Seconds) queryTimeout
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
