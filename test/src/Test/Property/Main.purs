@@ -23,6 +23,7 @@ import Quasar.Mount.MongoDB as MDB
 import Test.Property.Mount.Couchbase as Quasar.Mount.Couchbase
 import Test.Property.Mount.MarkLogic as Quasar.Mount.MarkLogic
 import Test.Property.Mount.MongoDB as Quasar.Mount.MongoDB
+import Test.Property.Mount.SparkFTP as Quasar.Mount.SparkFTP
 import Test.Property.Mount.SparkHDFS as Quasar.Mount.SparkHDFS
 import Test.Property.Mount.SparkLocal as Quasar.Mount.SparkLocal
 import Test.QuickCheck (QC)
@@ -46,8 +47,12 @@ main = do
   log "Check Quasar.Mount.MongoDB..."
   Quasar.Mount.MongoDB.check
 
+  log "Check Quasar.Mount.SparkFTP..."
+  Quasar.Mount.SparkFTP.check
+
   log "Check Quasar.Mount.SparkHDFS..."
   Quasar.Mount.SparkHDFS.check
 
   log "Check Quasar.Mount.SparkLocal..."
   Quasar.Mount.SparkLocal.check
+

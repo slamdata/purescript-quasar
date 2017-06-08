@@ -32,6 +32,7 @@ data Mount
   | Couchbase DirPath
   | MarkLogic DirPath
   | SparkHDFS DirPath
+  | SparkFTP DirPath
   | SparkLocal DirPath
 
 derive instance eqMount ∷ Eq Mount
@@ -43,6 +44,7 @@ instance showMount ∷ Show Mount where
   show (Couchbase p) = "(Couchbase " <> show p <> ")"
   show (MarkLogic p) = "(MarkLogic " <> show p <> ")"
   show (SparkHDFS p) = "(SparkHDFS " <> show p <> ")"
+  show (SparkFTP p) = "(SparkFTP " <> show p <> ")"
   show (SparkLocal p) = "(SparkLocal " <> show p <> ")"
 
 -- | Attempts to decode a mount listing value from Quasar's filesystem metadata,
@@ -70,6 +72,7 @@ getPath (MongoDB p) = Left p
 getPath (Couchbase p) = Left p
 getPath (MarkLogic p) = Left p
 getPath (SparkHDFS p) = Left p
+getPath (SparkFTP p) = Left p
 getPath (SparkLocal p) = Left p
 
 getName ∷ Mount → Either (Maybe DirName) FileName

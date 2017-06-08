@@ -29,6 +29,7 @@ import Quasar.Mount.Module as Module
 import Quasar.Mount.MongoDB as MongoDB
 import Quasar.Mount.SparkLocal as SparkLocal
 import Quasar.Mount.SparkHDFS as SparkHDFS
+import Quasar.Mount.SparkFTP as SparkFTP
 import Quasar.Mount.View as View
 
 data MountConfig
@@ -38,6 +39,7 @@ data MountConfig
   | CouchbaseConfig Couchbase.Config
   | MarkLogicConfig MarkLogic.Config
   | SparkHDFSConfig SparkHDFS.Config
+  | SparkFTPConfig SparkFTP.Config
   | SparkLocalConfig SparkLocal.Config
 
 instance showMountConfig ∷ Show MountConfig where
@@ -63,6 +65,11 @@ instance showMountConfig ∷ Show MountConfig where
     = "(SparkHDFSConfig { sparkHost: " <> show sparkHost
     <> ", hdfsHost: " <> show hdfsHost
     <> ", path: " <> show path <> " })"
+  show (SparkFTPConfig { sparkHost, ftpHost, path, credentials })
+    = "(SparkFTPConfig { sparkHost: " <> show sparkHost
+    <> ", ftpHost: " <> show ftpHost
+    <> ", path: " <> show path
+    <> ", credentials: " <> show credentials <> " })"
   show (SparkLocalConfig path )
     = "(SparkLocalConfig { path: " <> show path <> " })"
 
@@ -74,6 +81,7 @@ fromJSON json
   <|> CouchbaseConfig <$> Couchbase.fromJSON json
   <|> MarkLogicConfig <$> MarkLogic.fromJSON json
   <|> SparkHDFSConfig <$> SparkHDFS.fromJSON json
+  <|> SparkFTPConfig <$> SparkFTP.fromJSON json
   <|> SparkLocalConfig <$> SparkLocal.fromJSON json
   <|> Left "Could not decode mount config"
 
@@ -84,4 +92,5 @@ toJSON (MongoDBConfig config) = MongoDB.toJSON config
 toJSON (CouchbaseConfig config) = Couchbase.toJSON config
 toJSON (MarkLogicConfig config) = MarkLogic.toJSON config
 toJSON (SparkHDFSConfig config) = SparkHDFS.toJSON config
+toJSON (SparkFTPConfig config) = SparkFTP.toJSON config
 toJSON (SparkLocalConfig config) = SparkLocal.toJSON config
