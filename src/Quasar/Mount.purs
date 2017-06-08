@@ -65,12 +65,11 @@ instance showMountConfig ∷ Show MountConfig where
     = "(SparkHDFSConfig { sparkHost: " <> show sparkHost
     <> ", hdfsHost: " <> show hdfsHost
     <> ", path: " <> show path <> " })"
-  show (SparkFTPConfig { sparkHost, ftpHost, path, user, password })
+  show (SparkFTPConfig { sparkHost, ftpHost, path, credentials })
     = "(SparkFTPConfig { sparkHost: " <> show sparkHost
     <> ", ftpHost: " <> show ftpHost
     <> ", path: " <> show path
-    <> ", user: " <> show user
-    <> ", password: " <> show password <> " })"
+    <> ", credentials: " <> show credentials <> " })"
   show (SparkLocalConfig path )
     = "(SparkLocalConfig { path: " <> show path <> " })"
 
@@ -95,4 +94,3 @@ toJSON (MarkLogicConfig config) = MarkLogic.toJSON config
 toJSON (SparkHDFSConfig config) = SparkHDFS.toJSON config
 toJSON (SparkFTPConfig config) = SparkFTP.toJSON config
 toJSON (SparkLocalConfig config) = SparkLocal.toJSON config
-

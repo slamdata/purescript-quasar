@@ -22,14 +22,13 @@ import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.StrMap.Gen as SMG
-import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost, genAnyPath)
+import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost, genDirPath, genCredentials)
 import Quasar.Mount.SparkFTP as SFTP
 
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m SFTP.Config
-genConfig = { sparkHost: _, ftpHost: _, path: _, user: _, password: _, props: _ }
+genConfig = { sparkHost: _, ftpHost: _, path: _, credentials: _, props: _ }
   <$> genHost
   <*> genHost
-  <*> genAnyPath
-  <*> genAlphaNumericString
-  <*> genAlphaNumericString
+  <*> genDirPath
+  <*> genCredentials
   <*> SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
