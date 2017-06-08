@@ -50,11 +50,6 @@ type Config =
   , queryTimeout ∷ Maybe Seconds
   }
 
--- TODO: add unit tests for these:
--- couchbase://<host>[:<port>]/<bucket-name>?password=<password>&docTypeKey=<type>[&queryTimeoutSeconds=<seconds>]
--- couchbase://localhost/testBucket?password=&docTypeKey=
--- couchbase://localhost:99999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20
-
 toJSON ∷ Config → Json
 toJSON config =
   let uri = URI.printAbsoluteURI (toURI config)
