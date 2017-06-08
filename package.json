@@ -4,7 +4,7 @@
     "postinstall": "node script/get-quasar.js",
     "clean": "rimraf output && rimraf .pulp-cache && rimraf test/tmp",
     "build": "pulp build -- --censor-lib --strict",
-    "test-fast": "pulp test --test-path test/src --main Test.Fast",
+    "test-fast": "pulp test --test-path test/src --main Test.Implementation",
     "test": "npm run -s test-fast && pulp test --test-path test/src"
   },
   "devDependencies": {
