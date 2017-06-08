@@ -20,19 +20,17 @@ import Prelude
 
 import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Gen as Gen
+import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
-import Data.Maybe (Maybe(..))
+import Data.Time.Duration.Gen (genSeconds)
 import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost)
 import Quasar.Mount.Couchbase as CB
 
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m CB.Config
-genConfig = do
-  host ← genHost
-  withCreds ← Gen.chooseBool
-  case withCreds of
-    true → do
-      user ← Just <$> genAlphaNumericString
-      password ← Just <$> genAlphaNumericString
-      pure { host, user, password }
-    false →
-      pure { host, user: Nothing, password: Nothing }
+genConfig =
+  { host: _, bucketName: _, password: _, docTypeKey: _, queryTimeout: _ }
+    <$> genHost
+    <*> Gen.choose (pure "") genAlphaNumericString
+    <*> genAlphaNumericString
+    <*> genAlphaNumericString
+    <*> GenC.genMaybe genSeconds

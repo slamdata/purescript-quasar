@@ -19,9 +19,11 @@
   "dependencies": {
     "purescript-affjax-algebra": "^4.0.0",
     "purescript-argonaut": "^3.0.0",
+    "purescript-datetime": "^3.2.0",
     "purescript-ejson": "^9.0.0",
     "purescript-free": "^4.0.0",
     "purescript-nonempty": "^4.0.0",
+    "purescript-numbers": "^5.0.0",
     "purescript-oidc-crypt-utils": "^7.0.0",
     "purescript-pathy": "^4.0.0",
     "purescript-uri": "^3.0.0"
