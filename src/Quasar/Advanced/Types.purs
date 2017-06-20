@@ -5,8 +5,8 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, JString, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
-import Data.Either (Either(Left, Right))
-import Data.Maybe (Maybe(..), maybe, isJust)
+import Data.Either (Either(..))
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Newtype as Newtype
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Pt
@@ -22,10 +22,18 @@ derive instance ordGroupPath ∷ Ord GroupPath
 derive instance newtypeGroupPath ∷ Newtype.Newtype GroupPath _
 
 printGroupPath ∷ GroupPath → String
-printGroupPath = Pt.printPath <<< Newtype.un GroupPath
+printGroupPath gp =
+  let
+    dir = Newtype.un GroupPath gp
+  in
+   -- TODO(Christoph): Get rid of this once quasar treats Groups as directories
+    if dir == Pt.rootDir
+    then Pt.printPath dir
+    else fromMaybe "/" (Str.stripSuffix (Str.Pattern "/") (Pt.printPath dir))
 
 parseGroupPath ∷ String → Either String GroupPath
-parseGroupPath = map GroupPath <<< parseDir
+-- TODO(Christoph): Clean this up once Quasar treats Groups as directories
+parseGroupPath s = map GroupPath if s == "/" then Right Pt.rootDir else parseDir (s <> "/")
 
 data Operation
   = Add
@@ -97,7 +105,7 @@ instance decodeJsonResource ∷ DecodeJson Resource where
       Nothing, Nothing → Left "Incorrect resource"
       Just pt, _ →
         map Group
-          $ lmap (const $ "Incorrect group resource")
+          $ lmap (const "Incorrect group resource")
           $ parseGroupPath pt
       _, Just pt →
         (map File $ lmap (const $ "Incorrect file resource") $ parseFile pt)
@@ -285,11 +293,12 @@ instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
     where
     extractGroups ∷ Array String → Either String (Array GroupPath)
     extractGroups =
-      traverse (\x →
+      traverse \x →
         note "Incorrect subgroup" do
-          dir ← Pt.parseAbsDir x
+          -- Quasar returns file paths for the subgroups, so we have to append a slash
+          dir ← Pt.parseAbsDir (x <> "/")
           sandboxed ← Pt.sandbox Pt.rootDir dir
-          pure $ GroupPath $ Pt.rootDir </> sandboxed)
+          pure $ GroupPath $ Pt.rootDir </> sandboxed
 
 note :: ∀ a b. a → Maybe b → Either a b
 note n m = maybe (Left n) Right m
