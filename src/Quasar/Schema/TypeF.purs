@@ -51,7 +51,7 @@ instance eq1TypeF ∷ Eq j ⇒ Eq1 (TypeF j) where eq1 = eq
 derive instance ordTypeF ∷ (Ord j, Ord a) ⇒ Ord (TypeF j a)
 instance ord1TypeF ∷ Ord j ⇒ Ord1 (TypeF j) where compare1 = compare
 
-derive instance genericTypeF ∷ Generic (TypeF j a)
+derive instance genericTypeF ∷ Generic (TypeF j a) _
 
 instance showTypeF ∷ (Show j, Show a) ⇒ Show (TypeF j a) where
   show = genericShow
