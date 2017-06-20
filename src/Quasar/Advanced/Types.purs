@@ -3,43 +3,29 @@ module Quasar.Advanced.Types where
 import Prelude
 
 import Control.Alt ((<|>))
-
 import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, JString, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..), either)
+import Data.Either (Either(Left, Right))
 import Data.Maybe (Maybe(..), maybe, isJust)
 import Data.Newtype as Newtype
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Pt
 import Data.String as Str
 import Data.Traversable (traverse)
-
 import OIDC.Crypt.JSONWebKey (JSONWebKey)
 import OIDC.Crypt.Types (Issuer(..), ClientId(..))
 
-data Root = Root
+newtype GroupPath = GroupPath (Pt.AbsDir Pt.Sandboxed)
 
-derive instance eqRoot∷ Eq Root
-derive instance ordRoot ∷ Ord Root
-
-printRoot ∷ Root → String
-printRoot = const "/"
-
-parseRoot ∷ String → Either String Root
-parseRoot =
-  case _ of
-    "/" → Right Root
-    _ → Left "Incorrect resource"
-
-
-type GroupPath = Either Root (Pt.AbsFile Pt.Sandboxed)
+derive instance eqGroupPath ∷ Eq GroupPath
+derive instance ordGroupPath ∷ Ord GroupPath
+derive instance newtypeGroupPath ∷ Newtype.Newtype GroupPath _
 
 printGroupPath ∷ GroupPath → String
-printGroupPath = either printRoot Pt.printPath
+printGroupPath = Pt.printPath <<< Newtype.un GroupPath
 
 parseGroupPath ∷ String → Either String GroupPath
-parseGroupPath s = (Right <$> parseFile s) <|> Left <$> parseRoot s
-
+parseGroupPath = map GroupPath <<< parseDir
 
 data Operation
   = Add
@@ -139,11 +125,7 @@ type ActionR =
   , accessType ∷ AccessType
   }
 
-newtype Action = Action
-  { operation ∷ Operation
-  , resource ∷ Resource
-  , accessType ∷ AccessType
-  }
+newtype Action = Action ActionR
 
 runAction ∷ Action → ActionR
 runAction (Action r) = r
@@ -282,7 +264,7 @@ instance decodeJsonPermission ∷ DecodeJson Permission where
 type GroupInfoR =
   { members ∷ Array UserId
   , allMembers ∷ Array UserId
-  , subGroups ∷ Array (Pt.AbsFile Pt.Sandboxed)
+  , subGroups ∷ Array GroupPath
   }
 
 newtype GroupInfo = GroupInfoN GroupInfoR
@@ -301,13 +283,16 @@ instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
     <*> ((obj .? "subGroups") >>= extractGroups)
     <#> GroupInfoN
     where
-    extractGroups ∷ Array String → Either String (Array (Pt.AbsFile Pt.Sandboxed))
+    extractGroups ∷ Array String → Either String (Array GroupPath)
     extractGroups =
-      traverse (\x → maybe (Left "Incorrect subgroup") pure
-                     $ Pt.parseAbsFile x
-                     >>= Pt.sandbox Pt.rootDir
-                     <#> (\y → Pt.rootDir </> y)
-               )
+      traverse (\x →
+        note "Incorrect subgroup" do
+          dir ← Pt.parseAbsDir x
+          sandboxed ← Pt.sandbox Pt.rootDir dir
+          pure $ GroupPath $ Pt.rootDir </> sandboxed)
+
+note :: ∀ a b. a → Maybe b → Either a b
+note n m = maybe (Left n) Right m
 
 
 type GroupPatchR =
@@ -464,7 +449,7 @@ instance encodeJsonProvider ∷ EncodeJson Provider where
     ~> "client_id" := Newtype.unwrap obj.clientId
     ~> "openid_configuration" := OpenIDConfiguration obj.openIDConfiguration
     ~> jsonEmptyObject
-    
+
 data LicenseStatus = LicenseValid | LicenseExpired
 
 decodeLicenseStatus ∷ JString → Either String LicenseStatus

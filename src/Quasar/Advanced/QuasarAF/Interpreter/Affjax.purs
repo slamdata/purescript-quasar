@@ -78,7 +78,7 @@ evalQuasarAdvanced (GroupInfo pt k) = do
     $ _{ url =
             config.basePath
              <> (Str.drop 1 $ Pt.printPath Paths.group)
-             <> Pt.printPath pt
+             <> Qa.printGroupPath pt
        }
 evalQuasarAdvanced (CreateGroup pt k) = do
   config ← ask
@@ -88,7 +88,7 @@ evalQuasarAdvanced (CreateGroup pt k) = do
     $ _{ url =
            config.basePath
              <> (Str.drop 1 $ Pt.printPath Paths.group)
-             <> Pt.printPath pt
+             <> Qa.printGroupPath pt
        , method = Left POST
        }
 evalQuasarAdvanced (ModifyGroup pt patch k) = do
@@ -99,7 +99,7 @@ evalQuasarAdvanced (ModifyGroup pt patch k) = do
     $ _{ url =
            config.basePath
              <> (Str.drop 1 $ Pt.printPath Paths.group)
-             <> Pt.printPath pt
+             <> Qa.printGroupPath pt
        , method = Left PATCH
        , content = Just $ snd $ toRequest $ encodeJson $ Qa.GroupPatch patch
        }
@@ -110,7 +110,7 @@ evalQuasarAdvanced (DeleteGroup pt k) = do
     $ _{ url =
            config.basePath
              <> (Str.drop 1 $ Pt.printPath Paths.group)
-             <> Pt.printPath pt
+             <> Qa.printGroupPath pt
        , method = Left DELETE
        }
 evalQuasarAdvanced (PermissionList isTransitive k) = do

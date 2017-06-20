@@ -28,8 +28,7 @@ import Data.Argonaut (JArray)
 import Data.Foldable (class Foldable, foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.Maybe (Maybe)
-import Data.Path.Pathy as Pt
-
+import Quasar.Advanced.Types as QA
 import Quasar.Data (QData, JSONMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QError(..), QResponse, lowerQError, printQError)
@@ -39,13 +38,12 @@ import Quasar.QuasarF (QuasarF(..))
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL, CompileResultR)
-import Quasar.Advanced.Types as QA
 
 data QuasarAF a
-  = GroupInfo (Pt.AbsFile Pt.Sandboxed) (QA.GroupInfoR :~> a)
-  | CreateGroup (Pt.AbsFile Pt.Sandboxed) (Unit :~> a)
-  | ModifyGroup (Pt.AbsFile Pt.Sandboxed) QA.GroupPatchR (Unit :~> a)
-  | DeleteGroup (Pt.AbsFile Pt.Sandboxed) (Unit :~> a)
+  = GroupInfo QA.GroupPath (QA.GroupInfoR :~> a)
+  | CreateGroup QA.GroupPath (Unit :~> a)
+  | ModifyGroup QA.GroupPath QA.GroupPatchR (Unit :~> a)
+  | DeleteGroup QA.GroupPath (Unit :~> a)
   | AuthorityList ((Array QA.PermissionR) :~> a)
   | PermissionList Boolean ((Array QA.PermissionR) :~> a)
   | PermissionInfo QA.PermissionId (QA.PermissionR :~> a)
@@ -197,19 +195,19 @@ deleteMount path =
   left $ DeleteMount path id
 
 groupInfo
-  ∷ Pt.AbsFile Pt.Sandboxed
+  ∷ QA.GroupPath
   → QuasarAFCE QA.GroupInfoR
 groupInfo pt =
   right $ GroupInfo pt id
 
 createGroup
-  ∷ Pt.AbsFile Pt.Sandboxed
+  ∷ QA.GroupPath
   → QuasarAFCE Unit
 createGroup pt =
   right $ CreateGroup pt id
 
 modifyGroup
-  ∷ Pt.AbsFile Pt.Sandboxed
+  ∷ QA.GroupPath
   → QA.GroupPatchR
   → QuasarAFCE Unit
 modifyGroup pt ptch =
@@ -218,7 +216,7 @@ modifyGroup pt ptch =
 addUsersToGroup
   ∷ ∀ f
   . Foldable f
-  ⇒ Pt.AbsFile Pt.Sandboxed
+  ⇒ QA.GroupPath
   → f QA.UserId
   → QuasarAFCE Unit
 addUsersToGroup pt us =
@@ -227,7 +225,7 @@ addUsersToGroup pt us =
 removeUsersFromGroup
   ∷ ∀ f
   . Foldable f
-  ⇒ Pt.AbsFile Pt.Sandboxed
+  ⇒ QA.GroupPath
   → f QA.UserId
   → QuasarAFCE Unit
 removeUsersFromGroup pt us =
@@ -235,7 +233,7 @@ removeUsersFromGroup pt us =
 
 
 deleteGroup
-  ∷ Pt.AbsFile Pt.Sandboxed
+  ∷ QA.GroupPath
   → QuasarAFCE Unit
 deleteGroup pt =
   right $ DeleteGroup pt id
