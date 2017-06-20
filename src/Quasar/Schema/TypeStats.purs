@@ -17,6 +17,7 @@ limitations under the License.
 module Quasar.Schema.TypeStats where
 
 import Prelude
+import Data.Generic (class Generic, gShow)
 import Data.HugeInt (HugeInt)
 import Data.HugeNum (HugeNum)
 import Data.Maybe (Maybe)
@@ -78,3 +79,9 @@ data TypeStats
 
 derive instance eqTypeStats ∷ Eq TypeStats
 derive instance ordTypeStats ∷ Ord TypeStats
+
+-- TODO: use generics-rep when the nested record problem is fixed
+derive instance genericTypeStats ∷ Generic TypeStats
+
+instance showTypeStats ∷ Show TypeStats where
+  show = gShow

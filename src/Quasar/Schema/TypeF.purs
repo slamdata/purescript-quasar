@@ -20,6 +20,8 @@ import Prelude hiding (const, map, bottom, top)
 
 import Data.Eq (class Eq1)
 import Data.Foldable (class Foldable, foldl, foldr, foldMap)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Data.Lens (Prism', prism')
 import Data.List (List)
 import Data.List.NonEmpty (NonEmptyList)
@@ -48,6 +50,11 @@ instance eq1TypeF ∷ Eq j ⇒ Eq1 (TypeF j) where eq1 = eq
 
 derive instance ordTypeF ∷ (Ord j, Ord a) ⇒ Ord (TypeF j a)
 instance ord1TypeF ∷ Ord j ⇒ Ord1 (TypeF j) where compare1 = compare
+
+derive instance genericTypeF ∷ Generic (TypeF j a)
+
+instance showTypeF ∷ (Show j, Show a) ⇒ Show (TypeF j a) where
+  show = genericShow
 
 instance functorTypeF ∷ Functor (TypeF j) where
   map f = case _ of
