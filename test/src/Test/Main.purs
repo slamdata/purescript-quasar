@@ -127,7 +127,7 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ map _.physicalPlan <$> QF.compileQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"])
 
     log "\nGetMetadata:"
-    run isRight $ QF.dirMetadata testDbAnyDir
+    run isRight $ QF.dirMetadata testDbAnyDir Nothing
     run isRight $ QF.fileMetadata testFile1
     run isNotFound $ QF.fileMetadata nonexistant
 

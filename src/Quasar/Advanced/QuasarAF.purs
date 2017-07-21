@@ -115,9 +115,10 @@ fileMetadata path =
 
 dirMetadata
   ∷ DirPath
+  → Maybe Pagination
   → QuasarAFCE (Array Resource)
-dirMetadata path =
-  left $ DirMetadata path id
+dirMetadata path pagination =
+  left $ DirMetadata path pagination id
 
 readFile
   ∷ JSONMode
