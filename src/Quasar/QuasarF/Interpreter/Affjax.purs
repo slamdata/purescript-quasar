@@ -71,8 +71,8 @@ eval = case _ of
     url ← mkURL Paths.metadata (Right path) Nil
     k <$> mkRequest fileMetaResult (get url)
 
-  DirMetadata path k → do
-    url ← mkURL Paths.metadata (Left path) Nil
+  DirMetadata path pagination k → do
+    url ← mkURL Paths.metadata (Left path) (toPageParams pagination)
     k <$> mkRequest (resourcesResult path) (get url)
 
   ReadQuery mode path sql vars pagination k → do

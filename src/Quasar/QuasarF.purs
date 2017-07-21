@@ -40,7 +40,7 @@ data QuasarF a
   | WriteQuery DirPath FilePath SQL Vars (OutputMeta :~> a)
   | CompileQuery DirPath SQL Vars (CompileResultR :~> a)
   | FileMetadata FilePath (Unit :~> a)
-  | DirMetadata DirPath ((Array Resource) :~> a)
+  | DirMetadata DirPath (Maybe Pagination) ((Array Resource) :~> a)
   | ReadFile JSONMode FilePath (Maybe Pagination) (JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
   | AppendFile FilePath QData (Unit :~> a)
@@ -107,9 +107,10 @@ fileMetadata path =
 
 dirMetadata
   ∷ DirPath
+  → Maybe Pagination
   → QuasarFE (Array Resource)
-dirMetadata path =
-  DirMetadata path id
+dirMetadata path pagination =
+  DirMetadata path pagination id
 
 readFile
   ∷ JSONMode
