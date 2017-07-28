@@ -20,32 +20,19 @@ import Prelude
 
 import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe)
 import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
+import Quasar.Mount.Type as MT
+import Quasar.Types (AnyPath, DirPath)
 
-import Quasar.Types (AnyPath, FilePath, DirPath)
-
-data Mount
-  = View FilePath
-  | Module DirPath
-  | MongoDB DirPath
-  | Couchbase DirPath
-  | MarkLogic DirPath
-  | SparkHDFS DirPath
-  | SparkFTP DirPath
-  | SparkLocal DirPath
+data Mount = Mount MT.MountType AnyPath
 
 derive instance eqMount ∷ Eq Mount
-
-instance showMount ∷ Show Mount where
-  show (View p) = "(View " <> show p <> ")"
-  show (Module p) = "(Module " <> show p <> ")"
-  show (MongoDB p) = "(MongoDB " <> show p <> ")"
-  show (Couchbase p) = "(Couchbase " <> show p <> ")"
-  show (MarkLogic p) = "(MarkLogic " <> show p <> ")"
-  show (SparkHDFS p) = "(SparkHDFS " <> show p <> ")"
-  show (SparkFTP p) = "(SparkFTP " <> show p <> ")"
-  show (SparkLocal p) = "(SparkLocal " <> show p <> ")"
+derive instance ordMount ∷ Ord Mount
+derive instance genericMount ∷ Generic Mount _
+instance showMount ∷ Show Mount where show = genericShow
 
 -- | Attempts to decode a mount listing value from Quasar's filesystem metadata,
 -- | for a mount in the specified parent directory.
@@ -54,26 +41,13 @@ fromJSON parent = decodeJson >=> \obj → do
   mount ← obj .? "mount"
   typ ← obj .? "type"
   name ← obj .? "name"
-  case typ, mount of
-    "file", "view" → Right $ View (parent </> file name)
-    "directory", "module" → Right $ Module (parent </> dir name)
-    "directory", "mongodb" → Right $ MongoDB (parent </> dir name)
-    "directory", "couchbase" → Right $ Couchbase (parent </> dir name)
-    "directory", "marklogic" → Right $ MarkLogic (parent </> dir name)
-    "directory", "spark-hdfs" → Right $ SparkHDFS (parent </> dir name)
-    "directory", "spark-local" → Right $ SparkLocal (parent </> dir name)
-    _, _ → Left $
-      "Unknown mount type '" <> mount <> "' for resource type '" <> typ <> "'"
+  case typ of
+    "file" → Right $ Mount (MT.fromName mount) (Right (parent </> file name))
+    "directory" → Right $ Mount (MT.fromName mount) (Left (parent </> dir name))
+    _ → Left $ "Unknown type '" <> typ <> "' for mount"
 
 getPath ∷ Mount → AnyPath
-getPath (View p) = Right p
-getPath (Module p) = Left p
-getPath (MongoDB p) = Left p
-getPath (Couchbase p) = Left p
-getPath (MarkLogic p) = Left p
-getPath (SparkHDFS p) = Left p
-getPath (SparkFTP p) = Left p
-getPath (SparkLocal p) = Left p
+getPath (Mount _ p) = p
 
 getName ∷ Mount → Either (Maybe DirName) FileName
 getName = pathName <<< getPath

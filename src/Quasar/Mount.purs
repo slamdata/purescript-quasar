@@ -33,6 +33,7 @@ import Quasar.Mount.SparkHDFS as SparkHDFS
 import Quasar.Mount.SparkLocal as SparkLocal
 import Quasar.Mount.Unknown as Unknown
 import Quasar.Mount.View as View
+import Quasar.Mount.Type (MountType(..))
 
 data MountConfig
   = ViewConfig View.Config
@@ -109,6 +110,18 @@ toJSON (SparkFTPConfig config) = SparkFTP.toJSON config
 toJSON (SparkLocalConfig config) = SparkLocal.toJSON config
 toJSON (MimirConfig config) = Mimir.toJSON config
 toJSON (UnknownConfig config) = Unknown.toJSON config
+
+getType ∷ MountConfig → MountType
+getType (ViewConfig _) = View
+getType (ModuleConfig _) = Module
+getType (MongoDBConfig _) = MongoDB
+getType (CouchbaseConfig _) = Couchbase
+getType (MarkLogicConfig _) = MarkLogic
+getType (SparkHDFSConfig _) = SparkHDFS
+getType (SparkFTPConfig _) = SparkFTP
+getType (SparkLocalConfig _) = SparkLocal
+getType (MimirConfig _) = Mimir
+getType (UnknownConfig { mountType }) = Unknown (Just mountType)
 
 _View ∷ Prism' MountConfig View.Config
 _View = prism' ViewConfig case _ of
