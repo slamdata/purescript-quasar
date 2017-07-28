@@ -120,7 +120,7 @@ function checkQuasarVersion(quasarDistribution) {
       var err = [];
       proc.stderr.on('data', function(d){ err.push(d); });
       proc.stderr.on('end', function(){
-        reject(new Error(Buffer.concat(err).toString()));
+        if (err.length > 0) reject(new Error(Buffer.concat(err).toString()));
       });
     } else {
       resolve(false)
