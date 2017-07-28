@@ -34,6 +34,7 @@
     "purescript-node-child-process": "^4.0.0",
     "purescript-node-fs-aff": "^4.0.0",
     "purescript-generics-rep": "^5.1.0",
-    "purescript-quickcheck": "^4.4.0"
+    "purescript-quickcheck": "^4.4.0",
+    "purescript-quasar-test-starter": "slamdata/quasar-test-starter#^0.4.1"
   }
 }

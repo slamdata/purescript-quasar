@@ -46,7 +46,7 @@ import Node.Process (PROCESS)
 import Node.Process as Proc
 
 import Test.Assert (ASSERT, assert)
-import Test.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit)
+import Quasar.Spawn.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit)
 import Test.Util.FS as FS
 import Test.Util.Effect (Effects)
 
@@ -100,9 +100,9 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
   FSA.readFile "test/quasar/config.json"
     >>= FSA.writeFile "test/tmp/quasar/config.json"
 
-  spawnQuasarInit
-  mongod ← spawnMongo
-  quasar ← spawnQuasar
+  spawnQuasarInit "test/tmp/quasar/config.json" "jars/quasar.jar"
+  mongod ← spawnMongo "test/tmp" 63174
+  quasar ← spawnQuasar "test/tmp/quasar/config.json" "jars/quasar.jar" "-C slamdata"
 
   dataFiles ← FSA.readdir "test/data"
   for_ dataFiles \file →
@@ -164,9 +164,12 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nDeleteMount:"
     run isRight $ QF.deleteMount (Right testMount2)
+
     log "\nInvokeFile:"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
     run isRight $ QF.invokeFile Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
+
+    log "\nDone!"
 
   liftEff do
     void $ CP.kill SIGTERM mongod
