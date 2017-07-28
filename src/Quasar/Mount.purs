@@ -25,11 +25,13 @@ import Data.Lens (Prism', prism')
 import Data.Maybe (Maybe(..))
 import Quasar.Mount.Couchbase as Couchbase
 import Quasar.Mount.MarkLogic as MarkLogic
+import Quasar.Mount.Mimir as Mimir
 import Quasar.Mount.Module as Module
 import Quasar.Mount.MongoDB as MongoDB
 import Quasar.Mount.SparkFTP as SparkFTP
 import Quasar.Mount.SparkHDFS as SparkHDFS
 import Quasar.Mount.SparkLocal as SparkLocal
+import Quasar.Mount.Unknown as Unknown
 import Quasar.Mount.View as View
 
 data MountConfig
@@ -41,6 +43,8 @@ data MountConfig
   | SparkHDFSConfig SparkHDFS.Config
   | SparkFTPConfig SparkFTP.Config
   | SparkLocalConfig SparkLocal.Config
+  | MimirConfig Mimir.Config
+  | UnknownConfig Unknown.Config
 
 instance showMountConfig ∷ Show MountConfig where
   show (ViewConfig { query, vars })
@@ -72,8 +76,13 @@ instance showMountConfig ∷ Show MountConfig where
     <> ", ftpHost: " <> show ftpHost
     <> ", path: " <> show path
     <> ", credentials: " <> show credentials <> " })"
-  show (SparkLocalConfig path )
-    = "(SparkLocalConfig { path: " <> show path <> " })"
+  show (SparkLocalConfig path)
+    = "(SparkLocalConfig " <> show path <> ")"
+  show (MimirConfig path)
+    = "(MimirConfig " <> show path <> ")"
+  show (UnknownConfig { mountType, connectionUri })
+    = "(UnknownConfig { mountType: " <> show mountType
+    <> ", connectionUri: " <> show connectionUri <> " })"
 
 fromJSON ∷ Json → Either String MountConfig
 fromJSON json
@@ -85,6 +94,8 @@ fromJSON json
   <|> SparkHDFSConfig <$> SparkHDFS.fromJSON json
   <|> SparkFTPConfig <$> SparkFTP.fromJSON json
   <|> SparkLocalConfig <$> SparkLocal.fromJSON json
+  <|> MimirConfig <$> Mimir.fromJSON json
+  <|> UnknownConfig <$> Unknown.fromJSON json
   <|> Left "Could not decode mount config"
 
 toJSON ∷ MountConfig → Json
@@ -96,6 +107,8 @@ toJSON (MarkLogicConfig config) = MarkLogic.toJSON config
 toJSON (SparkHDFSConfig config) = SparkHDFS.toJSON config
 toJSON (SparkFTPConfig config) = SparkFTP.toJSON config
 toJSON (SparkLocalConfig config) = SparkLocal.toJSON config
+toJSON (MimirConfig config) = Mimir.toJSON config
+toJSON (UnknownConfig config) = Unknown.toJSON config
 
 _View ∷ Prism' MountConfig View.Config
 _View = prism' ViewConfig case _ of
@@ -135,4 +148,14 @@ _SparkFTP = prism' SparkFTPConfig case _ of
 _SparkLocal ∷ Prism' MountConfig SparkLocal.Config
 _SparkLocal = prism' SparkLocalConfig case _ of
   SparkLocalConfig config → Just config
+  _ → Nothing
+
+_Mimir ∷ Prism' MountConfig Mimir.Config
+_Mimir = prism' MimirConfig case _ of
+  MimirConfig config → Just config
+  _ → Nothing
+
+_Unknown ∷ Prism' MountConfig Unknown.Config
+_Unknown = prism' UnknownConfig case _ of
+  UnknownConfig config → Just config
   _ → Nothing

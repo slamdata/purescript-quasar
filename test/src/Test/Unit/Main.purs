@@ -20,17 +20,27 @@ import Prelude
 
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
+import Data.Argonaut.Parser as JP
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
 import Quasar.Mount.Couchbase as CB
+import Quasar.Mount as QM
 import Test.Assert (ASSERT, assert')
 import Test.Property.Mount.Couchbase as CBT
 
 main ∷ ∀ eff. Eff (assert ∷ ASSERT, console ∷ CONSOLE | eff) Unit
 main = do
+
+  log "Testing Unknown mount format parses"
+
+  case QM.fromJSON =<< JP.jsonParser """{ "mongoish": { "connectionUri": "mongodb://localhost:63174" } }""" of
+    Left err → fail $ "Config failed to parse: " <> show err
+    Right (QM.UnknownConfig { mountType, connectionUri })
+      | mountType == "mongoish" && connectionUri == "mongodb://localhost:63174" → pure unit
+    Right conf → fail $ "Config failed to parse as expected, found: \n\n" <> show conf
 
   log "Testing Couchbase URI format parses as expected"
 
