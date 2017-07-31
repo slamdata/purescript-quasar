@@ -19,21 +19,17 @@ module Quasar.FS.Resource where
 import Prelude
 
 import Control.Alt ((<|>))
-
 import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Either (Either(..))
 import Data.Maybe (Maybe)
 import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
-
-import Quasar.FS.Mount (Mount)
 import Quasar.FS.Mount as Mount
-
 import Quasar.Types (AnyPath, FilePath, DirPath)
 
 data Resource
   = File FilePath
   | Directory DirPath
-  | Mount Mount
+  | Mount Mount.Mount
 
 derive instance eqResource ∷ Eq Resource
 
