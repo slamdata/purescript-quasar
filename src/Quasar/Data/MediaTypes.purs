@@ -14,12 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Data.MediaTypes where
+module Quasar.Data.MediaTypes
+  ( applicationLDJSON
+  , applicationZip
+  , zipped
+  , module Data.MediaType.Common
+  ) where
 
+import Prelude
+
+import Data.Maybe (Maybe(..))
 import Data.MediaType (MediaType(..))
+import Data.MediaType.Common (applicationJSON)
+import Data.Newtype (over2)
+import Data.String as S
 
 applicationLDJSON ∷ MediaType
 applicationLDJSON = MediaType "application/ldjson;mode=readable"
 
 applicationZip ∷ MediaType
 applicationZip = MediaType "application/zip"
+
+zipped ∷ MediaType → MediaType
+zipped = over2 MediaType go applicationZip
+  where
+  go z mt = case S.stripPrefix (S.Pattern z) mt of
+    Nothing → z <> "," <> mt
+    _ → mt

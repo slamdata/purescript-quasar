@@ -43,7 +43,7 @@ import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
 import Quasar.ConfigF as CF
-import Quasar.Data.JSONMode as JSONMode
+import Quasar.Data.Json as Json
 import Quasar.FS.DirMetadata as DirMetadata
 import Quasar.Mount as Mount
 import Quasar.Paths as Paths
@@ -78,7 +78,7 @@ eval = case _ of
     k <$> mkRequest jsonResult
       (AXF.affjax $ defaultRequest
         { url = url
-        , headers = [Req.Accept $ JSONMode.decorateMode applicationJSON mode]
+        , headers = [Req.Accept $ Json.decorateMode mode applicationJSON]
         })
 
   WriteQuery path file sql vars k → do
@@ -100,7 +100,7 @@ eval = case _ of
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
         { url = url
-        , headers = [Req.Accept $ JSONMode.decorateMode applicationJSON mode]
+        , headers = [Req.Accept $ Json.decorateMode mode applicationJSON]
         })
 
   WriteFile path content k → do
@@ -141,7 +141,7 @@ eval = case _ of
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
         { url = url
-        , headers = [Req.Accept $ JSONMode.decorateMode applicationJSON mode]
+        , headers = [Req.Accept $ Json.decorateMode mode applicationJSON]
         })
 
   DeleteData path k → do
