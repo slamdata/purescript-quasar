@@ -25,7 +25,6 @@ import Prelude
 
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free)
-
 import Data.Argonaut (Json, JObject, jsonEmptyObject, (:=), (~>))
 import Data.Array (catMaybes)
 import Data.Bifunctor (lmap)
@@ -40,11 +39,9 @@ import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
 import Data.String as Str
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..), fst, snd)
-
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
-
 import Quasar.ConfigF as CF
 import Quasar.Data.JSONMode as JSONMode
 import Quasar.FS.DirMetadata as DirMetadata
@@ -115,6 +112,17 @@ eval = case _ of
         , headers = catMaybes [Req.ContentType <$> fst reqSettings]
         , method = Left PUT
         , content = Just $ snd reqSettings
+        })
+
+  WriteDir path content k → do
+    url ← mkURL Paths.data_ (Left path) Nil
+    let Tuple mediaType reqContent = toRequest content
+    k <$> mkRequest unitResult
+      (AXF.affjax defaultRequest
+        { url = url
+        , headers = catMaybes [Req.ContentType <$> mediaType]
+        , method = Left PUT
+        , content = Just reqContent
         })
 
   AppendFile path content k → do

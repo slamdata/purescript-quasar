@@ -24,8 +24,7 @@ import Prelude
 
 import Data.Argonaut (JArray)
 import Data.Maybe (Maybe)
-
-import Quasar.Data (QData, JSONMode(..))
+import Quasar.Data (BinaryString, QData, JSONMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QResponse, QError(..), UnauthorizedDetails(..), lowerQError, printQError)
 import Quasar.FS (Resource)
@@ -43,6 +42,7 @@ data QuasarF a
   | DirMetadata DirPath (Maybe Pagination) ((Array Resource) :~> a)
   | ReadFile JSONMode FilePath (Maybe Pagination) (JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
+  | WriteDir DirPath BinaryString (Unit :~> a)
   | AppendFile FilePath QData (Unit :~> a)
   | InvokeFile JSONMode FilePath Vars (Maybe Pagination) (JArray :~> a)
   | DeleteData AnyPath (Unit :~> a)
@@ -133,6 +133,13 @@ writeFile
   → QuasarFE Unit
 writeFile path content =
   WriteFile path content id
+
+writeDir
+  ∷ DirPath
+  → BinaryString
+  → QuasarFE Unit
+writeDir path content =
+  WriteDir path content id
 
 appendFile
   ∷ FilePath

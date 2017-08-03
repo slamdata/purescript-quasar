@@ -16,23 +16,24 @@ limitations under the License.
 
 module Quasar.Data
   ( QData(..)
+  , BinaryString(..)
   , module Exports
   ) where
 
 import Prelude
 
-import Data.Argonaut (JArray, fromArray)
+import Data.Argonaut.Core (JArray, fromArray, stringify)
 import Data.Maybe (Maybe(..))
-import Data.MediaType (MediaType(..))
+import Data.MediaType (MediaType)
 import Data.MediaType.Common (applicationJSON)
+import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple(..), snd)
-
 import Network.HTTP.Affjax.Request (class Requestable, toRequest)
-
 import Quasar.Data.CSVOptions (CSVOptions, defaultCSVOptions) as Exports
 import Quasar.Data.CSVOptions as CSV
 import Quasar.Data.JSONMode (JSONMode(..)) as Exports
 import Quasar.Data.JSONMode as JSON
+import Quasar.Data.MediaTypes (applicationLDJSON, applicationZip)
 
 data QData
   = JSON JSON.JSONMode JArray
@@ -44,7 +45,7 @@ instance requestableQData ∷ Requestable QData where
   toRequest (JSON mode jarr) =
     Tuple
       (Just (JSON.decorateMode applicationJSON mode))
-      (snd (toRequest (show (fromArray jarr)))) -- `show` for Argonaut's Json is just `stringify`
+      (snd (toRequest (stringify (fromArray jarr))))
   toRequest (LDJSON mode content) =
     Tuple
       (Just (JSON.decorateMode applicationLDJSON mode))
@@ -54,5 +55,12 @@ instance requestableQData ∷ Requestable QData where
   toRequest (CustomData mediaType content) =
     Tuple (Just mediaType) (snd (toRequest content))
 
-applicationLDJSON ∷ MediaType
-applicationLDJSON = MediaType "application/ldjson;mode=readable"
+newtype BinaryString = BinaryString String
+
+derive newtype instance eqBinaryString :: Eq BinaryString
+derive newtype instance ordBinaryString :: Ord BinaryString
+derive instance newtypeBinaryString :: Newtype BinaryString _
+
+instance requestableBinaryString ∷ Requestable BinaryString where
+  toRequest (BinaryString content) =
+    Tuple (Just applicationZip) (snd (toRequest content))

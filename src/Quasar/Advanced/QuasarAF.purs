@@ -29,7 +29,7 @@ import Data.Foldable (class Foldable, foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.Maybe (Maybe)
 import Quasar.Advanced.Types as QA
-import Quasar.Data (QData, JSONMode(..))
+import Quasar.Data (BinaryString, JSONMode(..), QData)
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QError(..), QResponse, lowerQError, printQError)
 import Quasar.FS (Resource)
@@ -141,6 +141,13 @@ writeFile
   → QuasarAFCE Unit
 writeFile path content =
   left $ WriteFile path content id
+
+writeDir
+  ∷ DirPath
+  → BinaryString
+  → QuasarAFCE Unit
+writeDir path content =
+  left $ WriteDir path content id
 
 appendFile
   ∷ FilePath
