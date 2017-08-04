@@ -117,13 +117,12 @@ eval = case _ of
 
   WriteDir path content k → do
     url ← mkURL Paths.data_ (Left path) Nil
-    let Tuple mediaType reqContent = toRequest content
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
         , headers = [Req.ContentType applicationZip]
         , method = Left PUT
-        , content = Just reqContent
+        , content = Just $ snd (toRequest content)
         })
 
   AppendFile path content k → do
