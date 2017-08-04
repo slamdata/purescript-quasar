@@ -27,8 +27,8 @@ import Control.Monad.Eff.Console as Console
 import Control.Monad.Eff.Exception (throwException)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Reader.Trans (runReaderT)
-
 import Data.Argonaut (jsonEmptyObject, (~>), (:=))
+import Data.Argonaut.Core as J
 import Data.Either (Either(..), isRight)
 import Data.Foldable (for_)
 import Data.Functor.Coproduct (left)
@@ -37,24 +37,21 @@ import Data.Path.Pathy (rootDir, dir, file, (</>))
 import Data.Posix.Signal (Signal(SIGTERM))
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
-
 import Network.HTTP.Affjax (AJAX)
-
 import Node.ChildProcess as CP
 import Node.FS.Aff as FSA
 import Node.Process (PROCESS)
 import Node.Process as Proc
-
-import Test.Assert (ASSERT, assert)
-import Quasar.Spawn.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit)
-import Test.Util.FS as FS
-import Test.Util.Effect (Effects)
-
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
-import Quasar.Data (QData(..), JSONMode(..))
+import Quasar.Data (QData(..))
+import Quasar.Data.Json as Json
 import Quasar.Mount (MountConfig(..))
 import Quasar.QuasarF (QuasarF, QError(..))
 import Quasar.QuasarF as QF
+import Quasar.Spawn.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit)
+import Test.Assert (ASSERT, assert)
+import Test.Util.Effect (Effects)
+import Test.Util.FS as FS
 
 -- | Evaluates and runs a `QuasarF` value, throwing an assertion error if the
 -- | query fails.
@@ -117,8 +114,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ map (\{ name, version } → name <> " " <> version) <$> QF.serverInfo
 
     log "\nReadQuery:"
-    run isRight $ QF.readQuery Readable testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
-    run isRight $ QF.readQuery Precise testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Json.Readable testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Json.Precise testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
 
     log "\nWriteQuery:"
     run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty
@@ -142,8 +139,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ QF.appendFile testFile1 content
 
     log "\nReadFile:"
-    run isRight $ QF.readFile Precise testFile1 (Just { offset: 0, limit: 100 })
-    run isRight $ QF.readFile Readable testFile3 (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readFile Json.Precise testFile1 (Just { offset: 0, limit: 100 })
+    run isRight $ QF.readFile Json.Readable testFile3 (Just { offset: 0, limit: 1 })
 
     log "\nDeleteData:"
     run isRight $ QF.deleteData (Right testFile1)
@@ -167,7 +164,7 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nInvokeFile:"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
-    run isRight $ QF.invokeFile Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
+    run isRight $ QF.invokeFile Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
 
     log "\nDone!"
 
@@ -197,10 +194,14 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     Left NotFound → true
     _ → false
 
-  content = JSON Readable
-    [ "foo" := "bar" ~> jsonEmptyObject
-    , "foo" := "baz" ~> jsonEmptyObject
-    ]
+  content =
+    QData
+      (Left (Json.Options { encoding: Json.Array, precision: Json.Readable }))
+      $ J.stringify
+      $ J.fromArray
+          [ "foo" := "bar" ~> jsonEmptyObject
+          , "foo" := "baz" ~> jsonEmptyObject
+          ]
 
   mountConfig1 = ViewConfig
     { query: "select * from `/test/smallZips`"
