@@ -36,14 +36,15 @@ import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (applicationJSON)
 import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
-import Data.String as Str
 import Data.StrMap as SM
+import Data.String as Str
 import Data.Tuple (Tuple(..), fst, snd)
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
 import Quasar.ConfigF as CF
 import Quasar.Data.Json as Json
+import Quasar.Data.MediaTypes (applicationZip)
 import Quasar.FS.DirMetadata as DirMetadata
 import Quasar.Mount as Mount
 import Quasar.Paths as Paths
@@ -120,7 +121,7 @@ eval = case _ of
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
-        , headers = catMaybes [Req.ContentType <$> mediaType]
+        , headers = [Req.ContentType applicationZip]
         , method = Left PUT
         , content = Just reqContent
         })

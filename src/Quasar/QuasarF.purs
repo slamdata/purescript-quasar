@@ -24,7 +24,8 @@ import Prelude
 
 import Data.Argonaut (JArray)
 import Data.Maybe (Maybe)
-import Quasar.Data (BinaryString, QData)
+import DOM.File.Types (Blob)
+import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QResponse, QError(..), UnauthorizedDetails(..), lowerQError, printQError)
@@ -43,7 +44,7 @@ data QuasarF a
   | DirMetadata DirPath (Maybe Pagination) ((Array Resource) :~> a)
   | ReadFile PrecisionMode FilePath (Maybe Pagination) (JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
-  | WriteDir DirPath BinaryString (Unit :~> a)
+  | WriteDir DirPath Blob (Unit :~> a)
   | AppendFile FilePath QData (Unit :~> a)
   | InvokeFile PrecisionMode FilePath Vars (Maybe Pagination) (JArray :~> a)
   | DeleteData AnyPath (Unit :~> a)
@@ -137,7 +138,7 @@ writeFile path content =
 
 writeDir
   ∷ DirPath
-  → BinaryString
+  → Blob
   → QuasarFE Unit
 writeDir path content =
   WriteDir path content id

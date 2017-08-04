@@ -14,21 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Data
-  ( QData(..)
-  , BinaryString(..)
-  ) where
-
-import Prelude
+module Quasar.Data where
 
 import Data.Either (Either, either)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple(..), snd)
 import Network.HTTP.Affjax.Request (class Requestable, toRequest)
 import Quasar.Data.CSV as CSV
 import Quasar.Data.Json as Json
-import Quasar.Data.MediaTypes (applicationZip)
 
 data QData = QData (Either Json.Options CSV.Options) String
 
@@ -37,13 +30,3 @@ instance requestableQData ∷ Requestable QData where
     Tuple
       (Just (either Json.toMediaType CSV.toMediaType mode))
       (snd (toRequest content))
-
-newtype BinaryString = BinaryString String
-
-derive newtype instance eqBinaryString :: Eq BinaryString
-derive newtype instance ordBinaryString :: Ord BinaryString
-derive instance newtypeBinaryString :: Newtype BinaryString _
-
-instance requestableBinaryString ∷ Requestable BinaryString where
-  toRequest (BinaryString content) =
-    Tuple (Just applicationZip) (snd (toRequest content))
