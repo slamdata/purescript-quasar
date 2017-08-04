@@ -14,45 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Data
-  ( QData(..)
-  , module Exports
-  ) where
+module Quasar.Data where
 
-import Prelude
-
-import Data.Argonaut (JArray, fromArray)
+import Data.Either (Either, either)
 import Data.Maybe (Maybe(..))
-import Data.MediaType (MediaType(..))
-import Data.MediaType.Common (applicationJSON)
 import Data.Tuple (Tuple(..), snd)
-
 import Network.HTTP.Affjax.Request (class Requestable, toRequest)
+import Quasar.Data.CSV as CSV
+import Quasar.Data.Json as Json
 
-import Quasar.Data.CSVOptions (CSVOptions, defaultCSVOptions) as Exports
-import Quasar.Data.CSVOptions as CSV
-import Quasar.Data.JSONMode (JSONMode(..)) as Exports
-import Quasar.Data.JSONMode as JSON
-
-data QData
-  = JSON JSON.JSONMode JArray
-  | LDJSON JSON.JSONMode String
-  | CSV CSV.CSVOptions String
-  | CustomData MediaType String
+data QData = QData (Either Json.Options CSV.Options) String
 
 instance requestableQData ∷ Requestable QData where
-  toRequest (JSON mode jarr) =
+  toRequest (QData mode content) =
     Tuple
-      (Just (JSON.decorateMode applicationJSON mode))
-      (snd (toRequest (show (fromArray jarr)))) -- `show` for Argonaut's Json is just `stringify`
-  toRequest (LDJSON mode content) =
-    Tuple
-      (Just (JSON.decorateMode applicationLDJSON mode))
+      (Just (either Json.toMediaType CSV.toMediaType mode))
       (snd (toRequest content))
-  toRequest (CSV mode content) =
-    Tuple (Just (CSV.toMediaType mode)) (snd (toRequest content))
-  toRequest (CustomData mediaType content) =
-    Tuple (Just mediaType) (snd (toRequest content))
-
-applicationLDJSON ∷ MediaType
-applicationLDJSON = MediaType "application/ldjson;mode=readable"

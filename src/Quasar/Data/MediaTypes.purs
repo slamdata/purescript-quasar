@@ -14,24 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Data.JSONMode where
+module Quasar.Data.MediaTypes
+  ( applicationLDJSON
+  , applicationZip
+  , zipped
+  , module Data.MediaType.Common
+  ) where
 
 import Prelude
 
+import Data.Maybe (Maybe(..))
 import Data.MediaType (MediaType(..))
+import Data.MediaType.Common (applicationJSON)
+import Data.Newtype (over2)
+import Data.String as S
 
-data JSONMode = Readable | Precise
+applicationLDJSON ∷ MediaType
+applicationLDJSON = MediaType "application/ldjson;mode=readable"
 
-derive instance eqJSONMode ∷ Eq JSONMode
+applicationZip ∷ MediaType
+applicationZip = MediaType "application/zip"
 
-derive instance ordJSONMode ∷ Ord JSONMode
-
-instance showJSONMode ∷ Show JSONMode where
-  show Readable = "Readable"
-  show Precise = "Precise"
-
-decorateMode ∷ MediaType → JSONMode → MediaType
-decorateMode (MediaType mt) mode = MediaType (mt <> modeToString mode)
+zipped ∷ MediaType → MediaType
+zipped = over2 MediaType go applicationZip
   where
-  modeToString Readable = ";mode=readable"
-  modeToString Precise = ";mode=precise"
+  go z mt = case S.stripPrefix (S.Pattern z) mt of
+    Nothing → z <> "," <> mt
+    _ → mt

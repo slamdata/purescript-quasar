@@ -24,8 +24,9 @@ import Prelude
 
 import Data.Argonaut (JArray)
 import Data.Maybe (Maybe)
-
-import Quasar.Data (QData, JSONMode(..))
+import DOM.File.Types (Blob)
+import Quasar.Data (QData)
+import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QResponse, QError(..), UnauthorizedDetails(..), lowerQError, printQError)
 import Quasar.FS (Resource)
@@ -36,15 +37,16 @@ import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL, CompileR
 
 data QuasarF a
   = ServerInfo (ServerInfo :~> a)
-  | ReadQuery JSONMode DirPath SQL Vars (Maybe Pagination) (JArray :~> a)
+  | ReadQuery PrecisionMode DirPath SQL Vars (Maybe Pagination) (JArray :~> a)
   | WriteQuery DirPath FilePath SQL Vars (OutputMeta :~> a)
   | CompileQuery DirPath SQL Vars (CompileResultR :~> a)
   | FileMetadata FilePath (Unit :~> a)
   | DirMetadata DirPath (Maybe Pagination) ((Array Resource) :~> a)
-  | ReadFile JSONMode FilePath (Maybe Pagination) (JArray :~> a)
+  | ReadFile PrecisionMode FilePath (Maybe Pagination) (JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
+  | WriteDir DirPath Blob (Unit :~> a)
   | AppendFile FilePath QData (Unit :~> a)
-  | InvokeFile JSONMode FilePath Vars (Maybe Pagination) (JArray :~> a)
+  | InvokeFile PrecisionMode FilePath Vars (Maybe Pagination) (JArray :~> a)
   | DeleteData AnyPath (Unit :~> a)
   | MoveData AnyPath AnyPath (Unit :~> a)
   | GetMount AnyPath (MountConfig :~> a)
@@ -64,7 +66,7 @@ serverInfo =
   ServerInfo id
 
 readQuery
-  ∷ JSONMode
+  ∷ PrecisionMode
   → DirPath
   → SQL
   → Vars
@@ -113,7 +115,7 @@ dirMetadata path pagination =
   DirMetadata path pagination id
 
 readFile
-  ∷ JSONMode
+  ∷ PrecisionMode
   → FilePath
   → Maybe Pagination
   → QuasarFE JArray
@@ -134,6 +136,13 @@ writeFile
 writeFile path content =
   WriteFile path content id
 
+writeDir
+  ∷ DirPath
+  → Blob
+  → QuasarFE Unit
+writeDir path content =
+  WriteDir path content id
+
 appendFile
   ∷ FilePath
   → QData
@@ -142,7 +151,7 @@ appendFile path content =
   AppendFile path content id
 
 invokeFile
-  ∷ JSONMode
+  ∷ PrecisionMode
   → FilePath
   → Vars
   → Maybe Pagination
