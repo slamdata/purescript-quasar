@@ -28,6 +28,7 @@ type OptionsR =
   , rowDelimiter ∷ String
   , quoteChar ∷ String
   , escapeChar ∷ String
+  , disposition ∷ String
   }
 
 newtype Options = Options OptionsR
@@ -41,18 +42,20 @@ defaultOptions ∷ Options
 defaultOptions =
   Options
     { columnDelimiter: ","
-    , rowDelimiter: "\\n"
-    , quoteChar: "\""
-    , escapeChar: "\""
+    , rowDelimiter: "\n"
+    , quoteChar: ""
+    , escapeChar: "",
+      disposition: "attachment"
     }
 
 toMediaType ∷ Options → MediaType
 toMediaType (Options opts) =
   MediaType $
     String.joinWith ";"
-      [ "text/csv"
+      [ "application/zip,text/csv"
       , "columnDelimiter=" <> opts.columnDelimiter
       , "rowDelimiter=" <> opts.rowDelimiter
       , "quoteChar=" <> opts.quoteChar
       , "escapeChar=" <> opts.escapeChar
+      , "disposition=" <> opts.disposition
       ]
