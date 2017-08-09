@@ -28,7 +28,6 @@ type OptionsR =
   , rowDelimiter ∷ String
   , quoteChar ∷ String
   , escapeChar ∷ String
-  , disposition ∷ String
   }
 
 newtype Options = Options OptionsR
@@ -41,21 +40,19 @@ derive instance genericOptions ∷ Generic Options _
 defaultOptions ∷ Options
 defaultOptions =
   Options
-    { columnDelimiter: ","
-    , rowDelimiter: "\n"
-    , quoteChar: ""
-    , escapeChar: "",
-      disposition: "attachment"
+    { columnDelimiter: "\",\""
+    , rowDelimiter: "\"\\n\""
+    , quoteChar: "\""
+    , escapeChar: "\""
     }
 
 toMediaType ∷ Options → MediaType
 toMediaType (Options opts) =
   MediaType $
     String.joinWith ";"
-      [ "application/zip,text/csv"
+      [ "text/csv"
       , "columnDelimiter=" <> opts.columnDelimiter
       , "rowDelimiter=" <> opts.rowDelimiter
       , "quoteChar=" <> opts.quoteChar
       , "escapeChar=" <> opts.escapeChar
-      , "disposition=" <> opts.disposition
       ]
