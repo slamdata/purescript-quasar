@@ -19,10 +19,11 @@ module Quasar.Types where
 import Prelude
 
 import Control.Alt ((<|>))
-
 import Data.Argonaut (class DecodeJson, decodeJson, (.?), jsonParser)
-import Data.Either (Either(..))
-import Data.Maybe (maybe)
+import Data.Bifunctor (bimap)
+import Data.Bitraversable (bitraverse)
+import Data.Either (Either(..), note)
+import Data.Maybe (Maybe(..), maybe)
 import Data.Path.Pathy (AbsPath, AbsFile, AbsDir, Sandboxed, (</>))
 import Data.Path.Pathy as Pt
 import Data.StrMap (StrMap)
@@ -38,7 +39,7 @@ type Vars = StrMap String
 type Pagination = { offset ∷ Int, limit ∷ Int }
 
 type CompileResultR =
-  { inputs ∷ Array FilePath
+  { inputs ∷ Array AnyPath
   , physicalPlan ∷ String
   }
 
@@ -51,7 +52,7 @@ instance decodeJsonCompileResult ∷ DecodeJson CompileResult where
       { inputs: _
       , physicalPlan: _
       }
-      <$> ((obj .? "inputs") >>= traverse parseFile)
+      <$> ((obj .? "inputs") >>= traverse parseAnyPath)
       <*> ((obj .? "physicalPlan") <|> pure "")
       <#> CompileResult
 
@@ -61,6 +62,12 @@ parseFile pt =
   >>= Pt.sandbox Pt.rootDir
   <#> (Pt.rootDir </> _)
   # maybe (Left "Incorrect resource") pure
+
+parseAnyPath ∷ String → Either String (Pt.AbsPath Pt.Sandboxed)
+parseAnyPath pt = note "Incorrect resource" do
+  anyPath ← Pt.parsePath (const Nothing) (Just <<< Left) (const Nothing) (Just <<< Right) pt
+  sandboxed ← bitraverse (Pt.sandbox Pt.rootDir) (Pt.sandbox Pt.rootDir) anyPath
+  pure $ bimap (Pt.rootDir </> _) (Pt.rootDir </> _) sandboxed
 
 compileResultFromString ∷ String → Either String CompileResultR
 compileResultFromString s =
