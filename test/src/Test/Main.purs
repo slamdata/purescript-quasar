@@ -39,6 +39,7 @@ import Data.Posix.Signal (Signal(SIGTERM))
 import Data.String as Str
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
+import Data.URI as URI
 import Network.HTTP.Affjax (AJAX)
 import Node.ChildProcess as CP
 import Node.Encoding (Encoding(..))
@@ -71,7 +72,11 @@ run pred qf = do
 
 config ∷ Config ()
 config =
-  { basePath: "http://localhost:53174"
+  { basePath: Left
+    { scheme: URI.URIScheme "http"
+    , authority: Just (URI.Authority Nothing [Tuple (URI.NameAddress "localhost") (Just 53174)])
+    , path: rootDir
+    }
   , idToken: Nothing
   , permissions: []
   }

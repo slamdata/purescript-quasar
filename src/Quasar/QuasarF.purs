@@ -22,6 +22,7 @@ module Quasar.QuasarF
 
 import Prelude
 
+import DOM.File.Types (Blob)
 import Data.Argonaut (JArray)
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Seconds)
@@ -33,6 +34,7 @@ import Quasar.Error (type (:~>), QResponse, QError(..), UnauthorizedDetails(..),
 import Quasar.FS (Resource)
 import Quasar.Mount (MountConfig(..))
 import Quasar.Mount.View as View
+import Quasar.Metastore (Metastore)
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL, CompileResultR)
@@ -56,6 +58,8 @@ data QuasarF a
   | UpdateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
   | MoveMount AnyPath AnyPath (Unit :~> a)
   | DeleteMount AnyPath (Unit :~> a)
+  | GetMetastore (Metastore :~> a)
+  | PutMetastore { initialize ∷ Boolean, metastore ∷ Metastore } (Unit :~> a)
 
 derive instance functorQuasarF ∷ Functor QuasarF
 

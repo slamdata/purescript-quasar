@@ -25,7 +25,8 @@ module Quasar.QuasarF.Interpreter.Internal
   , get
   , put
   , delete
-  , mkURL
+  , mkUrl
+  , mkFSUrl
   , mkRequest
   ) where
 
@@ -33,7 +34,6 @@ import Prelude
 
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free, liftF)
-
 import Data.Argonaut as Json
 import Data.Argonaut.Decode.Combinators ((.?), (.??))
 import Data.Array as Array
@@ -43,23 +43,22 @@ import Data.Foldable (oneOf)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
-import Data.List as List
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Path.Pathy (Sandboxed, Rel, Path, Abs, RelDir, file, dir, printPath, rootDir, relativeTo, (</>))
-import Data.String as Str
+import Data.Monoid (mempty)
+import Data.Path.Pathy (Abs, AnyPath, Path, Rel, RelDir, RelPath, Sandboxed, dir, file, relativeTo, rootDir, unsandbox, (</>))
 import Data.StrMap as SM
+import Data.String as Str
 import Data.Tuple (Tuple(..))
-
-import Global (encodeURIComponent)
-
+import Data.URI as URI
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
-import Network.HTTP.StatusCode (StatusCode(..))
 import Network.HTTP.ResponseHeader as RH
-
+import Network.HTTP.StatusCode (StatusCode(..))
 import Quasar.ConfigF as CF
-import Quasar.QuasarF (QError(..), UnauthorizedDetails(..), AnyPath, Pagination)
+import Quasar.QuasarF (Pagination, QError(..), UnauthorizedDetails(..))
+import Quasar.QuasarF.Interpreter.Config (Config)
+import Unsafe.Coerce (unsafeCoerce)
 
 type AXFP = AXF.AffjaxFP RequestContent String
 
@@ -75,15 +74,13 @@ strResult = Right
 unitResult ∷ String → Either Error Unit
 unitResult = const (Right unit)
 
-toVarParams ∷ SM.StrMap String → List (Tuple String String)
-toVarParams = map (lmap ("var." <> _)) <<< SM.toUnfoldable
+toVarParams ∷ SM.StrMap String → URI.Query
+toVarParams = URI.Query <<< map (bimap ("var." <> _) Just) <<< SM.toUnfoldable
 
-toPageParams ∷ Maybe Pagination → List (Tuple String String)
-toPageParams Nothing = Nil
+toPageParams ∷ Maybe Pagination → URI.Query
+toPageParams Nothing = mempty
 toPageParams (Just { offset, limit })
-  = Tuple "offset" (show offset)
-  : Tuple "limit" (show limit)
-  : Nil
+  = URI.Query $ Tuple "offset" (Just (show offset)) : Tuple "limit" (Just (show limit)) : Nil
 
 defaultRequest ∷ AX.AffjaxRequest RequestContent
 defaultRequest = AX.defaultRequest { content = Nothing }
@@ -97,38 +94,52 @@ put u c = AXF.affjax (defaultRequest { method = Left PUT, url = u, content = Jus
 delete ∷ AX.URL → AXF.AffjaxF RequestContent String
 delete u = AXF.affjax (defaultRequest { method = Left DELETE, url = u })
 
-mkURL
-  ∷ ∀ r
-  . RelDir Sandboxed
-  → AnyPath
-  → List (Tuple String String)
-  → Free (Coproduct (CF.ConfigF { basePath ∷ String | r }) AXFP) String
-mkURL endpoint path params = do
-  { basePath } ← ask
-  let url = basePath <> mkPath endpoint path
-  pure case params of
-    Nil → url
-    _ → url <> toQueryString params
-  where
-  toQueryString ∷ List (Tuple String String) → String
-  toQueryString
-    = ("?" <> _)
-    <<< Str.joinWith "&"
-    <<< List.toUnfoldable
-    <<< map (\(Tuple k v) → k <> "=" <> encodeURIComponent v)
+mkFSUrl
+  ∷ ∀ s s' r
+  . RelDir s
+  → AnyPath Abs s'
+  → URI.Query
+  → Free (Coproduct (CF.ConfigF (Config r)) AXFP) String
+mkFSUrl relDir fsPath q = URI.printURIRef <$> mkFSUrl' relDir fsPath q
 
-mkPath ∷ RelDir Sandboxed → AnyPath → String
-mkPath base fsPath
-  = Str.drop 1
-  $ Str.joinWith "/"
-  $ map encodeURIComponent
-  $ Str.split (Str.Pattern "/")
-  $ either printPath printPath
-  $ bimap (baseify (dir "/")) (baseify (file "")) fsPath
+mkFSUrl'
+  ∷ ∀ s s' r
+  . RelDir s
+  → AnyPath Abs s'
+  → URI.Query
+  → Free (Coproduct (CF.ConfigF (Config r)) AXFP) URI.URIRef
+mkFSUrl' relDir fsPath = mkUrl' (bimap (baseify (dir "/")) (baseify (file "")) fsPath)
   where
-  baseify
-    ∷ ∀ b. Path Rel b Sandboxed → Path Abs b Sandboxed → Path Rel b Sandboxed
-  baseify x p = base </> fromMaybe x (p `relativeTo` rootDir)
+    baseify ∷ ∀ b. Path Rel b s → Path Abs b s' → Path Rel b s
+    baseify x p = relDir </> fromMaybe x (p `relativeTo` rootDir)
+
+mkUrl ∷ ∀ s r. RelPath s → URI.Query → Free (Coproduct (CF.ConfigF (Config r)) AXFP) String
+mkUrl relPath q = URI.printURIRef <$> mkUrl' relPath q
+
+mkUrl' ∷ ∀ s r. RelPath s → URI.Query → Free (Coproduct (CF.ConfigF (Config r)) AXFP) URI.URIRef
+mkUrl' relPath q = do
+  { basePath } ← ask
+  pure (bimap toURI toRelativeRef basePath)
+  where
+    toURI { scheme, authority, path } =
+      URI.URI
+        (Just scheme)
+        (URI.HierarchicalPart
+          authority
+          (Just (bimap ((path </> _) <<< sandbox) ((path </> _) <<< sandbox) relPath)))
+        (Just q)
+        Nothing
+
+    sandbox ∷ ∀ a b. Path a b s → Path a b Sandboxed
+    sandbox = unsafeCoerce
+
+    toRelativeRef relDir =
+      URI.RelativeRef
+        (URI.RelativePart
+          Nothing
+          (Just (bimap ((relDir </> _) <<< unsandbox) ((relDir </> _) <<< unsandbox) relPath)))
+        (Just q)
+        Nothing
 
 mkRequest
   ∷ ∀ a l

@@ -17,13 +17,8 @@ limitations under the License.
 module Quasar.Advanced.QuasarAF.Interpreter.Config where
 
 import Data.Maybe (Maybe)
-import Network.HTTP.Affjax (URL)
 import OIDC.Crypt.Types (IdToken)
 import Quasar.Advanced.Types (TokenHash)
+import Quasar.QuasarF.Interpreter.Config as QuasarF
 
-type Config r =
-  { basePath ∷ URL
-  , idToken ∷ Maybe IdToken
-  , permissions ∷ Array TokenHash
-  | r
-  }
+type Config r = QuasarF.Config ( idToken ∷ Maybe IdToken, permissions ∷ Array TokenHash | r )

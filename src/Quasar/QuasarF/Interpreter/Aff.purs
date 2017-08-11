@@ -38,7 +38,7 @@ import Quasar.QuasarF.Interpreter.Config (Config)
 
 eval
   ∷ ∀ m eff r
-  . MonadReader { basePath ∷ AX.URL | r } m
+  . MonadReader (Config r) m
   ⇒ MonadAff (ajax ∷ AX.AJAX | eff) m
   ⇒ MonadRec m
   ⇒ QuasarF
