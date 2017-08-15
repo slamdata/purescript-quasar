@@ -144,6 +144,8 @@ eval = case _ of
         })
 
   InvokeFile mode path vars pagination k → do
+    -- We can't use toVarParams here, as the format is different for invokeFile,
+    -- instead of var.x=3 it's just x=3
     url ← mkFSUrl Paths.invoke (Right path) (URI.Query (map Just <$> SM.toUnfoldable vars) <> toPageParams pagination)
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
@@ -207,8 +209,8 @@ eval = case _ of
     k <$> mkRequest metastoreResult (get url)
 
   PutMetastore { initialize, metastore } k → do
-    -- todo query param
-    url ← mkUrl (Right Paths.metastore) mempty
+    let query = if initialize then URI.Query (singleton (Tuple "initialize" Nothing)) else mempty
+    url ← mkUrl (Right Paths.metastore) query
     k <$> (mkRequest unitResult $ put url $ snd (toRequest (Metastore.toJSON metastore)))
 
 
