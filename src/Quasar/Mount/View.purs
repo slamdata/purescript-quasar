@@ -29,6 +29,7 @@ import Data.String as Str
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..), lookup)
 import Data.URI as URI
+import Data.URI.AbsoluteURI as AbsoluteURI
 
 import Quasar.Types (SQL, Vars)
 
@@ -39,13 +40,13 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = URI.printAbsoluteURI (toURI config)
+  let (uri ∷ String) = AbsoluteURI.print (toURI config)
   in "view" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< URI.runParseAbsoluteURI
+  <=< lmap show <<< AbsoluteURI.parse
   <=< (_ .? "connectionUri")
   <=< (_ .? "view")
   <=< decodeJson
@@ -70,8 +71,8 @@ fromURI (URI.AbsoluteURI scheme _ query) = do
   let vars = SM.fromFoldable $ foldMap extractVar queryMap
   pure { query: query', vars }
 
-uriScheme ∷ URI.URIScheme
-uriScheme = URI.URIScheme "sql2"
+uriScheme ∷ URI.Scheme
+uriScheme = URI.Scheme "sql2"
 
 extractQuery ∷ List (Tuple String (Maybe String)) → Maybe String
 extractQuery

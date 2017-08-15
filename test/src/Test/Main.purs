@@ -73,8 +73,8 @@ run pred qf = do
 config ∷ Config ()
 config =
   { basePath: Left
-    { scheme: URI.URIScheme "http"
-    , authority: Just (URI.Authority Nothing [Tuple (URI.NameAddress "localhost") (Just 53174)])
+    { scheme: URI.Scheme "http"
+    , authority: Just (URI.Authority Nothing [Tuple (URI.NameAddress "localhost") (Just (URI.Port 53174))])
     , path: rootDir
     }
   , idToken: Nothing

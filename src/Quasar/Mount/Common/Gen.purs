@@ -55,7 +55,7 @@ genHostURI = Gen.oneOf $ genIPv4 :| [genName]
     pure $ URI.NameAddress $ head <> tail
 
 genPort ∷ ∀ m. MonadGen m ⇒ m URI.Port
-genPort = Gen.chooseInt 50000 65535
+genPort = URI.Port <$> Gen.chooseInt 50000 65535
 
 genHost ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MDB.Host
 genHost = Tuple <$> genHostURI <*> GenC.genMaybe genPort

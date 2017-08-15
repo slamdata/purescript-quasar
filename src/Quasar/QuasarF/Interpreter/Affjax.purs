@@ -144,7 +144,7 @@ eval = case _ of
         })
 
   InvokeFile mode path vars pagination k → do
-    url ← mkFSUrl Paths.invoke (Right path) (toVarParams vars <> toPageParams pagination)
+    url ← mkFSUrl Paths.invoke (Right path) (URI.Query (map Just <$> SM.toUnfoldable vars) <> toPageParams pagination)
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
         { url = url

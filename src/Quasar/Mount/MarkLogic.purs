@@ -34,9 +34,9 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
-
-import Quasar.Mount.Common (Host, Credentials, combineCredentials, extractCredentials, extractHost)
+import Data.URI.AbsoluteURI as AbsoluteURI
 import Quasar.Mount.Common (Host, Credentials(..)) as Exports
+import Quasar.Mount.Common (Host, Credentials, combineCredentials, extractCredentials, extractHost)
 import Quasar.Types (AnyPath)
 
 type Config =
@@ -60,13 +60,13 @@ instance showFormat ∷ Show Format where
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = URI.printAbsoluteURI (toURI config)
+  let uri = AbsoluteURI.print (toURI config)
   in "marklogic" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< URI.runParseAbsoluteURI
+  <=< lmap show <<< AbsoluteURI.parse
   <=< (_ .? "connectionUri")
   <=< (_ .? "marklogic")
   <=< decodeJson
@@ -100,5 +100,5 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
     Just f → Left $ "Unexpected format: " <> f
   pure { host, path, credentials, format}
 
-uriScheme ∷ URI.URIScheme
-uriScheme = URI.URIScheme "xcc"
+uriScheme ∷ URI.Scheme
+uriScheme = URI.Scheme "xcc"

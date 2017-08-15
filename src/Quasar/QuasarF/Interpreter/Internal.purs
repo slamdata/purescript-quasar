@@ -50,6 +50,7 @@ import Data.StrMap as SM
 import Data.String as Str
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
+import Data.URI.URIRef as URIRef
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
@@ -100,7 +101,9 @@ mkFSUrl
   → AnyPath Abs s'
   → URI.Query
   → Free (Coproduct (CF.ConfigF (Config r)) AXFP) String
-mkFSUrl relDir fsPath q = URI.printURIRef <$> mkFSUrl' relDir fsPath q
+mkFSUrl relDir fsPath q = do
+  uri ← URIRef.print <$> mkFSUrl' relDir fsPath q
+  pure uri
 
 mkFSUrl'
   ∷ ∀ s s' r
@@ -114,7 +117,7 @@ mkFSUrl' relDir fsPath = mkUrl' (bimap (baseify (dir "/")) (baseify (file "")) f
     baseify x p = relDir </> fromMaybe x (p `relativeTo` rootDir)
 
 mkUrl ∷ ∀ s r. RelPath s → URI.Query → Free (Coproduct (CF.ConfigF (Config r)) AXFP) String
-mkUrl relPath q = URI.printURIRef <$> mkUrl' relPath q
+mkUrl relPath q = URIRef.print <$> mkUrl' relPath q
 
 mkUrl' ∷ ∀ s r. RelPath s → URI.Query → Free (Coproduct (CF.ConfigF (Config r)) AXFP) URI.URIRef
 mkUrl' relPath q = do
