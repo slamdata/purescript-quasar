@@ -57,6 +57,12 @@ type StringStats =
   , max ∷ String
   }
 
+type ByteStats =
+  { count ∷ Number
+  , min ∷ Int
+  , max ∷ Int
+  }
+
 type IntStats =
   { count ∷ Number
   , distribution ∷ Distribution
@@ -88,6 +94,7 @@ data TypeStats
   = Bool BoolStats
   | Char CharStats
   | String StringStats
+  | Byte ByteStats
   | Int IntStats
   | Decimal DecimalStats
   | Collection CollectionStats
@@ -118,6 +125,7 @@ codec = C.basicCodec dec enc
       "bool" → Bool <$> C.decode boolCodec obj
       "char" → Char <$> C.decode charCodec obj
       "string" → String <$> C.decode stringCodec obj
+      "byte" → Byte <$> C.decode byteCodec obj
       "integer" → Int <$> C.decode intCodec obj
       "decimal" → Decimal <$> C.decode decimalCodec obj
       "collection" → Collection <$> C.decode collectionCodec obj
@@ -128,6 +136,7 @@ codec = C.basicCodec dec enc
     Bool st → kinded "bool" (C.encode boolCodec st)
     Char st → kinded "char" (C.encode charCodec st)
     String st → kinded "string" (C.encode stringCodec st)
+    Byte st → kinded "byte" (C.encode byteCodec st)
     Int st → kinded "integer" (C.encode intCodec st)
     Decimal st → kinded "decimal" (C.encode decimalCodec st)
     Collection st → kinded "collection" (C.encode collectionCodec st)
@@ -158,6 +167,13 @@ stringCodec = record
   , maxLength: CA.number
   , min: CA.string
   , max: CA.string
+  }
+
+byteCodec ∷ CA.JPropCodec ByteStats
+byteCodec = record
+  { count: CA.number
+  , min: CA.int
+  , max: CA.int
   }
 
 intCodec ∷ CA.JPropCodec IntStats
