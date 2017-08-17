@@ -24,6 +24,7 @@ import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Codec as C
 import Data.Codec.Argonaut as CA
+import Data.Codec.Argonaut.Record (record)
 import Data.Either (Either)
 import Data.Foldable (foldMap)
 import Data.Generic (class Generic, gShow)
@@ -35,7 +36,6 @@ import Data.List as List
 import Data.Maybe (Maybe, maybe)
 import Data.StrMap as StrMap
 import Data.String as Str
-import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
 
 type BoolStats =
@@ -139,62 +139,62 @@ codec = C.basicCodec dec enc
       >>> J.fromObject
 
 boolCodec ∷ CA.JPropCodec BoolStats
-boolCodec =
-  CA.record
-    # CA.recordProp (SProxy ∷ SProxy "true") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "false") CA.number
+boolCodec = record
+  { true: CA.number
+  , false: CA.number
+  }
 
 charCodec ∷ CA.JPropCodec CharStats
-charCodec =
-  CA.record
-    # CA.recordProp (SProxy ∷ SProxy "count") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "min") CA.char
-    # CA.recordProp (SProxy ∷ SProxy "max") CA.char
+charCodec = record
+  { count: CA.number
+  , min: CA.char
+  , max: CA.char
+  }
 
 stringCodec ∷ CA.JPropCodec StringStats
-stringCodec =
-  CA.record
-    # CA.recordProp (SProxy ∷ SProxy "count") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "minLength") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "maxLength") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "min") CA.string
-    # CA.recordProp (SProxy ∷ SProxy "max") CA.string
+stringCodec = record
+  { count: CA.number
+  , minLength: CA.number
+  , maxLength: CA.number
+  , min: CA.string
+  , max: CA.string
+  }
 
 intCodec ∷ CA.JPropCodec IntStats
-intCodec =
-  CA.record
-    # CA.recordProp (SProxy ∷ SProxy "count") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "distribution") distributionCodec
-    # CA.recordProp (SProxy ∷ SProxy "min") hugeIntCodec
-    # CA.recordProp (SProxy ∷ SProxy "max") hugeIntCodec
+intCodec = record
+  { count: CA.number
+  , distribution: distributionCodec
+  , min: hugeIntCodec
+  , max: hugeIntCodec
+  }
 
 decimalCodec ∷ CA.JPropCodec DecimalStats
-decimalCodec =
-  CA.record
-    # CA.recordProp (SProxy ∷ SProxy "count") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "distribution") distributionCodec
-    # CA.recordProp (SProxy ∷ SProxy "min") hugeNumCodec
-    # CA.recordProp (SProxy ∷ SProxy "max") hugeNumCodec
+decimalCodec = record
+  { count: CA.number
+  , distribution: distributionCodec
+  , min: hugeNumCodec
+  , max: hugeNumCodec
+  }
 
 collectionCodec ∷ CA.JPropCodec CollectionStats
-collectionCodec =
-  CA.record
-    # CA.recordProp (SProxy ∷ SProxy "count") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "minLength") (optionalCodec CA.number)
-    # CA.recordProp (SProxy ∷ SProxy "maxLength") (optionalCodec CA.number)
+collectionCodec = record
+  { count: CA.number
+  , minLength: optionalCodec CA.number
+  , maxLength: optionalCodec CA.number
+  }
 
 countCodec ∷ CA.JPropCodec { count ∷ Number }
-countCodec =
-  CA.record
-    # CA.recordProp (SProxy ∷ SProxy "count") CA.number
+countCodec = record
+  { count: CA.number
+  }
 
 distributionCodec ∷ CA.JsonCodec Distribution
-distributionCodec =
-  CA.object "Distribution" $ CA.record
-    # CA.recordProp (SProxy ∷ SProxy "mean") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "variance") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "skewness") CA.number
-    # CA.recordProp (SProxy ∷ SProxy "kurtosis") CA.number
+distributionCodec = CA.object "Distribution" $ record
+  { mean: CA.number
+  , variance: CA.number
+  , skewness: CA.number
+  , kurtosis: CA.number
+  }
 
 hugeIntCodec ∷ CA.JsonCodec HugeInt
 hugeIntCodec =
@@ -216,7 +216,7 @@ hugeNumCodec =
     (HN.toString >>> J.fromString)
 
 optionalCodec ∷ ∀ a. CA.JsonCodec a → CA.JsonCodec (Maybe a)
-optionalCodec codec =
+optionalCodec c =
   C.basicCodec
-    (map Array.head <$> C.decode (CA.array codec))
-    (foldMap pure >>> CA.encode (CA.array codec))
+    (map Array.head <$> C.decode (CA.array c))
+    (foldMap pure >>> CA.encode (CA.array c))
