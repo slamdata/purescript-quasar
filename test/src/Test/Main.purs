@@ -129,6 +129,9 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     log "\nServerInfo:"
     run isRight $ map (\{ name, version } → name <> " " <> version) <$> QF.serverInfo
 
+    log "\nGetMetastore:"
+    run isRight $ map show <$> QF.getMetastore
+
     log "\nReadQuery:"
     run isRight $ QF.readQuery Json.Readable testDbAnyDir "SELECT sha as obj FROM `/slamengine_commits.json`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
     run isRight $ QF.readQuery Json.Precise testDbAnyDir "SELECT sha as obj FROM `/slamengine_commits.json`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })

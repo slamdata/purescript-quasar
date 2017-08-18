@@ -234,3 +234,11 @@ deleteMount
   → QuasarFE Unit
 deleteMount path =
   DeleteMount path id
+
+getMetastore ∷ QuasarFE Metastore
+getMetastore = GetMetastore id
+
+putMetastore
+  ∷ { initialize ∷ Boolean, metastore ∷ Metastore }
+  → QuasarFE Unit
+putMetastore ms = PutMetastore ms id

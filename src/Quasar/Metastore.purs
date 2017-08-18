@@ -21,10 +21,17 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Either (Either)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 
 data Metastore
   = H2Metastore String
   | PostgresMetastore { host ∷ String, port ∷ Int, database ∷ String, password ∷ String }
+
+derive instance genericMetastore ∷ Generic Metastore _
+
+instance showMetastore ∷ Show Metastore where
+  show = genericShow
 
 fromJSON ∷ Json → Either String Metastore
 fromJSON = decodeJson >=> \obj → decodeH2 obj <|> decodePostgres obj
