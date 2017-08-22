@@ -188,6 +188,13 @@ getMount
 getMount path =
   GetMount path id
 
+createMount
+  ∷ AnyPath
+  → MountConfig
+  → QuasarFE Unit
+createMount path config =
+  CreateMount path config Nothing id
+
 updateMount
   ∷ AnyPath
   → MountConfig
