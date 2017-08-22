@@ -29,15 +29,17 @@ import Data.Argonaut (Json, JObject, jsonEmptyObject, (:=), (~>))
 import Data.Array (catMaybes)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), either)
-import Data.Foldable (class Foldable, foldl)
+import Data.Foldable (class Foldable, foldl, foldMap)
 import Data.Functor.Coproduct (Coproduct)
 import Data.HTTP.Method (Method(..))
+import Data.Int as Int
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (applicationJSON)
 import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
 import Data.StrMap as SM
 import Data.String as Str
+import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
@@ -50,7 +52,7 @@ import Quasar.Mount as Mount
 import Quasar.Paths as Paths
 import Quasar.QuasarF (QuasarF(..), DirPath)
 import Quasar.QuasarF.Interpreter.Config (Config)
-import Quasar.QuasarF.Interpreter.Internal (mkURL, delete, unitResult, mkRequest, defaultRequest, get, jsonResult, put, toPageParams, strResult, toVarParams, ask)
+import Quasar.QuasarF.Interpreter.Internal (mkURL, delete, unitResult, mkRequest, defaultRequest, get, jsonResult, toPageParams, strResult, toVarParams, ask)
 import Quasar.Query.OutputMeta as QueryOutputMeta
 import Quasar.ServerInfo as ServerInfo
 import Quasar.Types as QT
@@ -156,7 +158,7 @@ eval = case _ of
         , method = Left MOVE
         })
 
-  CreateMount path config k → do
+  CreateMount path config mbMaxAge k → do
     let pathParts = either peel peel path
         parentDir = maybe rootDir fst pathParts
         name = maybe "" (either runDirName runFileName <<< snd) pathParts
@@ -166,12 +168,19 @@ eval = case _ of
       (AXF.affjax defaultRequest
         { url = url
         , method = Left POST
+        , headers = foldMap (pure <<< maxAgeHeader) mbMaxAge
         , content = Just $ snd (toRequest (Mount.toJSON config))
         })
 
-  UpdateMount path config k → do
+  UpdateMount path config mbMaxAge k → do
     url ← mkURL Paths.mount path Nil
-    k <$> (mkRequest unitResult $ put url $ snd (toRequest (Mount.toJSON config)))
+    k <$> mkRequest unitResult
+      (AXF.affjax defaultRequest
+        { url = url
+        , method = Left PUT
+        , headers = foldMap (pure <<< maxAgeHeader) mbMaxAge
+        , content = Just $ snd (toRequest (Mount.toJSON config))
+        })
 
   GetMount path k →
     k <$> (mkRequest mountConfigResult <<< get =<< mkURL Paths.mount path Nil)
@@ -208,3 +217,6 @@ headerParams = Tuple "request-headers" <<< show <<< foldl go jsonEmptyObject
   where
   go ∷ Json → Tuple String String → Json
   go j (Tuple k v) = k := v ~> j
+
+maxAgeHeader ∷ Seconds → Req.RequestHeader
+maxAgeHeader (Seconds s) = Req.RequestHeader "Cache-Control" ("max-age=" <> show (Int.floor s))
