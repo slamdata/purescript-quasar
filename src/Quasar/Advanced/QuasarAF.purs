@@ -207,7 +207,7 @@ updateCachedView
   → Seconds
   → QuasarAFCE Unit
 updateCachedView path config maxAge =
-  left $ UpdateMount path (ViewConfig config) Nothing id
+  left $ UpdateMount path (ViewConfig config) (Just maxAge) id
 
 moveMount
   ∷ AnyPath
