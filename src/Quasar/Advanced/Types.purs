@@ -468,14 +468,14 @@ decodeLicenseStatus =
     "LICENSE_EXPIRED" → Right LicenseExpired
     _ → Left "\"status\" wasn't \"LICENSE_VALID\" or \"LICENSE_EXPIRED\""
 
-data LicenseType = Advanced | AdvancedTrial
+data LicenseType = Backend | BackendTrial
 
 decodeLicenseType ∷ JString → Either String LicenseType
 decodeLicenseType =
   case _ of
-    "advancedTrial" → Right AdvancedTrial
-    "advanced" → Right Advanced
-    _ → Left "\"type\" wasn't \"advancedTrial\" or \"advanced\""
+    "backendTrial" → Right BackendTrial
+    "backend" → Right Backend
+    _ → Left "\"type\" wasn't \"backendTrial\" or \"backend\""
 
 type LicenseInfo
   = { expirationDate ∷ String
