@@ -28,14 +28,16 @@ import DOM.File.Types (Blob)
 import Data.Argonaut (JArray)
 import Data.Foldable (class Foldable, foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
+import Data.Time.Duration (Seconds)
 import Quasar.Advanced.Types as QA
 import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QError(..), QResponse, lowerQError, printQError)
 import Quasar.FS (Resource)
-import Quasar.Mount (MountConfig)
+import Quasar.Mount (MountConfig(..))
+import Quasar.Mount.View as View
 import Quasar.QuasarF (QuasarF(..))
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
@@ -182,14 +184,30 @@ createMount
   → MountConfig
   → QuasarAFCE Unit
 createMount path config =
-  left $ CreateMount path config id
+  left $ CreateMount path config Nothing id
 
 updateMount
   ∷ AnyPath
   → MountConfig
   → QuasarAFCE Unit
 updateMount path config =
-  left $ UpdateMount path config id
+  left $ UpdateMount path config Nothing id
+
+createCachedView
+  ∷ AnyPath
+  → View.Config
+  → Seconds
+  → QuasarAFCE Unit
+createCachedView path config maxAge =
+  left $ CreateMount path (ViewConfig config) (Just maxAge) id
+
+updateCachedView
+  ∷ AnyPath
+  → View.Config
+  → Seconds
+  → QuasarAFCE Unit
+updateCachedView path config maxAge =
+  left $ UpdateMount path (ViewConfig config) (Just maxAge) id
 
 moveMount
   ∷ AnyPath

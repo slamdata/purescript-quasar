@@ -23,14 +23,16 @@ module Quasar.QuasarF
 import Prelude
 
 import Data.Argonaut (JArray)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
+import Data.Time.Duration (Seconds)
 import DOM.File.Types (Blob)
 import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QResponse, QError(..), UnauthorizedDetails(..), lowerQError, printQError)
 import Quasar.FS (Resource)
-import Quasar.Mount (MountConfig)
+import Quasar.Mount (MountConfig(..))
+import Quasar.Mount.View as View
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL, CompileResultR)
@@ -50,8 +52,8 @@ data QuasarF a
   | DeleteData AnyPath (Unit :~> a)
   | MoveData AnyPath AnyPath (Unit :~> a)
   | GetMount AnyPath (MountConfig :~> a)
-  | CreateMount AnyPath MountConfig (Unit :~> a)
-  | UpdateMount AnyPath MountConfig (Unit :~> a)
+  | CreateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
+  | UpdateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
   | MoveMount AnyPath AnyPath (Unit :~> a)
   | DeleteMount AnyPath (Unit :~> a)
 
@@ -191,14 +193,30 @@ createMount
   → MountConfig
   → QuasarFE Unit
 createMount path config =
-  CreateMount path config id
+  CreateMount path config Nothing id
 
 updateMount
   ∷ AnyPath
   → MountConfig
   → QuasarFE Unit
 updateMount path config =
-  UpdateMount path config id
+  UpdateMount path config Nothing id
+
+createCachedView
+  ∷ AnyPath
+  → View.Config
+  → Seconds
+  → QuasarFE Unit
+createCachedView path config maxAge =
+  CreateMount path (ViewConfig config) (Just maxAge) id
+
+updateCachedView
+  ∷ AnyPath
+  → View.Config
+  → Seconds
+  → QuasarFE Unit
+updateCachedView path config maxAge =
+  UpdateMount path (ViewConfig config) (Just maxAge) id
 
 moveMount
   ∷ AnyPath
