@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Mount.Mimir
+module Quasar.Mount.Local
   ( Config
   , toJSON
   , fromJSON

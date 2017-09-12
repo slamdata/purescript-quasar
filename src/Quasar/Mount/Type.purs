@@ -31,7 +31,7 @@ data MountType
   | SparkHDFS
   | SparkFTP
   | SparkLocal
-  | Mimir
+  | Local
   | Unknown (Maybe String)
 
 derive instance eqMountType ∷ Eq MountType
@@ -49,5 +49,5 @@ fromName = case _ of
   "spark-hdfs" → SparkHDFS
   "spark-ftp" → SparkFTP
   "spark-local" → SparkLocal
-  "mimir" → Mimir
+  "mimir" → Local
   other → Unknown (Just other)

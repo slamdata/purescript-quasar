@@ -14,15 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Test.Property.Mount.Mimir where
+module Test.Property.Mount.Local where
 
 import Prelude
 
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Quasar.Mount.Mimir as SL
-import Quasar.Mount.Mimir.Gen (genConfig)
+import Quasar.Mount.Local as SL
+import Quasar.Mount.Local.Gen (genConfig)
 import Test.QuickCheck (QC, Result, quickCheck, (===))
 import Test.QuickCheck.Gen (Gen)
 
