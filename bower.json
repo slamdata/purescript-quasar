@@ -18,7 +18,7 @@
   ],
   "dependencies": {
     "purescript-affjax-algebra": "^4.0.0",
-    "purescript-argonaut": "^3.0.0",
+    "purescript-argonaut": "^3.1.0",
     "purescript-datetime": "^3.3.0",
     "purescript-ejson": "^10.0.0",
     "purescript-free": "^4.1.0",
@@ -35,6 +35,6 @@
     "purescript-node-fs-aff": "^4.0.0",
     "purescript-generics-rep": "^5.1.0",
     "purescript-quickcheck": "^4.4.0",
-    "purescript-quasar-test-starter": "slamdata/quasar-test-starter#^0.4.1"
+    "purescript-quasar-test-starter": "slamdata/quasar-test-starter#^0.5.1"
   }
 }
