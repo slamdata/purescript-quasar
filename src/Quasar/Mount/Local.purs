@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Mount.Mimir
+module Quasar.Mount.Local
   ( Config
   , toJSON
   , fromJSON
@@ -45,12 +45,12 @@ parseDirPath = sandbox <=< P.parseAbsDir
 toJSON ∷ Config → Json
 toJSON config =
   let uri = P.printPath config
-  in "mimir" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
+  in "local" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = maybe (Left "Couldn't sandbox") Right
   <<< parseDirPath
   <=< (_ .? "connectionUri")
-  <=< (_ .? "mimir")
+  <=< (_ .? "local")
   <=< decodeJson
