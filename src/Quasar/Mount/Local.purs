@@ -45,12 +45,12 @@ parseDirPath = sandbox <=< P.parseAbsDir
 toJSON ∷ Config → Json
 toJSON config =
   let uri = P.printPath config
-  in "local" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
+  in "mimir" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = maybe (Left "Couldn't sandbox") Right
   <<< parseDirPath
   <=< (_ .? "connectionUri")
-  <=< (_ .? "local")
+  <=< (_ .? "mimir")
   <=< decodeJson

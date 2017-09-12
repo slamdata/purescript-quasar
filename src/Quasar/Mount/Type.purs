@@ -49,5 +49,5 @@ fromName = case _ of
   "spark-hdfs" → SparkHDFS
   "spark-ftp" → SparkFTP
   "spark-local" → SparkLocal
-  "local" → Local
+  "mimir" → Local
   other → Unknown (Just other)
