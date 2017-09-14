@@ -5,7 +5,8 @@
     "clean": "rimraf output && rimraf .pulp-cache && rimraf test/tmp",
     "build": "pulp build -- --censor-lib --strict",
     "test-fast": "pulp test --test-path test/src --main Test.Implementation",
-    "test": "npm run -s test-fast && pulp test --test-path test/src"
+    "test-quasar": "pulp test --test-path test/src",
+    "test": "npm run -s test-fast && npm run -s test-quasar"
   },
   "devDependencies": {
     "pulp": "^11.0.0",
