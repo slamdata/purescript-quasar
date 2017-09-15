@@ -58,8 +58,8 @@ data QuasarF a
   | UpdateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
   | MoveMount AnyPath AnyPath (Unit :~> a)
   | DeleteMount AnyPath (Unit :~> a)
-  | GetMetastore (Metastore :~> a)
-  | PutMetastore { initialize ∷ Boolean, metastore ∷ Metastore } (Unit :~> a)
+  | GetMetastore (Metastore () :~> a)
+  | PutMetastore { initialize ∷ Boolean, metastore ∷ Metastore (password ∷ String) } (Unit :~> a)
 
 derive instance functorQuasarF ∷ Functor QuasarF
 
@@ -235,10 +235,10 @@ deleteMount
 deleteMount path =
   DeleteMount path id
 
-getMetastore ∷ QuasarFE Metastore
+getMetastore ∷ QuasarFE (Metastore ())
 getMetastore = GetMetastore id
 
 putMetastore
-  ∷ { initialize ∷ Boolean, metastore ∷ Metastore }
+  ∷ { initialize ∷ Boolean, metastore ∷ Metastore (password ∷ String) }
   → QuasarFE Unit
 putMetastore ms = PutMetastore ms id

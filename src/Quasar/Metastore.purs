@@ -21,19 +21,18 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Either (Either)
-import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
 
-data Metastore
+data Metastore p
   = H2Metastore String
-  | PostgresMetastore { host ∷ String, port ∷ Int, database ∷ String, password ∷ String }
+  | PostgresMetastore { host ∷ String, port ∷ Int, database ∷ String | p }
 
-derive instance genericMetastore ∷ Generic Metastore _
+instance showMetastore ∷ Show (Metastore e) where
+  show = case _ of
+    H2Metastore s → "(H2Metastore " <> show s <> ")"
+    PostgresMetastore { host, port, database } →
+      "(PostgresMetastore { host: " <> show host <> ", port: " <> show port <> ", database: " <> show database  <> "})"
 
-instance showMetastore ∷ Show Metastore where
-  show = genericShow
-
-fromJSON ∷ Json → Either String Metastore
+fromJSON ∷ Json → Either String (Metastore ())
 fromJSON = decodeJson >=> \obj → decodeH2 obj <|> decodePostgres obj
   where
     decodeH2 obj = do
@@ -42,13 +41,12 @@ fromJSON = decodeJson >=> \obj → decodeH2 obj <|> decodePostgres obj
     decodePostgres obj = do
       conf ← obj .? "postgresql"
       map PostgresMetastore $
-        { host: _, port: _, database: _, password: _ }
+        { host: _, port: _, database: _ }
           <$> conf .? "host"
           <*> conf .? "port"
           <*> conf .? "database"
-          <*> conf .? "password"
 
-toJSON ∷ Metastore → Json
+toJSON ∷ Metastore (password ∷ String) → Json
 toJSON = case _ of
   H2Metastore s →
     "h2" := ("location" := s ~> jsonEmptyObject )

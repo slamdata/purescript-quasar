@@ -229,7 +229,7 @@ mountConfigResult = lmap error <$> Mount.fromJSON <=< jsonResult
 fileMetaResult ∷ String → Either Error Unit
 fileMetaResult = map (\(_ ∷ JObject) → unit) <<< jsonResult
 
-metastoreResult ∷ String → Either Error Metastore.Metastore
+metastoreResult ∷ String → Either Error (Metastore.Metastore ())
 metastoreResult = lmap error <$> Metastore.fromJSON <=< jsonResult
 
 querySingleton ∷ String → String → URI.Query
