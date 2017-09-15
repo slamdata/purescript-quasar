@@ -40,7 +40,7 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let (uri ∷ String) = AbsoluteURI.print (toURI config)
+  let uri = AbsoluteURI.print (toURI config)
   in "view" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
