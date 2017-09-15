@@ -4,15 +4,15 @@
   },
   "mountings": {
     "/": {
-      "mongodb": {
-        "connectionUri": "mongodb://localhost:63174"
+      "spark-local": {
+        "connectionUri": "./test/data/"
       }
     }
   },
   "metastore": {
     "database": {
       "h2": {
-        "file": "./metastore.db"
+        "file": "./test/tmp/quasar/metastore.db"
       }
     }
   }

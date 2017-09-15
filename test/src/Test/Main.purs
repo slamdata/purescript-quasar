@@ -24,21 +24,24 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Console as Console
-import Control.Monad.Eff.Exception (throwException)
+import Control.Monad.Eff.Exception (error, throwException)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Reader.Trans (runReaderT)
-import Data.Argonaut (jsonEmptyObject, (~>), (:=))
-import Data.Argonaut.Core as J
+import Data.Argonaut ((:=), (~>))
+import Data.Argonaut as J
+import Data.Argonaut.JCursor as JC
 import Data.Either (Either(..), isRight)
-import Data.Foldable (for_)
+import Data.Foldable (traverse_)
 import Data.Functor.Coproduct (left)
 import Data.Maybe (Maybe(..))
 import Data.Path.Pathy (rootDir, dir, file, (</>))
 import Data.Posix.Signal (Signal(SIGTERM))
+import Data.String as Str
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax (AJAX)
 import Node.ChildProcess as CP
+import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FSA
 import Node.Process (PROCESS)
 import Node.Process as Proc
@@ -48,7 +51,7 @@ import Quasar.Data.Json as Json
 import Quasar.Mount (MountConfig(..))
 import Quasar.QuasarF (QuasarF, QError(..))
 import Quasar.QuasarF as QF
-import Quasar.Spawn.Util.Process (spawnMongo, spawnQuasar, spawnQuasarInit)
+import Quasar.Spawn.Util.Process (spawnQuasar, spawnQuasarInit)
 import Test.Assert (ASSERT, assert)
 import Test.Util.Effect (Effects)
 import Test.Util.FS as FS
@@ -94,19 +97,27 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
   FS.mkdirRec "test/tmp/db"
   FS.mkdirRec "test/tmp/quasar"
 
-  FSA.readFile "test/quasar/config.json"
-    >>= FSA.writeFile "test/tmp/quasar/config.json"
+  FSA.readdir "test/data" >>= traverse_ \path →
+    FSA.readFile ("test/data/" <> path)
+      >>= FSA.writeFile ("test/tmp/db/" <> path)
+
+  qconfig ← FSA.readTextFile UTF8 "test/quasar/config.json"
+  case J.jsonParser qconfig of
+    Left err → throwError (error "Could not parse default quasar config.json")
+    Right conf → do
+      cwd ← liftEff Proc.cwd
+      let
+        cwd' = case Str.indexOf (Str.Pattern ":\\") cwd of
+          Just ix → Str.replaceAll (Str.Pattern "\\") (Str.Replacement "/") (Str.drop (ix + 1) cwd)
+          Nothing → cwd
+      let path = cwd' <> "/test/tmp/db/"
+      let cur = JC.insideOut $ JC.downField "mountings" $ JC.downField "/" $ JC.downField "spark-local" $ JC.downField "connectionUri" JC.JCursorTop
+      case JC.cursorSet cur (J.fromString path) conf of
+        Nothing → throwError (error "Could not set path in quasar config.json")
+        Just qconfig' → FSA.writeTextFile UTF8 "test/tmp/quasar/config.json" (J.stringify qconfig')
 
   spawnQuasarInit "test/tmp/quasar/config.json" "jars/quasar.jar"
-  mongod ← spawnMongo "test/tmp" 63174
   quasar ← spawnQuasar "test/tmp/quasar/config.json" "jars/quasar.jar" "-C slamdata"
-
-  dataFiles ← FSA.readdir "test/data"
-  for_ dataFiles \file →
-    liftEff $ CP.spawn
-      "mongoimport"
-      ["--port", "63174", "--file", file]
-      (CP.defaultSpawnOptions { cwd = Just "test/data" })
 
   result ← attempt do
 
@@ -114,14 +125,14 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ map (\{ name, version } → name <> " " <> version) <$> QF.serverInfo
 
     log "\nReadQuery:"
-    run isRight $ QF.readQuery Json.Readable testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
-    run isRight $ QF.readQuery Json.Precise testDbAnyDir "SELECT sha as obj FROM `/test/slamengine_commits`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Json.Readable testDbAnyDir "SELECT sha as obj FROM `/slamengine_commits.json`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Json.Precise testDbAnyDir "SELECT sha as obj FROM `/slamengine_commits.json`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
 
     log "\nWriteQuery:"
-    run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1 "SELECT * FROM `/test/smallZips` WHERE city IS NOT NULL" SM.empty
+    run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1 "SELECT * FROM `/smallZips.json` WHERE city IS NOT NULL" SM.empty
 
     log "\nCompileQuery:"
-    run isRight $ map _.physicalPlan <$> QF.compileQuery testDbAnyDir "SELECT * FROM `/test/smallZips`" (SM.fromFoldable [Tuple "foo" "bar"])
+    run isRight $ map _.physicalPlan <$> QF.compileQuery testDbAnyDir "SELECT * FROM `/smallZips.json`" (SM.fromFoldable [Tuple "foo" "bar"])
 
     log "\nGetMetadata:"
     run isRight $ QF.dirMetadata testDbAnyDir Nothing
@@ -169,7 +180,6 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     log "\nDone!"
 
   liftEff do
-    void $ CP.kill SIGTERM mongod
     void $ CP.kill SIGTERM quasar
 
   case result of
@@ -177,13 +187,13 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     Right _ → pure unit
 
   where
-  testDbAnyDir = rootDir </> dir "test"
-  nonexistant = rootDir </> dir "test" </> file "nonexistant"
-  testFile1 = rootDir </> dir "test" </> file "Пациенты# #"
-  testFile2Dir = rootDir </> dir "test" </> dir "subdir"
-  testFile2 = testFile2Dir </> file "Ϡ⨁⟶≣ΜϞ"
-  testFile3Dir = rootDir </> dir "test" </> dir "what"
-  testFile3 = testFile3Dir </> file "Ϡ⨁⟶≣ΜϞ"
+  testDbAnyDir = rootDir
+  nonexistant = rootDir </> file "nonexistant"
+  testFile1 = rootDir </> file "test1"
+  testFile2Dir = rootDir </> dir "subdir"
+  testFile2 = testFile2Dir </> file "test2"
+  testFile3Dir = rootDir </> dir "what"
+  testFile3 = testFile3Dir </> file "test3"
   testMount = rootDir </> file "testMount"
   testMount2 = rootDir </> file "testMount2"
   testMount3 = rootDir </> dir "testMount3" </> dir ""
@@ -199,17 +209,17 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
       (Left (Json.Options { encoding: Json.Array, precision: Json.Readable }))
       $ J.stringify
       $ J.fromArray
-          [ "foo" := "bar" ~> jsonEmptyObject
-          , "foo" := "baz" ~> jsonEmptyObject
+          [ "foo" := "bar" ~> J.jsonEmptyObject
+          , "foo" := "baz" ~> J.jsonEmptyObject
           ]
 
   mountConfig1 = ViewConfig
-    { query: "select * from `/test/smallZips`"
+    { query: "select * from `/smallZips.json`"
     , vars: SM.empty
     }
 
   mountConfig2 = ViewConfig
-    { query: "select * from `/test/slamengine_commits`"
+    { query: "select * from `/slamengine_commits.json`"
     , vars: SM.empty
     }
 
