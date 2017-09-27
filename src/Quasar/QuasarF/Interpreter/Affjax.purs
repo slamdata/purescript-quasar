@@ -33,17 +33,12 @@ import Data.Foldable (class Foldable, foldl, foldMap)
 import Data.Functor.Coproduct (Coproduct)
 import Data.HTTP.Method (Method(..))
 import Data.Int as Int
-import Data.List (List(..), (:))
 import Data.List (singleton)
 import Data.Maybe (Maybe(..), maybe)
-import Data.Maybe (Maybe(..), maybe)
-import Data.MediaType.Common (applicationJSON)
 import Data.MediaType.Common (applicationJSON)
 import Data.Monoid (mempty)
 import Data.Path.Pathy (peel, printPath, rootDir, runDirName, runFileName)
-import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
 import Data.StrMap as SM
-import Data.String as Str
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.URI as URI
