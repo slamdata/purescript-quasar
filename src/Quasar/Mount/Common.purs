@@ -45,14 +45,14 @@ instance showCredentials ∷ Show Credentials where
   show (Credentials { user, password }) =
     "(Credentials { user: " <> show user <> ", password: " <> show password <> " })"
 
-combineCredentials ∷ Credentials → String
+combineCredentials ∷ Credentials → URI.UserInfo
 combineCredentials (Credentials { user, password })
-  | Str.null password = user
-  | otherwise = user <> ":" <> password
+  | Str.null password = URI.UserInfo user
+  | otherwise = URI.UserInfo (user <> ":" <> password)
 
 extractCredentials ∷ Maybe URI.Authority → Maybe Credentials
 extractCredentials auth = do
-  userInfo ← (\(URI.Authority mui _) → mui) =<< auth
+  URI.UserInfo userInfo ← (\(URI.Authority mui _) → mui) =<< auth
   pure $ Credentials $
     case Str.indexOf (Str.Pattern ":") userInfo of
       Nothing →

@@ -24,6 +24,9 @@ upload = file "upload"
 metadata ∷ RelDir Sandboxed
 metadata = dir "metadata" </> dir "fs"
 
+metastore ∷ RelFile Sandboxed
+metastore = file "metastore"
+
 mount ∷ RelDir Sandboxed
 mount = dir "mount" </> dir "fs"
 

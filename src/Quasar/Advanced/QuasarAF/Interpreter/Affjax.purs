@@ -24,35 +24,36 @@ module Quasar.Advanced.QuasarAF.Interpreter.Affjax
 
 import Prelude
 
-import Control.Monad.Free (Free, foldFree, liftF)
 import Control.Monad.Eff.Exception (Error, error)
-
+import Control.Monad.Free (Free, foldFree, liftF)
 import Data.Argonaut (encodeJson, (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foldable (foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
 import Data.HTTP.Method (Method(..))
+import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
+import Data.Monoid (mempty)
+import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Pt
 import Data.String as Str
-import Data.Tuple (snd)
-
+import Data.Tuple (Tuple(..), snd)
+import Data.URI as URI
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
-
 import OIDC.Crypt.Types as OIDC
-
 import Quasar.Advanced.Paths as Paths
 import Quasar.Advanced.QuasarAF (QuasarAFC, QuasarAF(..))
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
+import Quasar.Advanced.QuasarAF.Interpreter.Internal (mkGroupUrl)
 import Quasar.Advanced.Types as Qa
 import Quasar.ConfigF as CF
 import Quasar.Error (QResponse)
 import Quasar.QuasarF.Interpreter.Affjax as QCI
-import Quasar.QuasarF.Interpreter.Internal (ask, mkRequest, jsonResult, defaultRequest, unitResult)
+import Quasar.QuasarF.Interpreter.Internal (ask, defaultRequest, jsonResult, mkRequest, mkUrl, unitResult)
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
@@ -73,116 +74,104 @@ evalQuasarCommunity = foldFree (coproduct (liftF <<< left) authify)
 evalQuasarAdvanced ∷ ∀ r. QuasarAF ~> M r
 evalQuasarAdvanced (GroupInfo pt k) = do
   config ← ask
+  url ← mkGroupUrl pt mempty
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runGroupInfo)
-    $ _{ url =
-            config.basePath
-             <> (Str.drop 1 $ Pt.printPath Paths.group)
-             <> Qa.printGroupPath pt
-       }
+    $ _ { url = url }
 evalQuasarAdvanced (CreateGroup pt k) = do
   config ← ask
+  url ← mkGroupUrl pt mempty
   map k
     -- Note, I'm not sure that this response is empty
     $ mkAuthedRequest unitResult
-    $ _{ url =
-           config.basePath
-             <> (Str.drop 1 $ Pt.printPath Paths.group)
-             <> Qa.printGroupPath pt
+    $ _{ url = url
        , method = Left POST
        }
 evalQuasarAdvanced (ModifyGroup pt patch k) = do
   config ← ask
+  url ← mkGroupUrl pt mempty
   map k
     -- same as L#86
     $ mkAuthedRequest unitResult
-    $ _{ url =
-           config.basePath
-             <> (Str.drop 1 $ Pt.printPath Paths.group)
-             <> Qa.printGroupPath pt
+    $ _{ url = url
        , method = Left PATCH
        , content = Just $ snd $ toRequest $ encodeJson $ Qa.GroupPatch patch
        }
 evalQuasarAdvanced (DeleteGroup pt k) = do
   config ← ask
+  url ← mkGroupUrl pt mempty
   map k
     $ mkAuthedRequest unitResult
-    $ _{ url =
-           config.basePath
-             <> (Str.drop 1 $ Pt.printPath Paths.group)
-             <> Qa.printGroupPath pt
+    $ _{ url = url
        , method = Left DELETE
        }
 evalQuasarAdvanced (PermissionList isTransitive k) = do
   config ← ask
+  url ← mkUrl (Left Paths.permission) (transitiveQuery isTransitive)
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
-    $ _{ url =
-           config.basePath
-             <> (Str.drop 1 $ Pt.printPath Paths.permission)
-             <> (if isTransitive then "?transitive" else "")
-       }
+    $ _{ url = url }
 evalQuasarAdvanced (AuthorityList k) = do
   config ← ask
+  url ← mkUrl (Left Paths.authority) mempty
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
-    $ _{ url =
-           config.basePath
-             <> (Str.drop 1 $ Pt.printPath Paths.authority)
-       }
+    $ _{ url = url }
 evalQuasarAdvanced (PermissionInfo pid k) = do
   config ← ask
+  url ← mkUrl
+    (Right (Paths.permission </> Pt.file (Qa.runPermissionId pid)))
+    (URI.Query (List.singleton (Tuple "transitive" Nothing)))
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runPermission)
-    $ _{ url =
-           config.basePath
-             <> (Str.drop 1 $ Pt.printPath Paths.permission)
-             <> Qa.runPermissionId pid
-       }
+    $ _{ url = url }
 evalQuasarAdvanced (PermissionChildren pid isTransitive k) = do
   config ← ask
+  url ← mkUrl
+    (Right (Paths.permission </> Pt.dir (Qa.runPermissionId pid) </> Pt.file "children"))
+    (transitiveQuery isTransitive)
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
-    $ _{ url =
-           config.basePath
-             <> (Str.drop 1 $ Pt.printPath Paths.permission)
-             <> Qa.runPermissionId pid
-             <> "/children"
-             <> (if isTransitive then "?transitive" else "")
-       }
+    $ _{ url = url }
 evalQuasarAdvanced (SharePermission req k) = do
   config ← ask
+  url ← mkUrl (Left Paths.permission) mempty
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
-    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.permission)
+    $ _{ url = url
        , method = Left POST
        , content = Just $ snd $ toRequest $ encodeJson $ Qa.ShareRequest req
        }
 evalQuasarAdvanced (DeletePermission pid k) = do
   config ← ask
+  url ← mkUrl
+    (Left (Paths.permission </> Pt.dir (Qa.runPermissionId pid)))
+    mempty
   map k
     $ mkAuthedRequest unitResult
-    $ _{ url =
-           config.basePath
-             <> (Str.drop 1 $ Pt.printPath Paths.permission)
-             <> Qa.runPermissionId pid
+    $ _{ url = url
        , method = Left DELETE
        }
 evalQuasarAdvanced (TokenList k) = do
   config ← ask
+  url ← mkUrl (Left Paths.token) mempty
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runToken))
-    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token) }
+    $ _{ url = url }
 evalQuasarAdvanced (TokenInfo tid k) = do
   config ← ask
+  url ← mkUrl
+    (Right (Paths.token </> Pt.file (Qa.runTokenId tid)))
+    mempty
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
-    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token) <> Qa.runTokenId tid }
+    $ _{ url = url }
 evalQuasarAdvanced (CreateToken mbName actions k) = do
   config ← ask
+  url ← mkUrl (Left Paths.token) mempty
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
-    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token)
+    $ _{ url = url
        , method = Left POST
        , content =
            Just $ snd $ toRequest
@@ -192,27 +181,36 @@ evalQuasarAdvanced (CreateToken mbName actions k) = do
        }
 evalQuasarAdvanced (DeleteToken tid k) = do
   config ← ask
+  url ← mkUrl
+    (Right (Paths.token </> Pt.file (Qa.runTokenId tid)))
+    mempty
   map k
     $ mkAuthedRequest unitResult
-    $ _{ url = config.basePath <> (Str.drop 1 $ Pt.printPath Paths.token) <> Qa.runTokenId tid
+    $ _{ url = url
        , method = Left DELETE
        }
 evalQuasarAdvanced (AuthProviders k) = do
   config ← ask
+  url ← mkUrl (Right Paths.oidcProviders) mempty
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runProvider))
-    $ _{ url = config.basePath <> Str.drop 1 (Pt.printPath Paths.oidcProviders) }
+    $ _{ url = url }
 evalQuasarAdvanced (Licensee k) = do
   config ← ask
+  url ← mkUrl (Right Paths.licensee) mempty
   map k
     $ mkAuthedRequest (jsonResult >=> map (lmap error) Qa.decodeLicensee)
-    $ _{ url = config.basePath <> "/server/licensee" }
+    $ _{ url = url }
 evalQuasarAdvanced (LicenseInfo k) = do
   config ← ask
+  url ← mkUrl (Right Paths.licenseInfo) mempty
   map k
     $ mkAuthedRequest (jsonResult >=> map (lmap error) Qa.decodeLicenseInfo)
-    $ _{ url = config.basePath <> "/server/licenseInfo" }
+    $ _{ url = url  }
 
+transitiveQuery ∷ Boolean → URI.Query
+transitiveQuery b =
+  if b then URI.Query (List.singleton (Tuple "transitive" Nothing)) else mempty
 
 mkAuthedRequest
   ∷ ∀ a r

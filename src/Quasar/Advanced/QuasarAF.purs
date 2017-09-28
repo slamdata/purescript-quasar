@@ -36,6 +36,7 @@ import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QError(..), QResponse, lowerQError, printQError)
 import Quasar.FS (Resource)
+import Quasar.Metastore (Metastore)
 import Quasar.Mount (MountConfig(..))
 import Quasar.Mount.View as View
 import Quasar.QuasarF (QuasarF(..))
@@ -222,6 +223,14 @@ deleteMount
 deleteMount path =
   left $ DeleteMount path id
 
+getMetastore ∷ QuasarAFCE (Metastore ())
+getMetastore = left $ GetMetastore id
+
+putMetastore
+  ∷ { initialize ∷ Boolean, metastore ∷ Metastore (password ∷ String) }
+  → QuasarAFCE Unit
+putMetastore ms = left $ PutMetastore ms id
+
 groupInfo
   ∷ QA.GroupPath
   → QuasarAFCE QA.GroupInfoR
@@ -258,7 +267,6 @@ removeUsersFromGroup
   → QuasarAFCE Unit
 removeUsersFromGroup pt us =
   modifyGroup pt { addUsers: [], removeUsers: foldMap pure us }
-
 
 deleteGroup
   ∷ QA.GroupPath

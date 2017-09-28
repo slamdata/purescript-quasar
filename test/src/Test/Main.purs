@@ -39,6 +39,7 @@ import Data.Posix.Signal (Signal(SIGTERM))
 import Data.String as Str
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
+import Data.URI as URI
 import Network.HTTP.Affjax (AJAX)
 import Node.ChildProcess as CP
 import Node.Encoding (Encoding(..))
@@ -71,7 +72,11 @@ run pred qf = do
 
 config ∷ Config ()
 config =
-  { basePath: "http://localhost:53174"
+  { basePath: Left
+    { scheme: URI.Scheme "http"
+    , authority: Just (URI.Authority Nothing [Tuple (URI.NameAddress "localhost") (Just (URI.Port 53174))])
+    , path: rootDir
+    }
   , idToken: Nothing
   , permissions: []
   }
@@ -123,6 +128,9 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nServerInfo:"
     run isRight $ map (\{ name, version } → name <> " " <> version) <$> QF.serverInfo
+
+    log "\nGetMetastore:"
+    run isRight $ map show <$> QF.getMetastore
 
     log "\nReadQuery:"
     run isRight $ QF.readQuery Json.Readable testDbAnyDir "SELECT sha as obj FROM `/slamengine_commits.json`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })

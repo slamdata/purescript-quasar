@@ -16,9 +16,12 @@ limitations under the License.
 
 module Quasar.QuasarF.Interpreter.Config where
 
-import Network.HTTP.Affjax as AX
+import Data.Either (Either)
+import Data.Maybe (Maybe)
+import Data.Path.Pathy (AbsDir, RelDir, Sandboxed, Unsandboxed)
+import Data.URI as URI
 
-type Config r =
-  { basePath ∷ AX.URL
-  | r
-  }
+type AbsBasePath = { scheme ∷ URI.Scheme, authority ∷ Maybe URI.Authority, path ∷ AbsDir Sandboxed }
+type BasePath = Either AbsBasePath (RelDir Unsandboxed)
+
+type Config r = { basePath ∷ BasePath | r }

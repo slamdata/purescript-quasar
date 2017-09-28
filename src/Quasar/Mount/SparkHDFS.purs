@@ -34,14 +34,12 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
+import Data.URI.AbsoluteURI as AbsoluteURI
 import Data.URI.Path (printPath, parseURIPathAbs)
-
 import Global (encodeURIComponent, decodeURIComponent)
-
-import Quasar.Mount.Common (Host, extractHost)
 import Quasar.Mount.Common (Host) as Exports
+import Quasar.Mount.Common (Host, extractHost)
 import Quasar.Types (DirPath)
-
 import Text.Parsing.StringParser (runParser)
 
 type Config =
@@ -53,13 +51,13 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = URI.printAbsoluteURI (toURI config)
+  let uri = AbsoluteURI.print (toURI config)
   in "spark-hdfs" := ("connectionUri" := uri ~> J.jsonEmptyObject) ~> J.jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< URI.runParseAbsoluteURI
+  <=< lmap show <<< AbsoluteURI.parse
   <=< (_ .? "connectionUri")
   <=< (_ .? "spark-hdfs")
   <=< J.decodeJson
@@ -69,7 +67,7 @@ toURI cfg = mkURI sparkURIScheme cfg.sparkHost (Just (URI.Query $ requiredProps 
   where
   requiredProps ∷ L.List (Tuple String (Maybe String))
   requiredProps = L.fromFoldable
-    [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ URI.printAbsoluteURI $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
+    [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ AbsoluteURI.print $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
     , Tuple "rootPath" $ Just $ printPath (Left cfg.path)
     ]
 
@@ -99,22 +97,22 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
 
   pure { sparkHost, hdfsHost, path, props: props'' }
 
-mkURI ∷ URI.URIScheme → Host → Maybe URI.Query → URI.AbsoluteURI
+mkURI ∷ URI.Scheme → Host → Maybe URI.Query → URI.AbsoluteURI
 mkURI scheme host params =
   URI.AbsoluteURI
     (Just scheme)
     (URI.HierarchicalPart (Just (URI.Authority Nothing (pure host))) Nothing)
     params
 
-extractHost' ∷ URI.URIScheme → String → Either String Host
-extractHost' scheme@(URI.URIScheme name) uri = do
+extractHost' ∷ URI.Scheme → String → Either String Host
+extractHost' scheme@(URI.Scheme name) uri = do
   URI.AbsoluteURI scheme' (URI.HierarchicalPart auth _) _ ←
-    lmap show $ URI.runParseAbsoluteURI uri
+    lmap show $ AbsoluteURI.parse uri
   unless (scheme' == Just scheme) $ Left $ "Expected '" <> name <> "' URL scheme"
   extractHost auth
 
-sparkURIScheme ∷ URI.URIScheme
-sparkURIScheme = URI.URIScheme "spark"
+sparkURIScheme ∷ URI.Scheme
+sparkURIScheme = URI.Scheme "spark"
 
-hdfsURIScheme ∷ URI.URIScheme
-hdfsURIScheme = URI.URIScheme "hdfs"
+hdfsURIScheme ∷ URI.Scheme
+hdfsURIScheme = URI.Scheme "hdfs"

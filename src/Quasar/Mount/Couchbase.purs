@@ -31,16 +31,16 @@ import Data.Either (Either(..))
 import Data.List as L
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Newtype (un)
+import Data.Number as Num
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as P
 import Data.StrMap as SM
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
-import Data.Number as Num
-
-import Quasar.Mount.Common (Host, extractHost)
+import Data.URI.AbsoluteURI as AbsoluteURI
 import Quasar.Mount.Common (Host) as Exports
+import Quasar.Mount.Common (Host, extractHost)
 
 type Config =
   { host ∷ Host
@@ -52,13 +52,13 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = URI.printAbsoluteURI (toURI config)
+  let uri = AbsoluteURI.print (toURI config)
   in "couchbase" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< URI.runParseAbsoluteURI
+  <=< lmap show <<< AbsoluteURI.parse
   <=< (_ .? "connectionUri")
   <=< (_ .? "couchbase")
   <=< decodeJson
@@ -97,5 +97,5 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
     , queryTimeout: map Seconds <<< Num.fromString =<< join (SM.lookup "queryTimeoutSeconds" props)
     }
 
-uriScheme ∷ URI.URIScheme
-uriScheme = URI.URIScheme "couchbase"
+uriScheme ∷ URI.Scheme
+uriScheme = URI.Scheme "couchbase"

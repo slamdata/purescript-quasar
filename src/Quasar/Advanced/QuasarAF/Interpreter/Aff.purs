@@ -25,16 +25,9 @@ import Control.Monad.Aff.Class (class MonadAff, liftAff)
 import Control.Monad.Free (foldFree)
 import Control.Monad.Reader.Class (class MonadReader)
 import Control.Monad.Rec.Class (class MonadRec)
-
 import Data.Functor.Coproduct (coproduct)
-import Data.Maybe (Maybe)
-
 import Network.HTTP.Affjax as AX
 import Network.HTTP.AffjaxF as AXF
-
-import OIDC.Crypt.Types (IdToken)
-
-import Quasar.Advanced.Types (TokenHash)
 import Quasar.Advanced.QuasarAF (QuasarAFC)
 import Quasar.Advanced.QuasarAF.Interpreter.Affjax as IAX
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
@@ -42,13 +35,7 @@ import Quasar.ConfigF as CF
 
 eval
   ∷ ∀ m eff r
-  . MonadReader
-      { basePath ∷ AX.URL
-      , idToken ∷ Maybe IdToken
-      , permissions ∷ Array TokenHash
-      | r
-      }
-      m
+  . MonadReader (Config r) m
   ⇒ MonadAff (ajax ∷ AX.AJAX | eff) m
   ⇒ MonadRec m
   ⇒ QuasarAFC

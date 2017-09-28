@@ -24,11 +24,17 @@ oidcProviders = dir "security" </> dir "oidc" </> file "providers"
 token ∷ RelDir Sandboxed
 token = dir "security" </> dir "token"
 
-group ∷ RelFile Sandboxed
-group = dir "security" </> file "group"
+group ∷ RelDir Sandboxed
+group = dir "security" </> dir "group"
 
 permission ∷ RelDir Sandboxed
 permission = dir "security" </> dir "permission"
 
 authority ∷ RelDir Sandboxed
 authority = dir "security" </> dir "authority"
+
+licenseInfo ∷ RelFile Sandboxed
+licenseInfo = dir "server" </> file "licenseInfo"
+
+licensee ∷ RelFile Sandboxed
+licensee = dir "server" </> file "licensee"

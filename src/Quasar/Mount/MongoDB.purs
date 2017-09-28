@@ -31,13 +31,13 @@ import Data.Array as Arr
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (class Newtype, unwrap)
 import Data.NonEmpty (NonEmpty(..), oneOf)
 import Data.StrMap as SM
-import Data.Newtype (class Newtype, unwrap)
 import Data.URI as URI
-
-import Quasar.Mount.Common (Host, Credentials, combineCredentials, extractCredentials)
+import Data.URI.AbsoluteURI as AbsoluteURI
 import Quasar.Mount.Common (Host, Credentials(..)) as Exports
+import Quasar.Mount.Common (Host, Credentials, combineCredentials, extractCredentials)
 import Quasar.Types (AnyPath)
 
 newtype Auth = Auth { path ∷ AnyPath, credentials ∷ Credentials }
@@ -58,13 +58,13 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = URI.printAbsoluteURI (toURI config)
+  let uri = AbsoluteURI.print (toURI config)
   in "mongodb" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< URI.runParseAbsoluteURI
+  <=< lmap show <<< AbsoluteURI.parse
   <=< (_ .? "connectionUri")
   <=< (_ .? "mongodb")
   <=< decodeJson
@@ -93,8 +93,8 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
   let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
   pure { hosts, auth: auth', props }
 
-uriScheme ∷ URI.URIScheme
-uriScheme = URI.URIScheme "mongodb"
+uriScheme ∷ URI.Scheme
+uriScheme = URI.Scheme "mongodb"
 
 extractHosts ∷ Maybe URI.Authority → Either String (NonEmpty Array Host)
 extractHosts = maybe err Right <<< (toNonEmpty <=< map getHosts)

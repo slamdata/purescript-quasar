@@ -33,14 +33,15 @@ import Data.Foldable (class Foldable, foldl, foldMap)
 import Data.Functor.Coproduct (Coproduct)
 import Data.HTTP.Method (Method(..))
 import Data.Int as Int
-import Data.List (List(..), (:))
+import Data.List (singleton)
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (applicationJSON)
-import Data.Path.Pathy (printPath, runFileName, runDirName, rootDir, peel)
+import Data.Monoid (mempty)
+import Data.Path.Pathy (peel, printPath, rootDir, runDirName, runFileName)
 import Data.StrMap as SM
-import Data.String as Str
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
+import Data.URI as URI
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
@@ -48,11 +49,12 @@ import Quasar.ConfigF as CF
 import Quasar.Data.Json as Json
 import Quasar.Data.MediaTypes (applicationZip)
 import Quasar.FS.DirMetadata as DirMetadata
+import Quasar.Metastore as Metastore
 import Quasar.Mount as Mount
 import Quasar.Paths as Paths
 import Quasar.QuasarF (QuasarF(..), DirPath)
 import Quasar.QuasarF.Interpreter.Config (Config)
-import Quasar.QuasarF.Interpreter.Internal (mkURL, delete, unitResult, mkRequest, defaultRequest, get, jsonResult, toPageParams, strResult, toVarParams, ask)
+import Quasar.QuasarF.Interpreter.Internal (defaultRequest, delete, get, jsonResult, mkFSUrl, mkRequest, mkUrl, put, strResult, toPageParams, toVarParams, unitResult)
 import Quasar.Query.OutputMeta as QueryOutputMeta
 import Quasar.ServerInfo as ServerInfo
 import Quasar.Types as QT
@@ -61,23 +63,21 @@ type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent 
 
 eval ∷ ∀ r. QuasarF ~> M r
 eval = case _ of
-
   ServerInfo k → do
-    { basePath } ← ask
-    let url = basePath <> Str.drop 1 (printPath Paths.serverInfo)
+    url ← mkUrl (Right Paths.serverInfo) mempty
     k <$> mkRequest serverInfoResult (get url)
 
   FileMetadata path k → do
-    url ← mkURL Paths.metadata (Right path) Nil
+    url ← mkFSUrl Paths.metadata (Right path) mempty
     k <$> mkRequest fileMetaResult (get url)
 
   DirMetadata path pagination k → do
-    url ← mkURL Paths.metadata (Left path) (toPageParams pagination)
+    url ← mkFSUrl Paths.metadata (Left path) (toPageParams pagination)
     k <$> mkRequest (resourcesResult path) (get url)
 
   ReadQuery mode path sql vars pagination k → do
-    let params = Tuple "q" sql : toVarParams vars <> toPageParams pagination
-    url ← mkURL Paths.query (Left path) params
+    let params = querySingleton "q" sql <> toVarParams vars <> toPageParams pagination
+    url ← mkFSUrl Paths.query (Left path) params
     k <$> mkRequest jsonResult
       (AXF.affjax $ defaultRequest
         { url = url
@@ -86,7 +86,7 @@ eval = case _ of
 
   WriteQuery path file sql vars k → do
     let destHeader = Tuple "Destination" (printPath file)
-    url ← mkURL Paths.query (Left path) (headerParams [destHeader] : toVarParams vars)
+    url ← mkFSUrl Paths.query (Left path) (headerParams [destHeader] <> toVarParams vars)
     k <$> mkRequest writeQueryResult
       (AXF.affjax $ defaultRequest
         { url = url
@@ -95,11 +95,11 @@ eval = case _ of
         })
 
   CompileQuery path sql vars k → do
-    url ← mkURL Paths.compile (Left path) (Tuple "q" sql : toVarParams vars)
+    url ← mkFSUrl Paths.compile (Left path) (querySingleton "q" sql <> toVarParams vars)
     k <$> mkRequest (lmap error <$> QT.compileResultFromString <=< strResult) (get url)
 
   ReadFile mode path pagination k → do
-    url ← mkURL Paths.data_ (Right path) (toPageParams pagination)
+    url ← mkFSUrl Paths.data_ (Right path) (toPageParams pagination)
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
         { url = url
@@ -107,7 +107,7 @@ eval = case _ of
         })
 
   WriteFile path content k → do
-    url ← mkURL Paths.data_ (Right path) Nil
+    url ← mkFSUrl Paths.data_ (Right path) mempty
     let reqSettings = toRequest content
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
@@ -118,7 +118,7 @@ eval = case _ of
         })
 
   WriteDir path content k → do
-    url ← mkURL Paths.data_ (Left path) Nil
+    url ← mkFSUrl Paths.data_ (Left path) mempty
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
@@ -128,7 +128,7 @@ eval = case _ of
         })
 
   AppendFile path content k → do
-    url ← mkURL Paths.data_ (Right path) Nil
+    url ← mkFSUrl Paths.data_ (Right path) mempty
     let reqSettings = toRequest content
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
@@ -139,7 +139,9 @@ eval = case _ of
         })
 
   InvokeFile mode path vars pagination k → do
-    url ← mkURL Paths.invoke (Right path) (SM.toUnfoldable vars <> toPageParams pagination)
+    -- We can't use toVarParams here, as the format is different for invokeFile,
+    -- instead of var.x=3 it's just x=3
+    url ← mkFSUrl Paths.invoke (Right path) (URI.Query (map Just <$> SM.toUnfoldable vars) <> toPageParams pagination)
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
         { url = url
@@ -147,11 +149,11 @@ eval = case _ of
         })
 
   DeleteData path k → do
-    k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.data_ path Nil)
+    k <$> (mkRequest unitResult <<< delete =<< mkFSUrl Paths.data_ path mempty)
 
   MoveData fromPath toPath k → do
     let destHeader = Tuple "Destination" (either printPath printPath toPath)
-    url ← mkURL Paths.data_ fromPath (headerParams [destHeader] : Nil)
+    url ← mkFSUrl Paths.data_ fromPath (headerParams [destHeader])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
@@ -163,7 +165,7 @@ eval = case _ of
         parentDir = maybe rootDir fst pathParts
         name = maybe "" (either runDirName runFileName <<< snd) pathParts
         filenameHeader = Tuple "X-File-Name" name
-    url ← mkURL Paths.mount (Left parentDir) (headerParams [filenameHeader] : Nil)
+    url ← mkFSUrl Paths.mount (Left parentDir) (headerParams [filenameHeader])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
@@ -173,7 +175,7 @@ eval = case _ of
         })
 
   UpdateMount path config mbMaxAge k → do
-    url ← mkURL Paths.mount path Nil
+    url ← mkFSUrl Paths.mount path mempty
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
@@ -183,11 +185,11 @@ eval = case _ of
         })
 
   GetMount path k →
-    k <$> (mkRequest mountConfigResult <<< get =<< mkURL Paths.mount path Nil)
+    k <$> (mkRequest mountConfigResult <<< get =<< mkFSUrl Paths.mount path mempty)
 
   MoveMount fromPath toPath k → do
     let destHeader = Tuple "Destination" (either printPath printPath toPath)
-    url ← mkURL Paths.mount fromPath (headerParams [destHeader] : Nil)
+    url ← mkFSUrl Paths.mount fromPath (headerParams [destHeader])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
@@ -195,7 +197,17 @@ eval = case _ of
         })
 
   DeleteMount path k →
-    k <$> (mkRequest unitResult <<< delete =<< mkURL Paths.mount path Nil)
+    k <$> (mkRequest unitResult <<< delete =<< mkFSUrl Paths.mount path mempty)
+
+  GetMetastore k → do
+    url ← mkUrl (Right Paths.metastore) mempty
+    k <$> mkRequest metastoreResult (get url)
+
+  PutMetastore { initialize, metastore } k → do
+    let query = if initialize then URI.Query (singleton (Tuple "initialize" Nothing)) else mempty
+    url ← mkUrl (Right Paths.metastore) query
+    k <$> (mkRequest unitResult $ put url $ snd (toRequest (Metastore.toJSON metastore)))
+
 
 serverInfoResult ∷ String -> Either Error ServerInfo.ServerInfo
 serverInfoResult = lmap error <$> ServerInfo.fromJSON <=< jsonResult
@@ -212,8 +224,14 @@ mountConfigResult = lmap error <$> Mount.fromJSON <=< jsonResult
 fileMetaResult ∷ String → Either Error Unit
 fileMetaResult = map (\(_ ∷ JObject) → unit) <<< jsonResult
 
-headerParams ∷ ∀ f. Foldable f ⇒ f (Tuple String String) → Tuple String String
-headerParams = Tuple "request-headers" <<< show <<< foldl go jsonEmptyObject
+metastoreResult ∷ String → Either Error (Metastore.Metastore ())
+metastoreResult = lmap error <$> Metastore.fromJSON <=< jsonResult
+
+querySingleton ∷ String → String → URI.Query
+querySingleton k v = URI.Query $ singleton $ Tuple k (Just v)
+
+headerParams ∷ ∀ f. Foldable f ⇒ f (Tuple String String) → URI.Query
+headerParams ps = querySingleton "request-headers" (show (foldl go jsonEmptyObject ps))
   where
   go ∷ Json → Tuple String String → Json
   go j (Tuple k v) = k := v ~> j

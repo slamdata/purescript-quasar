@@ -22,15 +22,16 @@ module Quasar.QuasarF
 
 import Prelude
 
+import DOM.File.Types (Blob)
 import Data.Argonaut (JArray)
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Seconds)
-import DOM.File.Types (Blob)
 import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QResponse, QError(..), UnauthorizedDetails(..), lowerQError, printQError)
 import Quasar.FS (Resource)
+import Quasar.Metastore (Metastore)
 import Quasar.Mount (MountConfig(..))
 import Quasar.Mount.View as View
 import Quasar.Query.OutputMeta (OutputMeta)
@@ -56,6 +57,8 @@ data QuasarF a
   | UpdateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
   | MoveMount AnyPath AnyPath (Unit :~> a)
   | DeleteMount AnyPath (Unit :~> a)
+  | GetMetastore (Metastore () :~> a)
+  | PutMetastore { initialize ∷ Boolean, metastore ∷ Metastore (password ∷ String) } (Unit :~> a)
 
 derive instance functorQuasarF ∷ Functor QuasarF
 
@@ -230,3 +233,11 @@ deleteMount
   → QuasarFE Unit
 deleteMount path =
   DeleteMount path id
+
+getMetastore ∷ QuasarFE (Metastore ())
+getMetastore = GetMetastore id
+
+putMetastore
+  ∷ { initialize ∷ Boolean, metastore ∷ Metastore (password ∷ String) }
+  → QuasarFE Unit
+putMetastore ms = PutMetastore ms id

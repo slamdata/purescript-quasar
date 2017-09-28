@@ -26,8 +26,9 @@ import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
-import Quasar.Mount.Couchbase as CB
+import Data.URI.AbsoluteURI as AbsoluteURI
 import Quasar.Mount as QM
+import Quasar.Mount.Couchbase as CB
 import Test.Assert (ASSERT, assert')
 import Test.Property.Mount.Couchbase as CBT
 
@@ -57,7 +58,7 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost:99999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
       (CBT.TestConfig
-        { host: Tuple (URI.NameAddress "localhost") (Just 99999)
+        { host: Tuple (URI.NameAddress "localhost") (Just (URI.Port 99999))
         , bucketName: "testBucket"
         , password: "pass"
         , docTypeKey: "type"
@@ -73,7 +74,7 @@ testURIParse
   → a
   → Eff (assert :: ASSERT | eff) Unit
 testURIParse fromURI uri expected =
-  case URI.runParseAbsoluteURI uri of
+  case AbsoluteURI.parse uri of
     Left err → fail $ "Test URI failed to parse as a URI even: \n\n\t" <> uri <> "\n\n\t" <> show err <> "\n\n"
     Right auri →
       case fromURI auri of
