@@ -28,7 +28,6 @@ import Quasar.Mount.MarkLogic as MarkLogic
 import Quasar.Mount.Mimir as Mimir
 import Quasar.Mount.Module as Module
 import Quasar.Mount.MongoDB as MongoDB
-import Quasar.Mount.SparkFTP as SparkFTP
 import Quasar.Mount.SparkHDFS as SparkHDFS
 import Quasar.Mount.SparkLocal as SparkLocal
 import Quasar.Mount.Unknown as Unknown
@@ -42,7 +41,6 @@ data MountConfig
   | CouchbaseConfig Couchbase.Config
   | MarkLogicConfig MarkLogic.Config
   | SparkHDFSConfig SparkHDFS.Config
-  | SparkFTPConfig SparkFTP.Config
   | SparkLocalConfig SparkLocal.Config
   | MimirConfig Mimir.Config
   | UnknownConfig Unknown.Config
@@ -72,11 +70,6 @@ instance showMountConfig ∷ Show MountConfig where
     = "(SparkHDFSConfig { sparkHost: " <> show sparkHost
     <> ", hdfsHost: " <> show hdfsHost
     <> ", path: " <> show path <> " })"
-  show (SparkFTPConfig { sparkHost, ftpHost, path, credentials })
-    = "(SparkFTPConfig { sparkHost: " <> show sparkHost
-    <> ", ftpHost: " <> show ftpHost
-    <> ", path: " <> show path
-    <> ", credentials: " <> show credentials <> " })"
   show (SparkLocalConfig path)
     = "(SparkLocalConfig " <> show path <> ")"
   show (MimirConfig path)
@@ -93,7 +86,6 @@ fromJSON json
   <|> CouchbaseConfig <$> Couchbase.fromJSON json
   <|> MarkLogicConfig <$> MarkLogic.fromJSON json
   <|> SparkHDFSConfig <$> SparkHDFS.fromJSON json
-  <|> SparkFTPConfig <$> SparkFTP.fromJSON json
   <|> SparkLocalConfig <$> SparkLocal.fromJSON json
   <|> MimirConfig <$> Mimir.fromJSON json
   <|> UnknownConfig <$> Unknown.fromJSON json
@@ -106,7 +98,6 @@ toJSON (MongoDBConfig config) = MongoDB.toJSON config
 toJSON (CouchbaseConfig config) = Couchbase.toJSON config
 toJSON (MarkLogicConfig config) = MarkLogic.toJSON config
 toJSON (SparkHDFSConfig config) = SparkHDFS.toJSON config
-toJSON (SparkFTPConfig config) = SparkFTP.toJSON config
 toJSON (SparkLocalConfig config) = SparkLocal.toJSON config
 toJSON (MimirConfig config) = Mimir.toJSON config
 toJSON (UnknownConfig config) = Unknown.toJSON config
@@ -118,7 +109,6 @@ getType (MongoDBConfig _) = MongoDB
 getType (CouchbaseConfig _) = Couchbase
 getType (MarkLogicConfig _) = MarkLogic
 getType (SparkHDFSConfig _) = SparkHDFS
-getType (SparkFTPConfig _) = SparkFTP
 getType (SparkLocalConfig _) = SparkLocal
 getType (MimirConfig _) = Mimir
 getType (UnknownConfig { mountType }) = Unknown (Just mountType)
@@ -151,11 +141,6 @@ _MarkLogic = prism' MarkLogicConfig case _ of
 _SparkHDFS ∷ Prism' MountConfig SparkHDFS.Config
 _SparkHDFS = prism' SparkHDFSConfig case _ of
   SparkHDFSConfig config → Just config
-  _ → Nothing
-
-_SparkFTP ∷ Prism' MountConfig SparkFTP.Config
-_SparkFTP = prism' SparkFTPConfig case _ of
-  SparkFTPConfig config → Just config
   _ → Nothing
 
 _SparkLocal ∷ Prism' MountConfig SparkLocal.Config

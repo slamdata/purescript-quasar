@@ -29,7 +29,6 @@ data MountType
   | Couchbase
   | MarkLogic
   | SparkHDFS
-  | SparkFTP
   | SparkLocal
   | Mimir
   | Unknown (Maybe String)
@@ -47,7 +46,6 @@ fromName = case _ of
   "couchbase" → Couchbase
   "marklogic" → MarkLogic
   "spark-hdfs" → SparkHDFS
-  "spark-ftp" → SparkFTP
   "spark-local" → SparkLocal
   "mimir" → Mimir
   other → Unknown (Just other)
