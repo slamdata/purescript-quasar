@@ -30,6 +30,7 @@ import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Array as Arr
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
+import Data.Foldable (null)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.NonEmpty (NonEmpty(..), oneOf)
@@ -79,7 +80,10 @@ toURI { hosts, auth, props } =
           (combineCredentials <<< _.credentials <<< unwrap <$> auth)
           (oneOf hosts)))
       (_.path <<< unwrap <$> auth))
-    (Just (URI.Query (SM.toUnfoldable props)))
+    (if null props
+      then Nothing
+      else Just (URI.Query (SM.toUnfoldable props)))
+
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
