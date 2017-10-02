@@ -23,12 +23,15 @@ import Control.Monad.Eff.Console (CONSOLE, log)
 import Data.Argonaut.Parser as JP
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
+import Data.Monoid (mempty)
+import Data.NonEmpty as NE
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
 import Data.URI.AbsoluteURI as AbsoluteURI
 import Quasar.Mount as QM
 import Quasar.Mount.Couchbase as CB
+import Quasar.Mount.MongoDB as Mongo
 import Test.Assert (ASSERT, assert')
 import Test.Property.Mount.Couchbase as CBT
 
@@ -64,6 +67,15 @@ main = do
         , docTypeKey: "type"
         , queryTimeout: Just (Seconds (20.0))
         })
+  let mongoURI =
+        AbsoluteURI.print
+          (Mongo.toURI
+            { hosts: NE.singleton (Tuple (URI.NameAddress "localhost") (Just (URI.Port 12345)))
+            , auth: Nothing
+            , props: mempty})
+  if  mongoURI == "mongodb://localhost:12345"
+    then pure unit
+    else fail ("Wrong MongoURI: " <> show mongoURI)
 
 testURIParse
   ∷ ∀ a eff
