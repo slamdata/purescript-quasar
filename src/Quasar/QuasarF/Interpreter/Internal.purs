@@ -130,7 +130,7 @@ mkUrl' relPath q = do
         (URI.HierarchicalPart
           authority
           (Just (bimap ((path </> _) <<< sandbox) ((path </> _) <<< sandbox) relPath)))
-        (Just q)
+        (if q == mempty then Nothing else Just q)
         Nothing
 
     sandbox ∷ ∀ a b. Path a b s → Path a b Sandboxed
@@ -141,7 +141,7 @@ mkUrl' relPath q = do
         (URI.RelativePart
           Nothing
           (Just (bimap ((relDir </> _) <<< unsandbox) ((relDir </> _) <<< unsandbox) relPath)))
-        (Just q)
+        (if q == mempty then Nothing else Just q)
         Nothing
 
 mkRequest
