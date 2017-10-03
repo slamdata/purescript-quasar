@@ -38,3 +38,6 @@ licenseInfo = dir "server" </> file "licenseInfo"
 
 licensee ∷ RelFile Sandboxed
 licensee = dir "server" </> file "licensee"
+
+generatePdf ∷ RelFile Sandboxed
+generatePdf = dir "service" </> dir "pdf" </> file "generate"
