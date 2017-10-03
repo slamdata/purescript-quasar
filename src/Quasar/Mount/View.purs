@@ -19,6 +19,7 @@ module Quasar.Mount.View where
 import Prelude
 
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (~>), (:=))
+import Data.Array as A
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
 import Data.Foldable (foldMap)
@@ -29,8 +30,10 @@ import Data.String as Str
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..), lookup)
 import Data.URI as URI
+import Data.URI.Scheme as Scheme
+import Data.URI.HierarchicalPart as HPart
 import Data.URI.AbsoluteURI as AbsoluteURI
-
+import Global (encodeURIComponent, decodeURIComponent)
 import Quasar.Types (SQL, Vars)
 
 type Config =
@@ -76,11 +79,26 @@ uriScheme = URI.Scheme "sql2"
 
 extractQuery ∷ List (Tuple String (Maybe String)) → Maybe String
 extractQuery
-  = Str.stripPrefix (Str.Pattern "(")
-  <=< Str.stripSuffix (Str.Pattern ")")
-  <=< join
+  = map decodeURIComponent
+  <<< join
   <<< lookup "q"
 
 extractVar ∷ Tuple String (Maybe String) → List (Tuple String String)
 extractVar (Tuple key val) = maybe Nil List.singleton $
   Tuple <$> Str.stripPrefix (Str.Pattern "var.") key <*> val
+
+printURI ∷ URI.AbsoluteURI → String
+printURI (URI.AbsoluteURI mbS hie mbQ) =
+  Str.joinWith "" $ A.catMaybes
+    [ mbS <#> \s → Scheme.print s <> "//"
+    , Just $ HPart.print hie
+    , map printQuery mbQ
+    ]
+  where
+  printQuery (URI.Query lst) = case lst of
+    Nil → "?"
+    items → "?" <> Str.joinWith "&" (foldMap printPart items)
+
+  printPart ∷ Tuple String (Maybe String) → Array String
+  printPart (Tuple k Nothing) = [encodeURIComponent k]
+  printPart (Tuple k (Just v)) = [encodeURIComponent k <> "=" <> encodeURIComponent v]
