@@ -75,11 +75,7 @@ uriScheme ∷ URI.Scheme
 uriScheme = URI.Scheme "sql2"
 
 extractQuery ∷ List (Tuple String (Maybe String)) → Maybe String
-extractQuery
-  = Str.stripPrefix (Str.Pattern "(")
-  <=< Str.stripSuffix (Str.Pattern ")")
-  <=< join
-  <<< lookup "q"
+extractQuery= join <<< lookup "q"
 
 extractVar ∷ Tuple String (Maybe String) → List (Tuple String String)
 extractVar (Tuple key val) = maybe Nil List.singleton $
