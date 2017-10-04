@@ -21,16 +21,30 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Either (Either)
+import Data.StrMap (StrMap)
 
 data Metastore p
   = H2Metastore String
-  | PostgresMetastore { host ∷ String, port ∷ Int, database ∷ String, userName ∷ String | p }
+  | PostgresMetastore
+      { host ∷ String
+      , port ∷ Int
+      , database ∷ String
+      , userName ∷ String
+      , parameters ∷ StrMap String
+      | p
+      }
 
 instance showMetastore ∷ Show (Metastore e) where
   show = case _ of
     H2Metastore s → "(H2Metastore " <> show s <> ")"
-    PostgresMetastore { host, port, database } →
-      "(PostgresMetastore { host: " <> show host <> ", port: " <> show port <> ", database: " <> show database  <> "})"
+    PostgresMetastore { host, port, database, userName, parameters } →
+      "(PostgresMetastore { "
+        <> " host: " <> show host
+        <> ", port: " <> show port
+        <> ", database: " <> show database
+        <> ", userName: " <> show userName
+        <> ", parameters: " <> show parameters
+        <> "})"
 
 fromJSON ∷ Json → Either String (Metastore ())
 fromJSON = decodeJson >=> \obj → decodeH2 obj <|> decodePostgres obj
@@ -41,24 +55,26 @@ fromJSON = decodeJson >=> \obj → decodeH2 obj <|> decodePostgres obj
     decodePostgres obj = do
       conf ← obj .? "postgresql"
       map PostgresMetastore $
-        { host: _, port: _, database: _, userName: _ }
+        { host: _, port: _, database: _, userName: _, parameters: _ }
           <$> conf .? "host"
           <*> conf .? "port"
           <*> conf .? "database"
           <*> conf .? "userName"
+          <*> conf .? "parameters"
 
 toJSON ∷ Metastore (password ∷ String) → Json
 toJSON = case _ of
   H2Metastore s →
     "h2" := ("location" := s ~> jsonEmptyObject )
     ~> jsonEmptyObject
-  PostgresMetastore { host, port, database, userName, password } →
+  PostgresMetastore { host, port, database, userName, password, parameters } →
     "postgresql" :=
       ("host" := host
        ~> "port" := port
        ~> "database" := database
        ~> "userName" := userName
        ~> "password" := password
+       ~> "parameters" := parameters
        ~> jsonEmptyObject
       )
     ~> jsonEmptyObject
