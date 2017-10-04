@@ -24,7 +24,7 @@ import Data.Either (Either)
 
 data Metastore p
   = H2Metastore String
-  | PostgresMetastore { host ∷ String, port ∷ Int, database ∷ String | p }
+  | PostgresMetastore { host ∷ String, port ∷ Int, database ∷ String, userName ∷ String | p }
 
 instance showMetastore ∷ Show (Metastore e) where
   show = case _ of
@@ -41,21 +41,23 @@ fromJSON = decodeJson >=> \obj → decodeH2 obj <|> decodePostgres obj
     decodePostgres obj = do
       conf ← obj .? "postgresql"
       map PostgresMetastore $
-        { host: _, port: _, database: _ }
+        { host: _, port: _, database: _, userName: _ }
           <$> conf .? "host"
           <*> conf .? "port"
           <*> conf .? "database"
+          <*> conf .? "userName"
 
 toJSON ∷ Metastore (password ∷ String) → Json
 toJSON = case _ of
   H2Metastore s →
     "h2" := ("location" := s ~> jsonEmptyObject )
     ~> jsonEmptyObject
-  PostgresMetastore { host, port, database, password } →
+  PostgresMetastore { host, port, database, userName, password } →
     "postgresql" :=
       ("host" := host
        ~> "port" := port
        ~> "database" := database
+       ~> "userName" := userName
        ~> "password" := password
        ~> jsonEmptyObject
       )
