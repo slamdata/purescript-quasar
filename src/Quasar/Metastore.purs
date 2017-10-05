@@ -19,9 +19,10 @@ module Quasar.Metastore where
 import Prelude
 
 import Control.Alt ((<|>))
-import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
+import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (.?=), (.??), (:=), (~>))
 import Data.Either (Either)
 import Data.StrMap (StrMap)
+import Data.StrMap as SM
 
 data Metastore p
   = H2Metastore String
@@ -60,7 +61,7 @@ fromJSON = decodeJson >=> \obj → decodeH2 obj <|> decodePostgres obj
           <*> conf .? "port"
           <*> conf .? "database"
           <*> conf .? "userName"
-          <*> conf .? "parameters"
+          <*> conf .?? "parameters" .?= SM.empty
 
 toJSON ∷ Metastore (password ∷ String) → Json
 toJSON = case _ of
