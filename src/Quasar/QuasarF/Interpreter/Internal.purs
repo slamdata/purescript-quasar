@@ -43,7 +43,9 @@ import Data.Foldable (oneOf)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.List.NonEmpty (NonEmptyList)
+import Data.List.NonEmpty as NEL
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Monoid (mempty)
 import Data.Path.Pathy (Abs, AnyPath, Path, Rel, RelDir, RelPath, Sandboxed, dir, file, relativeTo, rootDir, unsandbox, (</>))
 import Data.StrMap as SM
@@ -148,33 +150,34 @@ mkRequest
   ∷ ∀ a l
   . (String → Either Error a)
   → AXF.AffjaxF RequestContent String
-  → Free (Coproduct l AXFP) (Either QError a)
+  → Free (Coproduct l AXFP) (Either (NonEmptyList QError) a)
 mkRequest f = map (handleResult f) <<< liftF <<< right
 
 handleResult
   ∷ ∀ a
   . (String → Either Error a)
   → Either Error (AX.AffjaxResponse String)
-  → Either QError a
+  → Either (NonEmptyList QError) a
 handleResult f =
   case _ of
     Right { status: StatusCode code, response, headers }
-      | code >= 200 && code < 300 → lmap Error (f response)
-      | code == 404 → Left NotFound
-      | code == 403 → Left Forbidden
-      | code == 402 → Left PaymentRequired
+      | code >= 200 && code < 300 → lmap (NEL.singleton <<< Error) (f response)
+      | code == 404 → Left (NEL.singleton NotFound)
+      | code == 403 → Left (NEL.singleton Forbidden)
+      | code == 402 → Left (NEL.singleton PaymentRequired)
       | code == 401 →
           Left
+            $ NEL.singleton
             $ Unauthorized
             $ (UnauthorizedDetails <<< show)
             <$> (Array.index headers =<< Array.findIndex isWWWAuthenticate headers)
       | otherwise →
           let
             parseResult = parseHumanReadableError =<< hush (Json.decodeJson =<< Json.jsonParser response)
-            fallbackError = Error $ error $ "An unknown error ocurred: " <> show code <> " " <> show response
+            fallbackError = NEL.singleton $ Error $ error $ "An unknown error ocurred: " <> show code <> " " <> show response
           in
             Left (fromMaybe fallbackError parseResult)
-    Left err → Left (Error err)
+    Left err → Left (NEL.singleton (Error err))
   where
   isWWWAuthenticate ∷ RH.ResponseHeader → Boolean
   isWWWAuthenticate = eq "www-authenticate" <<< Str.toLower <<< RH.responseHeaderName
@@ -182,33 +185,33 @@ handleResult f =
 hush ∷ ∀ a b. Either a b → Maybe b
 hush = either (const Nothing) Just
 
--- | Try to parse the known Quasar error formats, to get at a human readable error message
-parseHumanReadableError ∷ Json.JObject → Maybe QError
+-- | Try to parse the known Quasar error formats, to get at a human readable error message.
+parseHumanReadableError ∷ Json.JObject → Maybe (NonEmptyList QError)
 parseHumanReadableError json =
   oneOf (map hush
     [ do message ← json .? "error"
-         pure (ErrorMessage {title: Nothing, message, raw: json})
+         pure (NEL.singleton (ErrorMessage {title: Nothing, message, raw: json}))
     , do e ← json .? "error"
          message ← e .? "message"
-         pure (ErrorMessage {title: Nothing, message, raw: json})
+         pure (NEL.singleton (ErrorMessage {title: Nothing, message, raw: json}))
     , do e ← json .? "error"
          detail ← e .? "detail"
          title ← e .?? "status"
          message ← detail .? "message"
-         pure (ErrorMessage {title, message, raw: json})
+         pure (NEL.singleton (ErrorMessage {title, message, raw: json}))
     , do e ← json .? "error"
          mErr ← e .? "status"
          case mErr of
            "Multiple errors" → do
              detail ← e .? "detail"
              errors ← detail .? "errors"
-             pure
-               $ MultipleErrors
+             maybe
+               (Left "Multiple errors contained no errors")
+               Right
+               $ map NEL.concat
+               $ NEL.fromFoldable
                $ Array.catMaybes
-               $ map (parseHumanReadableError <<< wrapError) errors
+               $ map (parseHumanReadableError <<< SM.singleton "error") errors
            _ → do
              Left "Parse error in multiple errors"
     ])
-  where
-    wrapError ∷ Json.Json → Json.JObject
-    wrapError = SM.singleton "error"
