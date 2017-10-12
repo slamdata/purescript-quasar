@@ -21,7 +21,9 @@ import Prelude
 import Control.Monad.Eff.Exception (Error, error, message)
 import Data.Argonaut (JObject)
 import Data.Either (Either)
+import Data.Foldable (intercalate)
 import Data.List.NonEmpty (NonEmptyList)
+import Data.List.NonEmpty as NEL
 import Data.Maybe (Maybe(..), maybe)
 
 newtype UnauthorizedDetails = UnauthorizedDetails String
@@ -56,6 +58,14 @@ lowerQError ∷ QError → Error
 lowerQError = case _ of
   Error err → err
   qe → error (printQError qe)
+
+lowerQErrors ∷ NonEmptyList QError → Error
+lowerQErrors errors =
+  error
+    $ "Multiple errors occured: "
+    <> intercalate
+         ", "
+         (map printQError $ (NEL.toUnfoldable errors) :: Array QError)
 
 type QResponse resp = Either (NonEmptyList QError) resp
 type QContinuation resp next = QResponse resp → next
