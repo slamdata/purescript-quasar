@@ -36,6 +36,8 @@ data QError
   | ErrorMessage {title ∷ Maybe String, message ∷ String, raw ∷ JObject}
   | Error Error
 
+type QErrors = NonEmptyList QError
+
 instance showQError ∷ Show QError where
   show NotFound = "NotFound"
   show (Unauthorized Nothing) = "Unauthorized"
