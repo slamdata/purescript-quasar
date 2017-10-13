@@ -26,6 +26,7 @@ module Quasar.Mount.MongoDB
 
 import Prelude
 
+import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Array as Arr
 import Data.Bifunctor (lmap)
@@ -34,6 +35,7 @@ import Data.Foldable (null)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.NonEmpty (NonEmpty(..), oneOf)
+import Data.Path.Pathy as P
 import Data.StrMap as SM
 import Data.URI as URI
 import Data.URI.AbsoluteURI as AbsoluteURI
@@ -79,7 +81,7 @@ toURI { hosts, auth, props } =
         (URI.Authority
           (combineCredentials <<< _.credentials <<< unwrap <$> auth)
           (oneOf hosts)))
-      (_.path <<< unwrap <$> auth))
+      (map (_.path <<< unwrap) auth <|> Just (Left P.rootDir)))
     (if null props
       then Nothing
       else Just (URI.Query (SM.toUnfoldable props)))
@@ -93,7 +95,9 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
     Just credentials, Just p → pure $ Just (Auth { path: p, credentials })
     Nothing, Nothing → pure $ Nothing
     Just _, Nothing → Left "User credentials were specified, but no auth database"
-    Nothing, Just _ → Left "An auth database was specified, but no user credentials"
+    Nothing, Just p
+      | p /= Left P.rootDir → Left "An auth database was specified, but no user credentials"
+      | otherwise → pure $ Nothing
   let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
   pure { hosts, auth: auth', props }
 

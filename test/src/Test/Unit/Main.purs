@@ -73,7 +73,7 @@ main = do
             { hosts: NE.singleton (Tuple (URI.NameAddress "localhost") (Just (URI.Port 12345)))
             , auth: Nothing
             , props: mempty})
-  if  mongoURI == "mongodb://localhost:12345"
+  if mongoURI == "mongodb://localhost:12345/"
     then pure unit
     else fail ("Wrong MongoURI: " <> show mongoURI)
 
