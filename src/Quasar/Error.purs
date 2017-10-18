@@ -81,7 +81,5 @@ printPDFError ∷ PDFError → String
 printPDFError = case _ of
   NoCEFPathInConfig →
     "The PDF service is unavailable, there is no path to the PDF service in the SlamData configuration file"
-  CEFPDFError "command not found" →
-    "The PDF service is unavailable, the path to the PDF service in the SlamData configuration file is incorrect"
   CEFPDFError string →
     "The PDF service returned the following error: " <> string
