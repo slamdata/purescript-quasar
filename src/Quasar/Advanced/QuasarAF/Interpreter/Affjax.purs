@@ -26,7 +26,7 @@ import Prelude
 
 import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free, foldFree, liftF)
-import Data.Argonaut (encodeJson, (:=), (~>), jsonEmptyObject)
+import Data.Argonaut (encodeJson, jsonEmptyObject, (:=), (~>))
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foldable (foldMap)
@@ -206,6 +206,12 @@ evalQuasarAdvanced (LicenseInfo k) = do
   url ← mkUrl (Right Paths.licenseInfo) mempty
   map k
     $ mkAuthedRequest (jsonResult >=> map (lmap error) Qa.decodeLicenseInfo)
+    $ _{ url = url  }
+evalQuasarAdvanced (PDFInfo k) = do
+  config ← ask
+  url ← mkUrl (Right Paths.pdfInfo) mempty
+  map k
+    $ mkAuthedRequest (const (Right unit))
     $ _{ url = url  }
 
 transitiveQuery ∷ Boolean → URI.Query

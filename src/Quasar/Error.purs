@@ -31,6 +31,7 @@ data QError
   | Unauthorized (Maybe UnauthorizedDetails)
   | Forbidden
   | PaymentRequired
+  | PDFError PDFError
   | ErrorMessage {title ∷ Maybe String, message ∷ String, raw ∷ JObject}
   | MultipleErrors (Array QError)
   | Error Error
@@ -41,6 +42,7 @@ instance showQError ∷ Show QError where
   show (Unauthorized (Just (UnauthorizedDetails details))) = "Unauthorized: " <> details
   show Forbidden = "Forbidden"
   show PaymentRequired = "PaymentRequired"
+  show (PDFError pdfError) = "(PDFError " <> show pdfError <> ")"
   show (ErrorMessage {title, message}) = "(ErrorMesssage {title: " <> show title <> ", message: " <> show message <> "})"
   show (MultipleErrors errs) = "(MultipleErrors " <> show errs <> ")"
   show (Error err) = "(Error " <> show err <> ")"
@@ -51,6 +53,7 @@ printQError = case _ of
   Unauthorized _ → "Resource is unavailable, authorization is required"
   Forbidden → "Resource is unavailable, the current authorization credentials do not grant access to the resource"
   PaymentRequired → "Resource is unavailable, payment is required to use this feature"
+  PDFError pdfError → printPDFError pdfError
   ErrorMessage {title, message} → maybe "" (_ <> ": ") title <> message
   MultipleErrors errs → "Multiple errors occured: " <> intercalate ", " (map printQError errs)
   Error err → message err
@@ -64,3 +67,21 @@ type QResponse resp = Either QError resp
 type QContinuation resp next = QResponse resp → next
 
 infixr 2 type QContinuation as :~>
+
+data PDFError = NoCEFPathInConfig | CEFPDFError String
+
+instance showPDFError ∷ Show PDFError where
+  show = case _ of
+    NoCEFPathInConfig →
+      "NoCEFPathInConfig"
+    CEFPDFError string →
+      "(CEFPDFError " <> string <> ")"
+
+printPDFError ∷ PDFError → String
+printPDFError = case _ of
+  NoCEFPathInConfig →
+    "The PDF service is unavailable, there is no path to the PDF service in the SlamData configuration file"
+  CEFPDFError "command not found" →
+    "The PDF service is unavailable, the path to the PDF service in the SlamData configuration file is incorrect"
+  CEFPDFError string →
+    "The PDF service returned the following error: " <> string

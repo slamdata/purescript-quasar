@@ -57,7 +57,7 @@ import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
 import Quasar.ConfigF as CF
-import Quasar.QuasarF (Pagination, QError(..), UnauthorizedDetails(..))
+import Quasar.QuasarF (Pagination, QError(..), PDFError(..), UnauthorizedDetails(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -208,6 +208,18 @@ parseHumanReadableError json =
                $ map (parseHumanReadableError <<< wrapError) errors
            _ → do
              Left "Parse error in multiple errors"
+    , do e ← json .? "error"
+         detail ← e .? "detail"
+         pdfError ← detail .? "PDFError"
+         code ← pdfError .? "code"
+         case code of
+           "CEF_PDF_ERROR" → do
+             reason ← pdfError .? "reason"
+             pure $ PDFError $ CEFPDFError reason
+           "NO_CEF_PATH_IN_CONFIG" →
+             pure $ PDFError NoCEFPathInConfig
+           _ →
+             Left "Unexpected PDF code"
     ])
   where
     wrapError ∷ Json.Json → Json.JObject
