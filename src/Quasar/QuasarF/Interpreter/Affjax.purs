@@ -77,7 +77,7 @@ eval = case _ of
     k <$> mkRequest (resourcesResult path) (get url)
 
   ReadQuery mode path sql vars pagination k → do
-    let params = querySingleton "q" (Sql.print sql) <> toVarParams vars <> toPageParams pagination
+    let params = querySingleton "q" (Sql.printQuery sql) <> toVarParams vars <> toPageParams pagination
     url ← mkFSUrl Paths.query (Left path) params
     k <$> mkRequest jsonResult
       (AXF.affjax $ defaultRequest
@@ -92,11 +92,11 @@ eval = case _ of
       (AXF.affjax $ defaultRequest
         { url = url
         , method = Left POST
-        , content = Just $ snd (toRequest $ Sql.print sql)
+        , content = Just $ snd (toRequest $ Sql.printQuery sql)
         })
 
   CompileQuery path sql vars k → do
-    url ← mkFSUrl Paths.compile (Left path) (querySingleton "q" (Sql.print sql) <> toVarParams vars)
+    url ← mkFSUrl Paths.compile (Left path) (querySingleton "q" (Sql.printQuery sql) <> toVarParams vars)
     k <$> mkRequest (lmap error <$> QT.compileResultFromString <=< strResult) (get url)
 
   ReadFile mode path pagination k → do

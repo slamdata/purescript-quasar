@@ -136,22 +136,22 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nReadQuery:"
     run isRight $ QF.readQuery Json.Readable testDbAnyDir
-      (unsafePartial $ fromRight $ Sql.parse "SELECT sha as obj FROM `/slamengine_commits.json`")
+      (unsafePartial $ fromRight $ Sql.parseQuery "SELECT sha as obj FROM `/slamengine_commits.json`")
       (SM.fromFoldable [Tuple "foo" "bar"])
       (Just { offset: 0, limit: 1 })
     run isRight $ QF.readQuery Json.Precise testDbAnyDir
-      (unsafePartial $ fromRight $ Sql.parse "SELECT sha as obj FROM `/slamengine_commits.json`")
+      (unsafePartial $ fromRight $ Sql.parseQuery "SELECT sha as obj FROM `/slamengine_commits.json`")
       (SM.fromFoldable [Tuple "foo" "bar"])
       (Just { offset: 0, limit: 1 })
 
     log "\nWriteQuery:"
     run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1
-      (unsafePartial $ fromRight $ Sql.parse "SELECT * FROM `/smallZips.json` WHERE city IS NOT NULL")
+      (unsafePartial $ fromRight $ Sql.parseQuery "SELECT * FROM `/smallZips.json` WHERE city IS NOT NULL")
       SM.empty
 
     log "\nCompileQuery:"
     run isRight $ map _.physicalPlan <$> QF.compileQuery testDbAnyDir
-      (unsafePartial $ fromRight $ Sql.parse "SELECT * FROM `/smallZips.json`")
+      (unsafePartial $ fromRight $ Sql.parseQuery "SELECT * FROM `/smallZips.json`")
       (SM.fromFoldable [Tuple "foo" "bar"])
 
     log "\nGetMetadata:"
