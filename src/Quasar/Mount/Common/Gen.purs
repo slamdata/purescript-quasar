@@ -68,7 +68,7 @@ genCredentials =
 
 genDirPath ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m DirPath
 genDirPath = Gen.sized \size → do
-  newSize <- Gen.chooseInt 0 size
+  newSize ← Gen.chooseInt 0 size
   Gen.resize (const newSize) do
     parts ∷ L.List String ← Gen.unfoldable genAlphaNumericString
     pure $ foldr (flip P.appendPath <<< P.dir) P.rootDir parts

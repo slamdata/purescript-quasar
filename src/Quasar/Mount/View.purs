@@ -71,7 +71,7 @@ fromURI (URI.AbsoluteURI scheme _ query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'sql2' URL scheme"
   let queryMap = maybe List.Nil (\(URI.Query q) → q) query
   query' ← maybe (Left "Expected 'q' query variable") pure (extractQuery queryMap)
-  q <- Sql.parseQuery query' # lmap \(ParseError err (Position { line , column })) →
+  q ← Sql.parseQuery query' # lmap \(ParseError err (Position { line , column })) →
     "Expected 'q' query variable to contain valid query, " <> "but at line "
     <> show line <> "and column " <> show column <> " got parse error: \n" <> err
   let vars = SM.fromFoldable $ foldMap extractVar queryMap
