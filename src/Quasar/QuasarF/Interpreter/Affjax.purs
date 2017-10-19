@@ -58,6 +58,7 @@ import Quasar.QuasarF.Interpreter.Internal (defaultRequest, delete, get, jsonRes
 import Quasar.Query.OutputMeta as QueryOutputMeta
 import Quasar.ServerInfo as ServerInfo
 import Quasar.Types as QT
+import SqlSquared as Sql
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
@@ -76,7 +77,7 @@ eval = case _ of
     k <$> mkRequest (resourcesResult path) (get url)
 
   ReadQuery mode path sql vars pagination k → do
-    let params = querySingleton "q" sql <> toVarParams vars <> toPageParams pagination
+    let params = querySingleton "q" (Sql.print sql) <> toVarParams vars <> toPageParams pagination
     url ← mkFSUrl Paths.query (Left path) params
     k <$> mkRequest jsonResult
       (AXF.affjax $ defaultRequest
@@ -91,11 +92,11 @@ eval = case _ of
       (AXF.affjax $ defaultRequest
         { url = url
         , method = Left POST
-        , content = Just $ snd (toRequest sql)
+        , content = Just $ snd (toRequest $ Sql.print sql)
         })
 
   CompileQuery path sql vars k → do
-    url ← mkFSUrl Paths.compile (Left path) (querySingleton "q" sql <> toVarParams vars)
+    url ← mkFSUrl Paths.compile (Left path) (querySingleton "q" (Sql.print sql) <> toVarParams vars)
     k <$> mkRequest (lmap error <$> QT.compileResultFromString <=< strResult) (get url)
 
   ReadFile mode path pagination k → do

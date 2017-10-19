@@ -30,14 +30,14 @@ import Control.Monad.Reader.Trans (runReaderT)
 import Data.Argonaut ((:=), (~>))
 import Data.Argonaut as J
 import Data.Argonaut.JCursor as JC
-import Data.Either (Either(..), isRight)
+import Data.Either (Either(..), fromRight, isRight)
 import Data.Foldable (traverse_)
 import Data.Functor.Coproduct (left)
 import Data.Maybe (Maybe(..))
 import Data.Path.Pathy (rootDir, dir, file, (</>))
 import Data.Posix.Signal (Signal(SIGTERM))
-import Data.String as Str
 import Data.StrMap as SM
+import Data.String as Str
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
 import Network.HTTP.Affjax (AJAX)
@@ -46,6 +46,7 @@ import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FSA
 import Node.Process (PROCESS)
 import Node.Process as Proc
+import Partial.Unsafe (unsafePartial)
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..))
 import Quasar.Data.Json as Json
@@ -53,6 +54,7 @@ import Quasar.Mount (MountConfig(..))
 import Quasar.QuasarF (QuasarF, QError(..))
 import Quasar.QuasarF as QF
 import Quasar.Spawn.Util.Process (spawnQuasar, spawnQuasarInit)
+import SqlSquared as Sql
 import Test.Assert (ASSERT, assert)
 import Test.Util.Effect (Effects)
 import Test.Util.FS as FS
@@ -133,14 +135,24 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ map show <$> QF.getMetastore
 
     log "\nReadQuery:"
-    run isRight $ QF.readQuery Json.Readable testDbAnyDir "SELECT sha as obj FROM `/slamengine_commits.json`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
-    run isRight $ QF.readQuery Json.Precise testDbAnyDir "SELECT sha as obj FROM `/slamengine_commits.json`" (SM.fromFoldable [Tuple "foo" "bar"]) (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Json.Readable testDbAnyDir
+      (unsafePartial $ fromRight $ Sql.parse "SELECT sha as obj FROM `/slamengine_commits.json`")
+      (SM.fromFoldable [Tuple "foo" "bar"])
+      (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readQuery Json.Precise testDbAnyDir
+      (unsafePartial $ fromRight $ Sql.parse "SELECT sha as obj FROM `/slamengine_commits.json`")
+      (SM.fromFoldable [Tuple "foo" "bar"])
+      (Just { offset: 0, limit: 1 })
 
     log "\nWriteQuery:"
-    run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1 "SELECT * FROM `/smallZips.json` WHERE city IS NOT NULL" SM.empty
+    run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1
+      (unsafePartial $ fromRight $ Sql.parse "SELECT * FROM `/smallZips.json` WHERE city IS NOT NULL")
+      SM.empty
 
     log "\nCompileQuery:"
-    run isRight $ map _.physicalPlan <$> QF.compileQuery testDbAnyDir "SELECT * FROM `/smallZips.json`" (SM.fromFoldable [Tuple "foo" "bar"])
+    run isRight $ map _.physicalPlan <$> QF.compileQuery testDbAnyDir
+      (unsafePartial $ fromRight $ Sql.parse "SELECT * FROM `/smallZips.json`")
+      (SM.fromFoldable [Tuple "foo" "bar"])
 
     log "\nGetMetadata:"
     run isRight $ QF.dirMetadata testDbAnyDir Nothing
@@ -222,15 +234,15 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
           ]
 
   mountConfig1 = ViewConfig
-    { query: "select * from `/smallZips.json`"
+    { query: unsafePartial $ fromRight $ Sql.parseQuery "select * from `/smallZips.json`"
     , vars: SM.empty
     }
 
   mountConfig2 = ViewConfig
-    { query: "select * from `/slamengine_commits.json`"
+    { query: unsafePartial $ fromRight $ Sql.parseQuery "select * from `/slamengine_commits.json`"
     , vars: SM.empty
     }
 
   mountConfig3 = ModuleConfig
-    { "module": "create function test(:a, :b) begin :a + :b end"
+    { "module": unsafePartial $ fromRight $ Sql.parseModule "create function test(:a, :b) begin :a + :b end"
     }

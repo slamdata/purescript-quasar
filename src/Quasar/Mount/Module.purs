@@ -19,20 +19,27 @@ module Quasar.Mount.Module where
 import Prelude
 
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (~>), (:=))
+import Data.Bifunctor (lmap)
 import Data.Either (Either)
-
-import Quasar.Types (SQL)
+import SqlSquared (SqlModule)
+import SqlSquared as Sql
+import Text.Parsing.Parser (ParseError(..))
+import Text.Parsing.Parser.Pos (Position(..))
 
 type Config =
-  { module ∷ SQL
+  { module ∷ SqlModule
   }
 
 toJSON ∷ Config → Json
 toJSON config =
-  "module" := config."module" ~> jsonEmptyObject
+  "module" := (Sql.printModule $ config."module") ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
-fromJSON
-  = map { "module": _ }
-  <<< (_ .? "module")
-  <=< decodeJson
+fromJSON =
+  decodeJson
+    >=> (_ .? "module")
+    >=> \str → do
+      q ← Sql.parseModule str # lmap \(ParseError err (Position { line , column })) →
+        "Expected valid query, but at line " <> show line <> "and column "
+        <> show column <> " got parse error: \n" <> err
+      pure { "module": q }

@@ -30,9 +30,10 @@ import Quasar.Mount.Module as Module
 import Quasar.Mount.MongoDB as MongoDB
 import Quasar.Mount.SparkHDFS as SparkHDFS
 import Quasar.Mount.SparkLocal as SparkLocal
+import Quasar.Mount.Type (MountType(..))
 import Quasar.Mount.Unknown as Unknown
 import Quasar.Mount.View as View
-import Quasar.Mount.Type (MountType(..))
+import SqlSquared as Sql
 
 data MountConfig
   = ViewConfig View.Config
@@ -47,10 +48,10 @@ data MountConfig
 
 instance showMountConfig ∷ Show MountConfig where
   show (ViewConfig { query, vars })
-    = "(ViewConfig { query: " <> show query
+    = "(ViewConfig { query: " <> Sql.printQuery query
     <> ", vars: " <> show vars <> " })"
   show (ModuleConfig config)
-    = "(ModuleConfig { module: " <> config."module" <> " })"
+    = "(ModuleConfig { module: " <> Sql.printModule config."module" <> " })"
   show (MongoDBConfig { hosts, auth, props })
     = "(MongoDBConfig { hosts: " <> show hosts
     <> ", auth: " <> show auth

@@ -25,16 +25,19 @@ import Data.Foldable (foldMap)
 import Data.List ((:), List(..))
 import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
-import Data.String as Str
 import Data.StrMap as SM
+import Data.String as Str
 import Data.Tuple (Tuple(..), lookup)
 import Data.URI as URI
 import Data.URI.AbsoluteURI as AbsoluteURI
-
-import Quasar.Types (SQL, Vars)
+import Quasar.Types (Vars)
+import SqlSquared (SqlQuery)
+import SqlSquared as Sql
+import Text.Parsing.Parser (ParseError(..))
+import Text.Parsing.Parser.Pos (Position(..))
 
 type Config =
-  { query ∷ SQL
+  { query ∷ SqlQuery
   , vars ∷ Vars
   }
 
@@ -60,7 +63,7 @@ toURI { query, vars } =
   where
   props ∷ List (Tuple String (Maybe String))
   props
-    = Tuple "q" (Just query)
+    = Tuple "q" (Just $ Sql.printQuery query)
     : (bimap ("var." <> _) Just <$> SM.toUnfoldable vars)
 
 fromURI ∷ URI.AbsoluteURI → Either String Config
@@ -68,8 +71,11 @@ fromURI (URI.AbsoluteURI scheme _ query) = do
   unless (scheme == Just uriScheme) $ Left "Expected 'sql2' URL scheme"
   let queryMap = maybe List.Nil (\(URI.Query q) → q) query
   query' ← maybe (Left "Expected 'q' query variable") pure (extractQuery queryMap)
+  q <- Sql.parseQuery query' # lmap \(ParseError err (Position { line , column })) →
+    "Expected 'q' query variable to contain valid query, " <> "but at line "
+    <> show line <> "and column " <> show column <> " got parse error: \n" <> err
   let vars = SM.fromFoldable $ foldMap extractVar queryMap
-  pure { query: query', vars }
+  pure { query: q, vars }
 
 uriScheme ∷ URI.Scheme
 uriScheme = URI.Scheme "sql2"
