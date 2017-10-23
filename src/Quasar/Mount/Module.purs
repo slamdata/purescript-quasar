@@ -32,7 +32,7 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  "module" := (Sql.printModule $ config."module") ~> jsonEmptyObject
+  "module" := Sql.printModule config."module" ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON =
