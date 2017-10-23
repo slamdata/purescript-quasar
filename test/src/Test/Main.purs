@@ -46,6 +46,7 @@ import Node.Encoding (Encoding(..))
 import Node.FS.Aff as FSA
 import Node.Process (PROCESS)
 import Node.Process as Proc
+import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..))
@@ -136,22 +137,22 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nReadQuery:"
     run isRight $ QF.readQuery Json.Readable testDbAnyDir
-      (unsafePartial $ fromRight $ Sql.parseQuery "SELECT sha as obj FROM `/slamengine_commits.json`")
+      (unsafePartial $ fromParsed "ReadQueryA" $ Sql.parseQuery "SELECT sha as obj FROM `/slamengine_commits.json`")
       (SM.fromFoldable [Tuple "foo" "bar"])
       (Just { offset: 0, limit: 1 })
     run isRight $ QF.readQuery Json.Precise testDbAnyDir
-      (unsafePartial $ fromRight $ Sql.parseQuery "SELECT sha as obj FROM `/slamengine_commits.json`")
+      (unsafePartial $ fromParsed "ReadQueryB" $ Sql.parseQuery "SELECT sha as obj FROM `/slamengine_commits.json`")
       (SM.fromFoldable [Tuple "foo" "bar"])
       (Just { offset: 0, limit: 1 })
 
     log "\nWriteQuery:"
     run isRight $ map _.out <$> QF.writeQuery testDbAnyDir testFile1
-      (unsafePartial $ fromRight $ Sql.parseQuery "SELECT * FROM `/smallZips.json` WHERE city IS NOT NULL")
+      (unsafePartial $ fromParsed "WriteQuery" $ Sql.parseQuery "SELECT * FROM `/smallZips.json` WHERE city IS NOT NULL")
       SM.empty
 
     log "\nCompileQuery:"
     run isRight $ map _.physicalPlan <$> QF.compileQuery testDbAnyDir
-      (unsafePartial $ fromRight $ Sql.parseQuery "SELECT * FROM `/smallZips.json`")
+      (unsafePartial $ fromParsed "CompileQuery" $ Sql.parseQuery "SELECT * FROM `/smallZips.json`")
       (SM.fromFoldable [Tuple "foo" "bar"])
 
     log "\nGetMetadata:"
@@ -234,15 +235,19 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
           ]
 
   mountConfig1 = ViewConfig
-    { query: unsafePartial $ fromRight $ Sql.parseQuery "select * from `/smallZips.json`"
+    { query: unsafePartial $ fromParsed "mountConfig1" $ Sql.parseQuery "select * from `/smallZips.json`"
     , vars: SM.empty
     }
 
   mountConfig2 = ViewConfig
-    { query: unsafePartial $ fromRight $ Sql.parseQuery "select * from `/slamengine_commits.json`"
+    { query: unsafePartial $ fromParsed "mountConfig2" $ Sql.parseQuery "select * from `/slamengine_commits.json`"
     , vars: SM.empty
     }
 
   mountConfig3 = ModuleConfig
-    { "module": unsafePartial $ fromRight $ Sql.parseModule "create function test(:a, :b) begin :a + :b end"
+    { "module": unsafePartial $ fromParsed "mountConfig3" $ Sql.parseModule "create function test(:a, :b) begin :a + :b end"
     }
+
+fromParsed ∷ ∀ a b. Show a ⇒ Partial ⇒ String → Either a b → b
+fromParsed msg (Left err) = crashWith $ "At " <> msg <> " got (Left " <> show err <> ")"
+fromParsed _ (Right x) = x
