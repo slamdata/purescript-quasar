@@ -27,7 +27,7 @@
     "purescript-oidc-crypt-utils": "^7.0.1",
     "purescript-pathy": "^4.0.0",
     "purescript-uri": "^4.0.0",
-    "purescript-sql-squared": "^0.8.1"
+    "purescript-sql-squared": "^0.8.4"
   },
   "devDependencies": {
     "purescript-assert": "^3.0.0",
