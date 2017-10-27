@@ -26,7 +26,6 @@ import Data.Identity (Identity(..))
 import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
-import Data.TacitString as TS
 import Quasar.Types (AnyPath, DirPath, FilePath)
 
 data MountF f
@@ -74,11 +73,11 @@ instance eqMount ∷ (Eq1 f) => Eq (MountF f) where
       | Unknown yName y <- inY -> eq1 x y && eq xName yName
       | otherwise -> false
 
-instance showMount ∷ (Show (f TS.TacitString), Functor f) => Show (MountF f) where
+instance showMount ∷ (Show (f String), Functor f) => Show (MountF f) where
   show = 
     let 
       show' :: forall a. Show a => f a -> String
-      show' = map (show >>> TS.hush) >>> show
+      show' = map show >>> show
     in case _ of
       View p -> "(View " <> show' p <> ")"
       Module p -> "(Module " <> show' p <> ")"
