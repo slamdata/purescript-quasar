@@ -20,6 +20,7 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Argonaut (Json)
+import Data.Const (Const(..))
 import Data.Either (Either(..))
 import Data.Lens (Prism', prism')
 import Data.Maybe (Maybe(..))
@@ -30,9 +31,9 @@ import Quasar.Mount.Module as Module
 import Quasar.Mount.MongoDB as MongoDB
 import Quasar.Mount.SparkHDFS as SparkHDFS
 import Quasar.Mount.SparkLocal as SparkLocal
+import Quasar.FS.Mount (MountF(..), MountType)
 import Quasar.Mount.Unknown as Unknown
 import Quasar.Mount.View as View
-import Quasar.Mount.Type (MountType(..))
 
 data MountConfig
   = ViewConfig View.Config
@@ -103,15 +104,15 @@ toJSON (MimirConfig config) = Mimir.toJSON config
 toJSON (UnknownConfig config) = Unknown.toJSON config
 
 getType ∷ MountConfig → MountType
-getType (ViewConfig _) = View
-getType (ModuleConfig _) = Module
-getType (MongoDBConfig _) = MongoDB
-getType (CouchbaseConfig _) = Couchbase
-getType (MarkLogicConfig _) = MarkLogic
-getType (SparkHDFSConfig _) = SparkHDFS
-getType (SparkLocalConfig _) = SparkLocal
-getType (MimirConfig _) = Mimir
-getType (UnknownConfig { mountType }) = Unknown (Just mountType)
+getType (ViewConfig _) = View $ Const unit
+getType (ModuleConfig _) = Module $ Const unit
+getType (MongoDBConfig _) = MongoDB $ Const unit
+getType (CouchbaseConfig _) = Couchbase $ Const unit
+getType (MarkLogicConfig _) = MarkLogic $ Const unit
+getType (SparkHDFSConfig _) = SparkHDFS $ Const unit
+getType (SparkLocalConfig _) = SparkLocal $ Const unit
+getType (MimirConfig _) = Mimir $ Const unit
+getType (UnknownConfig { mountType }) = Unknown mountType $ Const unit
 
 _View ∷ Prism' MountConfig View.Config
 _View = prism' ViewConfig case _ of
@@ -157,3 +158,4 @@ _Unknown ∷ Prism' MountConfig Unknown.Config
 _Unknown = prism' UnknownConfig case _ of
   UnknownConfig config → Just config
   _ → Nothing
+
