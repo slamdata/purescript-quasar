@@ -32,7 +32,6 @@ type AnyPath = AbsPath Sandboxed
 type DirPath = AbsDir Sandboxed
 type FilePath = AbsFile Sandboxed
 
-type SQL = String
 type Vars = StrMap String
 
 type Pagination = { offset ∷ Int, limit ∷ Int }

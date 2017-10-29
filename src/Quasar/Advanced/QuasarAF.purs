@@ -42,7 +42,8 @@ import Quasar.Mount.View as View
 import Quasar.QuasarF (QuasarF(..))
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
-import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, SQL, CompileResultR)
+import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, CompileResultR)
+import SqlSquared (SqlQuery)
 
 data QuasarAF a
   = GroupInfo QA.GroupPath (QA.GroupInfoR :~> a)
@@ -80,7 +81,7 @@ serverInfo =
 readQuery
   ∷ PrecisionMode
   → DirPath
-  → SQL
+  → SqlQuery
   → Vars
   → Maybe Pagination
   → QuasarAFCE JArray
@@ -89,7 +90,7 @@ readQuery mode path sql vars pagination =
 
 readQueryEJson
   ∷ DirPath
-  → SQL
+  → SqlQuery
   → Vars
   → Maybe Pagination
   → QuasarAFCE (Array EJson)
@@ -99,7 +100,7 @@ readQueryEJson path sql vars pagination =
 writeQuery
   ∷ DirPath
   → FilePath
-  → SQL
+  → SqlQuery
   → Vars
   → QuasarAFCE OutputMeta
 writeQuery path file sql vars =
@@ -107,7 +108,7 @@ writeQuery path file sql vars =
 
 compileQuery
   ∷ DirPath
-  → SQL
+  → SqlQuery
   → Vars
   → QuasarAFCE CompileResultR
 compileQuery path sql vars =
