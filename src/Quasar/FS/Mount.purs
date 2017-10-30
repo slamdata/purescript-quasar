@@ -45,7 +45,7 @@ type Mount = MountF Identity
 type MountType = MountF (Const Unit)
 
 
-instance eqMount ∷ (Eq1 f) => Eq (MountF f) where
+instance eqMount ∷ (Eq1 f) ⇒ Eq (MountF f) where
   eq =  case _, _ of
     View x, View y -> eq1 x y
     View x, _ -> false
@@ -66,10 +66,10 @@ instance eqMount ∷ (Eq1 f) => Eq (MountF f) where
     Unknown xName x, Unknown yName y -> eq1 x y && eq xName yName
     Unknown _ _, _ -> false
 
-instance showMount ∷ (Show (f TS.TacitString), Functor f) => Show (MountF f) where
+instance showMount ∷ (Show (f TS.TacitString), Functor f) ⇒ Show (MountF f) where
   show = 
     let 
-      show' :: forall a. Show a => f a -> String
+      show' :: forall a. Show a ⇒ f a -> String
       show' = map (show >>> TS.hush) >>> show
     in case _ of
       View p -> "(View " <> show' p <> ")"
@@ -131,7 +131,7 @@ typeFromName = case _ of
   "mimir" → Mimir $ Const unit
   other → Unknown other $ Const unit
 
-overPath ∷ ∀ f. Functor f => (DirPath → f DirPath) → (FilePath → f FilePath) → Mount → f Mount
+overPath ∷ ∀ f. Functor f ⇒ (DirPath → f DirPath) → (FilePath → f FilePath) → Mount → f Mount
 overPath overDir overFile = case _ of
   View (Identity file) → overFile file <#> Identity >>> View
   Module (Identity dir) → overDir dir <#> Identity >>> Module
