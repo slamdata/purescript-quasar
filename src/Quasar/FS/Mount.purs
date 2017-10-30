@@ -136,3 +136,17 @@ typeFromName = case _ of
   "spark-local" → SparkLocal $ Const unit
   "mimir" → Mimir $ Const unit
   other → Unknown other $ Const unit
+
+overPath ∷ ∀ f. Functor f => (DirPath → f DirPath) → (FilePath → f FilePath) → Mount → f Mount
+overPath overDir overFile = case _ of
+  View (Identity file) → overFile file <#> Identity >>> View
+  Module (Identity dir) → overDir dir <#> Identity >>> Module
+  MongoDB (Identity dir) → overDir dir <#> Identity >>> MongoDB
+  Couchbase (Identity dir) → overDir dir <#> Identity >>> Couchbase
+  MarkLogic (Identity dir) → overDir dir <#> Identity >>> MarkLogic
+  SparkHDFS (Identity dir) → overDir dir <#> Identity >>> SparkHDFS
+  SparkLocal (Identity dir) → overDir dir <#> Identity >>> SparkLocal
+  Mimir (Identity dir) → overDir dir <#> Identity >>> Mimir
+  Unknown name (Identity path) → case path of
+    Left dir → overDir dir <#> Left >>> Identity >>> Unknown name
+    Right file → overFile file <#> Right >>> Identity >>> Unknown name
