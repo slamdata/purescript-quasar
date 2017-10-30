@@ -109,20 +109,14 @@ fromJSON parent = decodeJson >=> \obj → do
     Mimir _ → Mimir <$> onDir
     Unknown n _ → Unknown n <$> onAnyPath
 
+foldPath ∷ ∀ r. (DirPath → r) → (FilePath → r) → Mount → r
+foldPath onDir onPath = overPath (onDir >>> Const) (onPath >>> Const) >>> unwrap
+
 getPath ∷ Mount → AnyPath
-getPath = case _ of
-  View file → Right $ unwrap file
-  Module dir → Left $ unwrap dir
-  MongoDB dir → Left $ unwrap dir
-  Couchbase dir → Left $ unwrap dir
-  MarkLogic dir → Left $ unwrap dir
-  SparkHDFS dir → Left $ unwrap dir
-  SparkLocal dir → Left $ unwrap dir
-  Mimir dir → Left $ unwrap dir
-  Unknown _ any → unwrap any
+getPath = foldPath Left Right
 
 getName ∷ Mount → Either (Maybe DirName) FileName
-getName = pathName <<< getPath
+getName = getPath >>> pathName
 
 
 typeFromName ∷ String → MountType
