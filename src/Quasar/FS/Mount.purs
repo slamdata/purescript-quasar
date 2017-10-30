@@ -18,6 +18,7 @@ module Quasar.FS.Mount where
 
 import Prelude
 
+import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Const (Const(..))
 import Data.Either (Either(..))
@@ -26,6 +27,7 @@ import Data.Identity (Identity(..))
 import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
+import Data.TacitString as TS
 import Quasar.Types (AnyPath, DirPath, FilePath)
 
 data MountF f
@@ -44,40 +46,31 @@ type MountType = MountF (Const Unit)
 
 
 instance eqMount ∷ (Eq1 f) => Eq (MountF f) where
-  eq inX inY =  case inX of
-    View x
-      | View y <- inY -> eq1 x y
-      | otherwise -> false
-    Module x
-      | Module y <- inY -> eq1 x y
-      | otherwise -> false
-    MongoDB x
-      | MongoDB y <- inY -> eq1 x y
-      | otherwise -> false
-    Couchbase x
-      | Couchbase y <- inY -> eq1 x y
-      | otherwise -> false
-    MarkLogic x
-      | MarkLogic y <- inY -> eq1 x y
-      | otherwise -> false
-    SparkHDFS x
-      | SparkHDFS y <- inY -> eq1 x y
-      | otherwise -> false
-    SparkLocal x
-      | SparkLocal y <- inY -> eq1 x y
-      | otherwise -> false
-    Mimir x
-      | Mimir y <- inY -> eq1 x y
-      | otherwise -> false
-    Unknown xName x
-      | Unknown yName y <- inY -> eq1 x y && eq xName yName
-      | otherwise -> false
+  eq =  case _, _ of
+    View x, View y -> eq1 x y
+    View x, _ -> false
+    Module x, Module y -> eq1 x y
+    Module x, _ -> false
+    MongoDB x, MongoDB y -> eq1 x y
+    MongoDB x, _ -> false
+    Couchbase x, Couchbase y -> eq1 x y
+    Couchbase x, _ -> false
+    MarkLogic x, MarkLogic y -> eq1 x y
+    MarkLogic x, _ -> false
+    SparkHDFS x, SparkHDFS y -> eq1 x y
+    SparkHDFS x, _ -> false
+    SparkLocal x, SparkLocal y -> eq1 x y
+    SparkLocal x, _ -> false
+    Mimir x, Mimir y -> eq1 x y
+    Mimir x, _ -> false
+    Unknown xName x, Unknown yName y -> eq1 x y && eq xName yName
+    Unknown xName x, _ -> false
 
-instance showMount ∷ (Show (f String), Functor f) => Show (MountF f) where
+instance showMount ∷ (Show (f TS.TacitString), Functor f) => Show (MountF f) where
   show = 
     let 
       show' :: forall a. Show a => f a -> String
-      show' = map show >>> show
+      show' = map (show >>> TS.hush) >>> show
     in case _ of
       View p -> "(View " <> show' p <> ")"
       Module p -> "(Module " <> show' p <> ")"
@@ -91,7 +84,7 @@ instance showMount ∷ (Show (f String), Functor f) => Show (MountF f) where
 
 -- | Attempts to decode a mount listing value from Quasar's filesystem metadata,
 -- | for a mount in the specified parent directory.
-fromJSON ∷ DirPath → Json → Either String (Mount)
+fromJSON ∷ DirPath → Json → Either String Mount
 fromJSON parent = decodeJson >=> \obj → do
   mount ← obj .? "mount"
   typ ← obj .? "type"
@@ -99,14 +92,12 @@ fromJSON parent = decodeJson >=> \obj → do
   let 
     err :: forall a. Either String a
     err = Left $ "Unexpected type '" <> typ <> "' for mount '" <> mount <> "'"
-    asFile = parent </> file name
-    asDir = parent </> dir name
-    onFile = if typ == "file" then Right $ Identity asFile else err
-    onDir = if typ == "directory" then Right $ Identity asDir else err
-    onAnyPath = case typ of 
-      "file" → Right $ Identity $ Right asFile
-      "directory" → Right $ Identity $ Left asDir
-      _ → err
+    onFile :: Either String (Identity FilePath)
+    onFile = if typ == "file" then Right $ Identity $ parent </> file name else err
+    onDir :: Either String (Identity DirPath)
+    onDir = if typ == "directory" then Right $ Identity $ parent </> dir name else err
+    onAnyPath :: Either String (Identity AnyPath)
+    onAnyPath = map (map Left) onDir <|> map (map Right) onFile
   case typeFromName mount of
     View _ → View <$> onFile
     Module _ → Module <$> onDir
