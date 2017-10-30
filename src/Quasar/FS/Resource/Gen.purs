@@ -23,14 +23,15 @@ import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Gen as Gen
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.NonEmpty ((:|))
+import Data.Tuple (Tuple(..))
 import Quasar.FS.Mount.Gen (genMount)
 import Quasar.FS.Resource (Resource(..))
 import Quasar.Mount.Common.Gen (genDirPath, genFilePath)
 
 
 genResource :: ∀ m. MonadGen m ⇒ MonadRec m ⇒ m Resource
-genResource = Gen.oneOf
-  $ (genFilePath <#> File ) :|
-  [ genDirPath <#> Directory 
-  , genMount <#> Mount
+genResource = Gen.frequency
+  $ (Tuple 1.0 $ genFilePath <#> File ) :|
+  [ Tuple 1.0 $ genDirPath <#> Directory 
+  , Tuple 3.0 $ genMount <#> Mount
   ]
