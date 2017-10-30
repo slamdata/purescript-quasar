@@ -50,21 +50,21 @@ instance eqMount ∷ (Eq1 f) => Eq (MountF f) where
     View x, View y -> eq1 x y
     View x, _ -> false
     Module x, Module y -> eq1 x y
-    Module x, _ -> false
+    Module _, _ -> false
     MongoDB x, MongoDB y -> eq1 x y
-    MongoDB x, _ -> false
+    MongoDB _, _ -> false
     Couchbase x, Couchbase y -> eq1 x y
-    Couchbase x, _ -> false
+    Couchbase _, _ -> false
     MarkLogic x, MarkLogic y -> eq1 x y
-    MarkLogic x, _ -> false
+    MarkLogic _, _ -> false
     SparkHDFS x, SparkHDFS y -> eq1 x y
-    SparkHDFS x, _ -> false
+    SparkHDFS _, _ -> false
     SparkLocal x, SparkLocal y -> eq1 x y
-    SparkLocal x, _ -> false
+    SparkLocal _, _ -> false
     Mimir x, Mimir y -> eq1 x y
-    Mimir x, _ -> false
+    Mimir _, _ -> false
     Unknown xName x, Unknown yName y -> eq1 x y && eq xName yName
-    Unknown xName x, _ -> false
+    Unknown _ _, _ -> false
 
 instance showMount ∷ (Show (f TS.TacitString), Functor f) => Show (MountF f) where
   show = 
