@@ -27,7 +27,7 @@ import Text.Parsing.Parser (ParseError(..))
 import Text.Parsing.Parser.Pos (Position(..))
 
 type Config =
-  { module ∷ SqlModule
+  { "module" ∷ SqlModule
   }
 
 toJSON ∷ Config → Json
