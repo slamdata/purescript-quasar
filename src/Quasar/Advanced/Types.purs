@@ -82,20 +82,20 @@ instance decodeJsonAccessType ∷ DecodeJson AccessType where
     _ → Left "Incorrect resource type"
 
 
-data Resource
+data QResource
   = File (Pt.AbsFile Pt.Sandboxed)
   | Dir (Pt.AbsDir Pt.Sandboxed)
   | Group GroupPath
 
-derive instance eqResource ∷ Eq Resource
-derive instance ordResource ∷ Ord Resource
+derive instance eqQResource ∷ Eq QResource
+derive instance ordQResource ∷ Ord QResource
 
-instance encodeJsonResource ∷ EncodeJson Resource where
+instance encodeJsonQResource ∷ EncodeJson QResource where
   encodeJson (File pt) = encodeJson $ "data:" <> Pt.printPath pt
   encodeJson (Dir pt) = encodeJson $ "data:" <> Pt.printPath pt
   encodeJson (Group gpt) = encodeJson $ "group:" <> printGroupPath gpt
 
-instance decodeJsonResource ∷ DecodeJson Resource where
+instance decodeJsonQResource ∷ DecodeJson QResource where
   decodeJson js = do
     str ← decodeJson js
     let
@@ -129,7 +129,7 @@ parseDir pt =
 
 type ActionR =
   { operation ∷ Operation
-  , resource ∷ Resource
+  , resource ∷ QResource
   , accessType ∷ AccessType
   }
 

@@ -25,14 +25,14 @@ import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Either (Either)
 import Data.Traversable (traverse)
 
-import Quasar.FS.Resource (Resource)
-import Quasar.FS.Resource as Resource
+import Quasar.FS.Resource (QResource)
+import Quasar.FS.Resource as QResource
 import Quasar.Types (DirPath)
 
-type DirMetadata = Array Resource
+type DirMetadata = Array QResource
 
 fromJSON ∷ DirPath → Json → Either String DirMetadata
 fromJSON parent json = do
   obj ← decodeJson json
   children ← obj .? "children"
-  traverse (Resource.fromJSON parent) children
+  traverse (QResource.fromJSON parent) children

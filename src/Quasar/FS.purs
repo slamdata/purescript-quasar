@@ -20,4 +20,4 @@ module Quasar.FS
   ) where
 
 import Quasar.FS.DirMetadata (DirMetadata)
-import Quasar.FS.Resource (Resource(..))
+import Quasar.FS.Resource (QResource(..))

@@ -30,7 +30,7 @@ import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QResponse, QError(..), PDFError(..), UnauthorizedDetails(..), lowerQError, printQError)
-import Quasar.FS (Resource)
+import Quasar.FS (QResource)
 import Quasar.Metastore (Metastore)
 import Quasar.Mount (MountConfig(..))
 import Quasar.Mount.View as View
@@ -45,7 +45,7 @@ data QuasarF a
   | WriteQuery DirPath FilePath SqlQuery Vars (OutputMeta :~> a)
   | CompileQuery DirPath SqlQuery Vars (CompileResultR :~> a)
   | FileMetadata FilePath (Unit :~> a)
-  | DirMetadata DirPath (Maybe Pagination) ((Array Resource) :~> a)
+  | DirMetadata DirPath (Maybe Pagination) ((Array QResource) :~> a)
   | ReadFile PrecisionMode FilePath (Maybe Pagination) (JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
   | WriteDir DirPath Blob (Unit :~> a)
@@ -116,7 +116,7 @@ fileMetadata path =
 dirMetadata
   ∷ DirPath
   → Maybe Pagination
-  → QuasarFE (Array Resource)
+  → QuasarFE (Array QResource)
 dirMetadata path pagination =
   DirMetadata path pagination id
 
