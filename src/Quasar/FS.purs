@@ -17,7 +17,9 @@ limitations under the License.
 module Quasar.FS
   ( module Quasar.FS.DirMetadata
   , module Quasar.FS.Resource
+  , module Quasar.FS.Mount
   ) where
 
 import Quasar.FS.DirMetadata (DirMetadata)
 import Quasar.FS.Resource (QResource(..))
+import Quasar.FS.Mount (MountF(..))
