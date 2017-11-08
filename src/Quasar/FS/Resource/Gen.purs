@@ -14,12 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.FS
-  ( module Quasar.FS.DirMetadata
-  , module Quasar.FS.Resource
-  , module Quasar.FS.Mount
-  ) where
+module Quasar.FS.Resource.Gen where
 
-import Quasar.FS.DirMetadata (DirMetadata)
+
+import Prelude
+
+import Control.Monad.Gen (class MonadGen)
+import Control.Monad.Gen as Gen
+import Control.Monad.Rec.Class (class MonadRec)
+import Data.NonEmpty ((:|))
+import Data.Tuple (Tuple(..))
+import Quasar.FS.Mount.Gen (genMount)
 import Quasar.FS.Resource (QResource(..))
-import Quasar.FS.Mount (MountF(..))
+import Quasar.Mount.Common.Gen (genDirPath, genFilePath)
+
+
+genQResource :: ∀ m. MonadGen m ⇒ MonadRec m ⇒ m QResource
+genQResource = Gen.frequency
+  $ (Tuple 1.0 $ genFilePath <#> File ) :|
+  [ Tuple 1.0 $ genDirPath <#> Directory 
+  , Tuple 3.0 $ genMount <#> Mount
+  ]

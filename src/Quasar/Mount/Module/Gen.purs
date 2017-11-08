@@ -14,25 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.FS.DirMetadata
-  ( DirMetadata
-  , fromJSON
-  ) where
+module Quasar.Mount.Module.Gen where
 
 import Prelude
 
-import Data.Argonaut (Json, decodeJson, (.?))
-import Data.Either (Either)
-import Data.Traversable (traverse)
+import Control.Monad.Gen (class MonadGen)
+import Control.Monad.Rec.Class (class MonadRec)
+import Quasar.Mount.Module as M
+import SqlSquared (genSqlModule)
 
-import Quasar.FS.Resource (QResource)
-import Quasar.FS.Resource as QResource
-import Quasar.Types (DirPath)
 
-type DirMetadata = Array QResource
-
-fromJSON ∷ DirPath → Json → Either String DirMetadata
-fromJSON parent json = do
-  obj ← decodeJson json
-  children ← obj .? "children"
-  traverse (QResource.fromJSON parent) children
+genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m M.Config
+genConfig =
+  { "module": _} <$> genSqlModule

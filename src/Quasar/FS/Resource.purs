@@ -26,19 +26,19 @@ import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
 import Quasar.FS.Mount as Mount
 import Quasar.Types (AnyPath, FilePath, DirPath)
 
-data Resource
+data QResource
   = File FilePath
   | Directory DirPath
   | Mount Mount.Mount
 
-derive instance eqResource ∷ Eq Resource
+derive instance eqQResource ∷ Eq QResource
 
-instance showResource ∷ Show Resource where
+instance showQResource ∷ Show QResource where
   show (File p) = "(File " <> show p <> ")"
   show (Directory p) = "(Directory " <> show p <> ")"
   show (Mount m) = "(Mount " <> show m <> ")"
 
-fromJSON ∷ DirPath → Json → Either String Resource
+fromJSON ∷ DirPath → Json → Either String QResource
 fromJSON parent json
   = Mount <$> Mount.fromJSON parent json
   <|> do
@@ -49,10 +49,10 @@ fromJSON parent json
       "file" → Right $ File (parent </> file name)
       typ → Left $ "unknown resource type " <> typ
 
-getPath ∷ Resource → AnyPath
+getPath ∷ QResource → AnyPath
 getPath (File p) = Right p
 getPath (Directory p) = Left p
 getPath (Mount m) = Mount.getPath m
 
-getName ∷ Resource → Either (Maybe DirName) FileName
+getName ∷ QResource → Either (Maybe DirName) FileName
 getName = pathName <<< getPath

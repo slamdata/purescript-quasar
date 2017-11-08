@@ -14,25 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.FS.DirMetadata
-  ( DirMetadata
-  , fromJSON
-  ) where
+module Quasar.Mount.Unknown.Gen where
 
-import Prelude
+import Control.Applicative ((<$>), (<*>))
+import Control.Monad.Gen (class MonadGen)
+import Control.Monad.Rec.Class (class MonadRec)
+import Data.String.Gen (genUnicodeString)
+import Quasar.Mount.Unknown as U
 
-import Data.Argonaut (Json, decodeJson, (.?))
-import Data.Either (Either)
-import Data.Traversable (traverse)
-
-import Quasar.FS.Resource (QResource)
-import Quasar.FS.Resource as QResource
-import Quasar.Types (DirPath)
-
-type DirMetadata = Array QResource
-
-fromJSON ∷ DirPath → Json → Either String DirMetadata
-fromJSON parent json = do
-  obj ← decodeJson json
-  children ← obj .? "children"
-  traverse (QResource.fromJSON parent) children
+genConfig ∷ ∀ m. MonadRec m ⇒ MonadGen m ⇒ m U.Config
+genConfig = 
+  { mountType:_, connectionUri:_ } 
+    <$> genUnicodeString 
+    <*> genUnicodeString
