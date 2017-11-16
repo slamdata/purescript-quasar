@@ -39,6 +39,11 @@ import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, CompileResultR)
 import SqlSquared (SqlQuery)
 
+type ExpiredContent a =
+  { content ∷ a
+  , expired ∷ Boolean
+  }
+
 data QuasarF a
   = ServerInfo (ServerInfo :~> a)
   | ReadQuery PrecisionMode DirPath SqlQuery Vars (Maybe Pagination) (JArray :~> a)
@@ -46,11 +51,11 @@ data QuasarF a
   | CompileQuery DirPath SqlQuery Vars (CompileResultR :~> a)
   | FileMetadata FilePath (Unit :~> a)
   | DirMetadata DirPath (Maybe Pagination) ((Array QResource) :~> a)
-  | ReadFile PrecisionMode FilePath (Maybe Pagination) (JArray :~> a)
+  | ReadFile PrecisionMode FilePath (Maybe Pagination) (ExpiredContent JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
   | WriteDir DirPath Blob (Unit :~> a)
   | AppendFile FilePath QData (Unit :~> a)
-  | InvokeFile PrecisionMode FilePath Vars (Maybe Pagination) (JArray :~> a)
+  | InvokeFile PrecisionMode FilePath Vars (Maybe Pagination) (ExpiredContent JArray :~> a)
   | DeleteData AnyPath (Unit :~> a)
   | MoveData AnyPath AnyPath (Unit :~> a)
   | GetMount AnyPath (MountConfig :~> a)
@@ -124,16 +129,16 @@ readFile
   ∷ PrecisionMode
   → FilePath
   → Maybe Pagination
-  → QuasarFE JArray
+  → QuasarFE (ExpiredContent JArray)
 readFile mode path pagination =
   ReadFile mode path pagination id
 
-readFileEJson
-  ∷ FilePath
-  → Maybe Pagination
-  → QuasarFE (Array EJson)
-readFileEJson path pagination =
-  readFile Precise path pagination <#> resultsAsEJson
+--readFileEJson
+--  ∷ FilePath
+--  → Maybe Pagination
+--  → QuasarFE (ExpiredContent (Array EJson))
+--readFileEJson path pagination =
+--  readFile Precise path pagination <#> (map $ map ?resultsAsEJson)
 
 writeFile
   ∷ FilePath
@@ -161,17 +166,17 @@ invokeFile
   → FilePath
   → Vars
   → Maybe Pagination
-  → QuasarFE JArray
+  → QuasarFE (ExpiredContent JArray)
 invokeFile mode path vars pagination =
   InvokeFile mode path vars pagination id
 
-invokeFileEJson
-  ∷ FilePath
-  → Vars
-  → Maybe Pagination
-  → QuasarFE (Array EJson)
-invokeFileEJson path vars pagination =
-  invokeFile Precise path vars pagination <#> resultsAsEJson
+--invokeFileEJson
+--  ∷ FilePath
+---n  → Vars
+--  → Maybe Pagination
+--  → QuasarFE (Array EJson)
+--invokeFileEJson path vars pagination =
+--  invokeFile Precise path vars pagination <#> resultsAsEJson
 
 deleteData
   ∷ AnyPath
