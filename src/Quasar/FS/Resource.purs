@@ -32,6 +32,7 @@ data QResource
   | Mount Mount.Mount
 
 derive instance eqQResource ∷ Eq QResource
+derive instance ordQResource ∷ Ord QResource
 
 instance showQResource ∷ Show QResource where
   show (File p) = "(File " <> show p <> ")"

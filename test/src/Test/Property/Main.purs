@@ -20,6 +20,7 @@ import Prelude
 
 import Control.Monad.Eff.Console (log)
 import Quasar.Mount.MongoDB as MDB
+import Test.Property.FS.Mount as Quasar.FS.Mount
 import Test.Property.Mount.Couchbase as Quasar.Mount.Couchbase
 import Test.Property.Mount.MarkLogic as Quasar.Mount.MarkLogic
 import Test.Property.Mount.Mimir as Quasar.Mount.Mimir
@@ -37,6 +38,9 @@ instance showTestConfig ∷ Show TestConfig where
 
 main ∷ ∀ eff. QC eff Unit
 main = do
+
+  log "Check Quasar.FS.Mount..."
+  Quasar.FS.Mount.check
 
   log "Check Quasar.Mount.Couchbase..."
   Quasar.Mount.Couchbase.check
