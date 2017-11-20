@@ -59,6 +59,7 @@ data QuasarAF a
   | AuthProviders ((Array QA.ProviderR) :~> a)
   | Licensee (QA.Licensee :~> a)
   | LicenseInfo (QA.LicenseInfo :~> a)
+  | PdfInfo (Unit :~> a)
 
 -- | `C` for coproduct
 type QuasarAFC = Coproduct QuasarF QuasarAF
@@ -322,3 +323,8 @@ licenseInfo
   ∷ QuasarAFCE QA.LicenseInfo
 licenseInfo =
   right $ LicenseInfo id
+
+pdfInfo
+  ∷ QuasarAFCE Unit
+pdfInfo =
+  right $ PdfInfo id

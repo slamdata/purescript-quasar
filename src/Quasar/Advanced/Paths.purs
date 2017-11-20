@@ -32,3 +32,9 @@ permission = dir "security" </> dir "permission"
 
 authority ∷ RelDir Sandboxed
 authority = dir "security" </> dir "authority"
+
+pdfInfo ∷ RelFile Sandboxed
+pdfInfo = dir "service" </> dir "pdf" </> file "info"
+
+generatePdf ∷ RelFile Sandboxed
+generatePdf = dir "service" </> dir "pdf" </> file "generate"

@@ -212,6 +212,11 @@ evalQuasarAdvanced (LicenseInfo k) = do
   map k
     $ mkAuthedRequest (jsonResult >=> map (lmap error) Qa.decodeLicenseInfo)
     $ _{ url = config.basePath <> "/server/licenseInfo" }
+evalQuasarAdvanced (PdfInfo k) = do
+  config ← ask
+  map k
+    $ mkAuthedRequest (const (Right unit))
+    $ _{ url = config.basePath <> "/service/pdf/info" }
 
 
 mkAuthedRequest

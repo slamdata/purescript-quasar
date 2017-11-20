@@ -59,7 +59,7 @@ import Network.HTTP.StatusCode (StatusCode(..))
 import Network.HTTP.ResponseHeader as RH
 
 import Quasar.ConfigF as CF
-import Quasar.QuasarF (QError(..), UnauthorizedDetails(..), AnyPath, Pagination)
+import Quasar.QuasarF (QError(..), PDFError(..), UnauthorizedDetails(..), AnyPath, Pagination)
 
 type AXFP = AXF.AffjaxFP RequestContent String
 
@@ -182,6 +182,18 @@ parseHumanReadableError json =
          title ← e .?? "status"
          message ← detail .? "message"
          pure (ErrorMessage {title, message, raw: json})
+    , do e ← json .? "error"
+         detail ← e .? "detail"
+         pdfError ← detail .? "PDFError"
+         code ← pdfError .? "code"
+         case code of
+           "CEF_PDF_ERROR" → do
+             reason ← pdfError .? "reason"
+             pure $ PDFError $ CEFPDFError reason
+           "NO_CEF_PATH_IN_CONFIG" →
+             pure $ PDFError NoCEFPathInConfig
+           _ →
+             Left "Unexpected PDF code"
     , do e ← json .? "error"
          mErr ← e .? "status"
          case mErr of
