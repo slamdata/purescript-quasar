@@ -182,8 +182,7 @@ parseHumanReadableError json =
          title ← e .?? "status"
          message ← detail .? "message"
          pure (ErrorMessage {title, message, raw: json})
-    , do e ← json .? "error"
-         detail ← e .? "detail"
+    , do detail ← json .? "detail"
          pdfError ← detail .? "PDFError"
          code ← pdfError .? "code"
          case code of
