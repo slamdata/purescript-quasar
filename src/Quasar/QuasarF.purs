@@ -1,12 +1,9 @@
 {-
 Copyright 2017 SlamData, Inc.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,6 +36,11 @@ import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, CompileResultR)
 import SqlSquared (SqlQuery)
 
+type ExpiredContent a =
+  { content ∷ a
+  , expired ∷ Boolean
+  }
+
 data QuasarF a
   = ServerInfo (ServerInfo :~> a)
   | ReadQuery PrecisionMode DirPath SqlQuery Vars (Maybe Pagination) (JArray :~> a)
@@ -46,11 +48,11 @@ data QuasarF a
   | CompileQuery DirPath SqlQuery Vars (CompileResultR :~> a)
   | FileMetadata FilePath (Unit :~> a)
   | DirMetadata DirPath (Maybe Pagination) ((Array QResource) :~> a)
-  | ReadFile PrecisionMode FilePath (Maybe Pagination) (JArray :~> a)
+  | ReadFile PrecisionMode FilePath (Maybe Pagination) (ExpiredContent JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
   | WriteDir DirPath Blob (Unit :~> a)
   | AppendFile FilePath QData (Unit :~> a)
-  | InvokeFile PrecisionMode FilePath Vars (Maybe Pagination) (JArray :~> a)
+  | InvokeFile PrecisionMode FilePath Vars (Maybe Pagination) (ExpiredContent JArray :~> a)
   | DeleteData AnyPath (Unit :~> a)
   | MoveData AnyPath AnyPath (Unit :~> a)
   | GetMount AnyPath (MountConfig :~> a)
@@ -124,16 +126,23 @@ readFile
   ∷ PrecisionMode
   → FilePath
   → Maybe Pagination
-  → QuasarFE JArray
+  → QuasarFE (ExpiredContent JArray)
 readFile mode path pagination =
   ReadFile mode path pagination id
 
 readFileEJson
   ∷ FilePath
   → Maybe Pagination
-  → QuasarFE (Array EJson)
+  → QuasarFE JArray
 readFileEJson path pagination =
-  readFile Precise path pagination <#> resultsAsEJson
+  map _.content <$> readFileEJsonDetail path pagination
+
+readFileEJsonDetail
+  ∷ FilePath
+  → Maybe Pagination
+  → QuasarFE (ExpiredContent JArray)
+readFileEJsonDetail path pagination =
+  readFile Precise path pagination
 
 writeFile
   ∷ FilePath
@@ -161,7 +170,7 @@ invokeFile
   → FilePath
   → Vars
   → Maybe Pagination
-  → QuasarFE JArray
+  → QuasarFE (ExpiredContent JArray)
 invokeFile mode path vars pagination =
   InvokeFile mode path vars pagination id
 
@@ -169,9 +178,17 @@ invokeFileEJson
   ∷ FilePath
   → Vars
   → Maybe Pagination
-  → QuasarFE (Array EJson)
+  → QuasarFE JArray
 invokeFileEJson path vars pagination =
-  invokeFile Precise path vars pagination <#> resultsAsEJson
+  map _.content <$> invokeFileEJsonDetail path vars pagination
+
+invokeFileEJsonDetail
+  ∷ FilePath
+  → Vars
+  → Maybe Pagination
+  → QuasarFE (ExpiredContent JArray)
+invokeFileEJsonDetail path vars pagination =
+  invokeFile Precise path vars pagination
 
 deleteData
   ∷ AnyPath

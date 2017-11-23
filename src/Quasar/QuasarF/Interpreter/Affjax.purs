@@ -1,12 +1,9 @@
 {-
 Copyright 2017 SlamData, Inc.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,7 +51,7 @@ import Quasar.Mount as Mount
 import Quasar.Paths as Paths
 import Quasar.QuasarF (QuasarF(..), DirPath)
 import Quasar.QuasarF.Interpreter.Config (Config)
-import Quasar.QuasarF.Interpreter.Internal (defaultRequest, delete, get, jsonResult, mkFSUrl, mkRequest, mkUrl, put, strResult, toPageParams, toVarParams, unitResult)
+import Quasar.QuasarF.Interpreter.Internal (defaultRequest, delete, get, jsonResult, mkFSUrl, mkRequest, mkUrl, put, strResult, toPageParams, toVarParams, unitResult, mkRequest', withExpired)
 import Quasar.Query.OutputMeta as QueryOutputMeta
 import Quasar.ServerInfo as ServerInfo
 import Quasar.Types as QT
@@ -101,11 +98,12 @@ eval = case _ of
 
   ReadFile mode path pagination k → do
     url ← mkFSUrl Paths.data_ (Right path) (toPageParams pagination)
-    k <$> mkRequest jsonResult
+    eitherJarr ← mkRequest' jsonResult
       (AXF.affjax defaultRequest
         { url = url
         , headers = [Req.Accept $ Json.decorateMode mode applicationJSON]
         })
+    pure $ k $ map withExpired eitherJarr
 
   WriteFile path content k → do
     url ← mkFSUrl Paths.data_ (Right path) mempty
@@ -142,12 +140,19 @@ eval = case _ of
   InvokeFile mode path vars pagination k → do
     -- We can't use toVarParams here, as the format is different for invokeFile,
     -- instead of var.x=3 it's just x=3
-    url ← mkFSUrl Paths.invoke (Right path) (URI.Query (map Just <$> SM.toUnfoldable vars) <> toPageParams pagination)
-    k <$> mkRequest jsonResult
-      (AXF.affjax defaultRequest
-        { url = url
-        , headers = [Req.Accept $ Json.decorateMode mode applicationJSON]
-        })
+    url ←
+      mkFSUrl Paths.invoke
+        (Right path)
+        ( URI.Query
+            (map Just <$> SM.toUnfoldable vars)
+            <> toPageParams pagination)
+    eitherJarr ←
+      mkRequest' jsonResult
+        (AXF.affjax defaultRequest
+          { url = url
+          , headers = [Req.Accept $ Json.decorateMode mode applicationJSON]
+          })
+    pure $ k $ map withExpired eitherJarr
 
   DeleteData path k → do
     k <$> (mkRequest unitResult <<< delete =<< mkFSUrl Paths.data_ path mempty)
