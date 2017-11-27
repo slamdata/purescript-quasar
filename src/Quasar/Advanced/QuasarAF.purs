@@ -29,11 +29,12 @@ import Data.Argonaut (JArray)
 import Data.Foldable (class Foldable, foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds)
 import Quasar.Advanced.Types as QA
 import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
-import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
+import Quasar.Data.Json.Extended (EJson, resultsAsEJson')
 import Quasar.Error (type (:~>), QError(..), QResponse, lowerQError, printQError)
 import Quasar.FS (QResource)
 import Quasar.Metastore (Metastore)
@@ -95,7 +96,7 @@ readQueryEJson
   → Maybe Pagination
   → QuasarAFCE (Array EJson)
 readQueryEJson path sql vars pagination =
-  readQuery Precise path sql vars pagination <#> resultsAsEJson
+  readQuery Precise path sql vars pagination <#> resultsAsEJson'
 
 writeQuery
   ∷ DirPath
@@ -133,7 +134,7 @@ readFile
   → Maybe Pagination
   → QuasarAFCE JArray
 readFile mode path pagination =
-  map _.content <$> readFileDetail mode path pagination
+  map (_.content <<< unwrap) <$> readFileDetail mode path pagination
 
 readFileDetail
   ∷ PrecisionMode
@@ -148,7 +149,7 @@ readFileEJson
   → Maybe Pagination
   → QuasarAFCE (Array EJson)
 readFileEJson path pagination =
-  readFile Precise path pagination <#> resultsAsEJson
+  readFile Precise path pagination <#> resultsAsEJson'
 
 writeFile
   ∷ FilePath

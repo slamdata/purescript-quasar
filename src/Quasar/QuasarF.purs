@@ -22,10 +22,12 @@ import Prelude
 import DOM.File.Types (Blob)
 import Data.Argonaut (JArray)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (class Newtype, unwrap)
 import Data.Time.Duration (Seconds)
+import Data.Traversable (class Foldable, class Traversable, sequenceDefault)
 import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
-import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
+import Quasar.Data.Json.Extended (EJson, resultsAsEJson, resultsAsEJson')
 import Quasar.Error (type (:~>), QResponse, QError(..), PDFError(..), UnauthorizedDetails(..), lowerQError, printQError)
 import Quasar.FS (QResource)
 import Quasar.Metastore (Metastore)
@@ -36,10 +38,23 @@ import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, CompileResultR)
 import SqlSquared (SqlQuery)
 
-type ExpiredContent a =
+newtype ExpiredContent a = ExpiredContent
   { content ∷ a
   , expired ∷ Boolean
   }
+
+derive instance functorExpiredContent ∷ Functor ExpiredContent
+derive instance newtypeExpiredContent ∷ Newtype (ExpiredContent a) _
+
+instance foldableExpiredContent ∷ Foldable ExpiredContent where
+  foldr f a ec = f (unwrap ec).content a
+  foldl f a ec = f a (unwrap ec).content
+  foldMap f ec = f (unwrap ec).content
+
+instance traversableExpiredContent ∷ Traversable ExpiredContent where
+  traverse f (ExpiredContent {content, expired}) =
+    map (ExpiredContent <<< {expired, content: _}) (f content)
+  sequence ec = sequenceDefault ec
 
 data QuasarF a
   = ServerInfo (ServerInfo :~> a)
@@ -90,7 +105,7 @@ readQueryEJson
   → Maybe Pagination
   → QuasarFE (Array EJson)
 readQueryEJson path sql vars pagination =
-  readQuery Precise path sql vars pagination <#> resultsAsEJson
+  readQuery Precise path sql vars pagination <#> resultsAsEJson'
 
 writeQuery
   ∷ DirPath
@@ -133,16 +148,16 @@ readFile mode path pagination =
 readFileEJson
   ∷ FilePath
   → Maybe Pagination
-  → QuasarFE JArray
+  → QuasarFE (Array EJson)
 readFileEJson path pagination =
-  map _.content <$> readFileEJsonDetail path pagination
+  map (_.content <<< unwrap) <$> readFileEJsonDetail path pagination
 
 readFileEJsonDetail
   ∷ FilePath
   → Maybe Pagination
-  → QuasarFE (ExpiredContent JArray)
+  → QuasarFE (ExpiredContent (Array EJson))
 readFileEJsonDetail path pagination =
-  readFile Precise path pagination
+  readFile Precise path pagination <#> resultsAsEJson
 
 writeFile
   ∷ FilePath
@@ -178,17 +193,17 @@ invokeFileEJson
   ∷ FilePath
   → Vars
   → Maybe Pagination
-  → QuasarFE JArray
+  → QuasarFE (Array EJson)
 invokeFileEJson path vars pagination =
-  map _.content <$> invokeFileEJsonDetail path vars pagination
+  map (_.content <<< unwrap) <$> invokeFileEJsonDetail path vars pagination
 
 invokeFileEJsonDetail
   ∷ FilePath
   → Vars
   → Maybe Pagination
-  → QuasarFE (ExpiredContent JArray)
+  → QuasarFE (ExpiredContent (Array EJson))
 invokeFileEJsonDetail path vars pagination =
-  invokeFile Precise path vars pagination
+  invokeFile Precise path vars pagination <#> resultsAsEJson
 
 deleteData
   ∷ AnyPath

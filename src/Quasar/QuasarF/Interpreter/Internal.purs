@@ -50,14 +50,13 @@ import Data.String as Str
 import Data.Tuple (Tuple(..), snd)
 import Data.URI as URI
 import Data.URI.URIRef as URIRef
--- import Debug.Trace as Debug
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
 import Quasar.ConfigF as CF
-import Quasar.QuasarF (Pagination, QError(..), PDFError(..), UnauthorizedDetails(..))
+import Quasar.QuasarF (ExpiredContent(..), PDFError(..), Pagination, QError(..), UnauthorizedDetails(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -159,12 +158,12 @@ mkRequest'
   → Free (Coproduct l AXFP) (Either QError (Tuple (AX.AffjaxResponse String) a))
 mkRequest' f = map (handleResult f) <<< liftF <<< right
 
-withExpired ∷ ∀ a b. Tuple (AX.AffjaxResponse a) b → { content ∷ b, expired ∷ Boolean }
+withExpired ∷ ∀ a b. Tuple (AX.AffjaxResponse a) b → ExpiredContent b
 withExpired (Tuple { headers: hs } content) =
-  { content
-  -- , expired: doSomethingWithHeaders $ Debug.spy hs
-  , expired: doSomethingWithHeaders hs
-  }
+  ExpiredContent
+    { content
+    , expired: doSomethingWithHeaders hs
+    }
   where
   doSomethingWithHeaders headers = false
 
@@ -174,23 +173,23 @@ handleResult
   → Either Error (AX.AffjaxResponse String)
   → Either QError (Tuple (AX.AffjaxResponse String) a)
 handleResult f = case _ of
-    Right resp@{ status: StatusCode code, response, headers }
-      | code >= 200 && code < 300 → map (Tuple resp) (lmap Error (f response))
-      | code == 404 → Left NotFound
-      | code == 403 → Left Forbidden
-      | code == 402 → Left PaymentRequired
-      | code == 401 →
-          Left
-            $ Unauthorized
-            $ (UnauthorizedDetails <<< show)
-            <$> (Array.index headers =<< Array.findIndex isWWWAuthenticate headers)
-      | otherwise →
-          let
-            parseResult = parseHumanReadableError =<< hush (Json.decodeJson =<< Json.jsonParser response)
-            fallbackError = Error $ error $ "An unknown error ocurred: " <> show code <> " " <> show response
-          in
-            Left (fromMaybe fallbackError parseResult)
-    Left err → Left (Error err)
+  Right resp@{ status: StatusCode code, response, headers }
+    | code >= 200 && code < 300 → bimap Error (Tuple resp) (f response)
+    | code == 404 → Left NotFound
+    | code == 403 → Left Forbidden
+    | code == 402 → Left PaymentRequired
+    | code == 401 →
+      Left
+        $ Unauthorized
+        $ (UnauthorizedDetails <<< show)
+          <$> (Array.index headers =<< Array.findIndex isWWWAuthenticate headers)
+    | otherwise →
+        let
+          parseResult = parseHumanReadableError =<< hush (Json.decodeJson =<< Json.jsonParser response)
+          fallbackError = Error $ error $ "An unknown error ocurred: " <> show code <> " " <> show response
+        in
+          Left (fromMaybe fallbackError parseResult)
+  Left err → Left (Error err)
   where
   isWWWAuthenticate ∷ RH.ResponseHeader → Boolean
   isWWWAuthenticate = eq "www-authenticate" <<< Str.toLower <<< RH.responseHeaderName

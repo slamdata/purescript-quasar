@@ -30,7 +30,7 @@ import Control.Monad.Reader.Trans (runReaderT)
 import Data.Argonaut ((:=), (~>))
 import Data.Argonaut as J
 import Data.Argonaut.JCursor as JC
-import Data.Either (Either(..), fromRight, isRight)
+import Data.Either (Either(Right, Left), isRight)
 import Data.Foldable (traverse_)
 import Data.Functor.Coproduct (left)
 import Data.Maybe (Maybe(..))
@@ -52,7 +52,7 @@ import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..))
 import Quasar.Data.Json as Json
 import Quasar.Mount (MountConfig(..))
-import Quasar.QuasarF (QuasarF, QError(..))
+import Quasar.QuasarF (ExpiredContent(..), QError(..), QuasarF)
 import Quasar.QuasarF as QF
 import Quasar.Spawn.Util.Process (spawnQuasar, spawnQuasarInit)
 import SqlSquared as Sql
@@ -83,6 +83,10 @@ config =
   , idToken: Nothing
   , permissions: []
   }
+
+showContentExpired ∷ forall a. Show a => ExpiredContent a -> String
+showContentExpired =
+  \(ExpiredContent {content, expired}) → "content: " <> show content <> " expired: " <> show expired
 
 -- | Used to catch Aff exceptions that don't get caught in main due to them
 -- | being raised asynchronously.
@@ -171,8 +175,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ QF.appendFile testFile1 content
 
     log "\nReadFile:"
-    run isRight $ QF.readFile Json.Precise testFile1 (Just { offset: 0, limit: 100 })
-    run isRight $ QF.readFile Json.Readable testFile3 (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readFile Json.Precise testFile1 (Just { offset: 0, limit: 100 }) <#> map showContentExpired
+    run isRight $ QF.readFile Json.Readable testFile3 (Just { offset: 0, limit: 1 }) <#> map showContentExpired
 
     log "\nDeleteData:"
     run isRight $ QF.deleteData (Right testFile1)
@@ -196,7 +200,7 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nInvokeFile:"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
-    run isRight $ QF.invokeFile Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
+    run isRight $ QF.invokeFile Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing <#> map showContentExpired
 
     log "\nDone!"
 
