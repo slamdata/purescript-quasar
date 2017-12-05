@@ -1,7 +1,6 @@
 module Quasar.Data.Json.Extended
-  ( resultsAsEJson
-  , resultsAsEJson'
-  , decodeEJsonQ
+  ( resultsAsEJson'
+  , resultsAsEJson
   , module Data.Json.Extended
   ) where
 
@@ -17,17 +16,17 @@ import Data.Newtype (unwrap)
 import Data.Traversable as TR
 import Quasar.Error (QError(..))
 
-resultsAsEJson
+resultsAsEJson'
   ∷ ∀ f
   . TR.Traversable f
   ⇒ Either QError (f (Array Json))
   → Either QError (f (Array EJson))
-resultsAsEJson = (TR.traverse (TR.traverse decodeEJsonQ) =<< _)
+resultsAsEJson' = (TR.traverse (TR.traverse decodeEJsonQ) =<< _)
 
-resultsAsEJson'
+resultsAsEJson
   ∷ Either QError (Array Json)
   → Either QError (Array EJson)
-resultsAsEJson' = map Identity >>> resultsAsEJson >>> map unwrap
+resultsAsEJson = map Identity >>> resultsAsEJson' >>> map unwrap
 
 decodeEJsonQ ∷ Json → Either QError EJson
 decodeEJsonQ = decodeEJson >>> BF.lmap (Exn.error >>> Error)

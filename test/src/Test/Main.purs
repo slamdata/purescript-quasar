@@ -30,7 +30,7 @@ import Control.Monad.Reader.Trans (runReaderT)
 import Data.Argonaut ((:=), (~>))
 import Data.Argonaut as J
 import Data.Argonaut.JCursor as JC
-import Data.Either (Either(Right, Left), isRight)
+import Data.Either (Either(..), isRight)
 import Data.Foldable (traverse_)
 import Data.Functor.Coproduct (left)
 import Data.Maybe (Maybe(..))

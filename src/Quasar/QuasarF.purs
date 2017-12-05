@@ -1,9 +1,12 @@
 {-
 Copyright 2017 SlamData, Inc.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +30,7 @@ import Data.Time.Duration (Seconds)
 import Data.Traversable (class Foldable, class Traversable, sequenceDefault)
 import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
-import Quasar.Data.Json.Extended (EJson, resultsAsEJson, resultsAsEJson')
+import Quasar.Data.Json.Extended (EJson, resultsAsEJson', resultsAsEJson)
 import Quasar.Error (type (:~>), QResponse, QError(..), PDFError(..), UnauthorizedDetails(..), lowerQError, printQError)
 import Quasar.FS (QResource)
 import Quasar.Metastore (Metastore)
@@ -105,7 +108,7 @@ readQueryEJson
   → Maybe Pagination
   → QuasarFE (Array EJson)
 readQueryEJson path sql vars pagination =
-  readQuery Precise path sql vars pagination <#> resultsAsEJson'
+  readQuery Precise path sql vars pagination <#> resultsAsEJson
 
 writeQuery
   ∷ DirPath
@@ -157,7 +160,7 @@ readFileEJsonDetail
   → Maybe Pagination
   → QuasarFE (ExpiredContent (Array EJson))
 readFileEJsonDetail path pagination =
-  readFile Precise path pagination <#> resultsAsEJson
+  readFile Precise path pagination <#> resultsAsEJson'
 
 writeFile
   ∷ FilePath
@@ -203,7 +206,7 @@ invokeFileEJsonDetail
   → Maybe Pagination
   → QuasarFE (ExpiredContent (Array EJson))
 invokeFileEJsonDetail path vars pagination =
-  invokeFile Precise path vars pagination <#> resultsAsEJson
+  invokeFile Precise path vars pagination <#> resultsAsEJson'
 
 deleteData
   ∷ AnyPath

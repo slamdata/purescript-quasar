@@ -1,9 +1,12 @@
 {-
 Copyright 2017 SlamData, Inc.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -172,7 +175,8 @@ handleResult
   . (String → Either Error a)
   → Either Error (AX.AffjaxResponse String)
   → Either QError (Tuple (AX.AffjaxResponse String) a)
-handleResult f = case _ of
+handleResult f =
+  case _ of
   Right resp@{ status: StatusCode code, response, headers }
     | code >= 200 && code < 300 → bimap Error (Tuple resp) (f response)
     | code == 404 → Left NotFound
