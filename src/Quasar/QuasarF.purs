@@ -188,8 +188,17 @@ invokeFile
   → FilePath
   → Vars
   → Maybe Pagination
-  → QuasarFE (ExpiredContent JArray)
+  → QuasarFE JArray
 invokeFile mode path vars pagination =
+  map (_.content <<< unwrap) <$> invokeFileDetail mode path vars pagination
+
+invokeFileDetail
+  ∷ PrecisionMode
+  → FilePath
+  → Vars
+  → Maybe Pagination
+  → QuasarFE (ExpiredContent JArray)
+invokeFileDetail mode path vars pagination =
   InvokeFile mode path vars pagination id
 
 invokeFileEJson
@@ -206,7 +215,7 @@ invokeFileEJsonDetail
   → Maybe Pagination
   → QuasarFE (ExpiredContent (Array EJson))
 invokeFileEJsonDetail path vars pagination =
-  invokeFile Precise path vars pagination <#> resultsAsEJson'
+  invokeFileDetail Precise path vars pagination <#> resultsAsEJson'
 
 deleteData
   ∷ AnyPath

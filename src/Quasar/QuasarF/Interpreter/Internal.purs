@@ -165,10 +165,11 @@ withExpired ∷ ∀ a b. Tuple (AX.AffjaxResponse a) b → ExpiredContent b
 withExpired (Tuple { headers: hs } content) =
   ExpiredContent
     { content
-    , expired: doSomethingWithHeaders hs
+    , expired: Array.any isExpired hs
     }
   where
-  doSomethingWithHeaders headers = false
+    -- TODO: Vince, I really need to make this look beter and work out how to make tests ¯\_(ツ)_/¯
+    isExpired header = RH.responseHeaderName header == "Warning" && Str.contains (Str.Pattern "110 - \"Response is Stale\"") (RH.responseHeaderValue header)
 
 handleResult
   ∷ ∀ a
