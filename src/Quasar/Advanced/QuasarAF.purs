@@ -142,7 +142,7 @@ readFileDetail
   → Maybe Pagination
   → QuasarAFCE (ExpiredContent JArray)
 readFileDetail mode path pagination =
-  left $ ReadFile mode path pagination id
+  left $ ReadFileCache mode path pagination id
 
 readFileEJson
   ∷ FilePath

@@ -175,8 +175,10 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     run isRight $ QF.appendFile testFile1 content
 
     log "\nReadFile:"
-    run isRight $ QF.readFile Json.Precise testFile1 (Just { offset: 0, limit: 100 }) <#> map showContentExpired
-    run isRight $ QF.readFile Json.Readable testFile3 (Just { offset: 0, limit: 1 }) <#> map showContentExpired
+    run isRight $ QF.readFile Json.Precise testFile1 (Just { offset: 0, limit: 100 })
+    run isRight $ QF.readFileCache Json.Precise testFile1 (Just { offset: 0, limit: 100 }) <#> map showContentExpired
+    run isRight $ QF.readFile Json.Readable testFile3 (Just { offset: 0, limit: 1 })
+    run isRight $ QF.readFileCache Json.Readable testFile3 (Just { offset: 0, limit: 1 }) <#> map showContentExpired
 
     log "\nDeleteData:"
     run isRight $ QF.deleteData (Right testFile1)
@@ -200,7 +202,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nInvokeFile:"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
-    run isRight $ QF.invokeFile Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing <#> map showContentExpired
+    run isRight $ QF.invokeFile Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
+    run isRight $ QF.invokeFileDetail Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing <#> map showContentExpired
 
     log "\nDone!"
 

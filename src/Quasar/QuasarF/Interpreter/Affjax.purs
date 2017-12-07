@@ -98,6 +98,14 @@ eval = case _ of
 
   ReadFile mode path pagination k → do
     url ← mkFSUrl Paths.data_ (Right path) (toPageParams pagination)
+    k <$> mkRequest jsonResult
+      (AXF.affjax defaultRequest
+        { url = url
+        , headers = [Req.Accept $ Json.decorateMode mode applicationJSON]
+        })
+
+  ReadFileCache mode path pagination k → do
+    url ← mkFSUrl Paths.data_ (Right path) (toPageParams pagination)
     eitherJarr ← mkRequest' jsonResult
       (AXF.affjax defaultRequest
         { url = url

@@ -66,7 +66,8 @@ data QuasarF a
   | CompileQuery DirPath SqlQuery Vars (CompileResultR :~> a)
   | FileMetadata FilePath (Unit :~> a)
   | DirMetadata DirPath (Maybe Pagination) ((Array QResource) :~> a)
-  | ReadFile PrecisionMode FilePath (Maybe Pagination) (ExpiredContent JArray :~> a)
+  | ReadFile PrecisionMode FilePath (Maybe Pagination) (JArray :~> a)
+  | ReadFileCache PrecisionMode FilePath (Maybe Pagination) (ExpiredContent JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
   | WriteDir DirPath Blob (Unit :~> a)
   | AppendFile FilePath QData (Unit :~> a)
@@ -144,9 +145,17 @@ readFile
   ∷ PrecisionMode
   → FilePath
   → Maybe Pagination
-  → QuasarFE (ExpiredContent JArray)
+  → QuasarFE JArray
 readFile mode path pagination =
   ReadFile mode path pagination id
+
+readFileCache
+  ∷ PrecisionMode
+  → FilePath
+  → Maybe Pagination
+  → QuasarFE (ExpiredContent JArray)
+readFileCache mode path pagination =
+  ReadFileCache mode path pagination id
 
 readFileEJson
   ∷ FilePath
@@ -160,7 +169,7 @@ readFileEJsonDetail
   → Maybe Pagination
   → QuasarFE (ExpiredContent (Array EJson))
 readFileEJsonDetail path pagination =
-  readFile Precise path pagination <#> resultsAsEJson'
+  readFileCache Precise path pagination <#> resultsAsEJson'
 
 writeFile
   ∷ FilePath
