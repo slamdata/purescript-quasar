@@ -24,12 +24,12 @@ module Quasar.Advanced.QuasarAF
 
 import Prelude
 
+import Control.Comonad (extract)
 import DOM.File.Types (Blob)
 import Data.Argonaut (JArray)
 import Data.Foldable (class Foldable, foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
 import Data.Time.Duration (Seconds)
 import Quasar.Advanced.Types as QA
 import Quasar.Data (QData)
@@ -134,7 +134,7 @@ readFile
   → Maybe Pagination
   → QuasarAFCE JArray
 readFile mode path pagination =
-  map (_.content <<< unwrap) <$> readFileDetail mode path pagination
+  map extract <$> readFileDetail mode path pagination
 
 readFileDetail
   ∷ PrecisionMode
