@@ -176,9 +176,9 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nReadFile:"
     run isRight $ QF.readFile Json.Precise testFile1 (Just { offset: 0, limit: 100 })
-    run isRight $ QF.readFileCache Json.Precise testFile1 (Just { offset: 0, limit: 100 }) <#> map showContentExpired
+    run isRight $ QF.readFileDetail Json.Precise testFile1 (Just { offset: 0, limit: 100 }) <#> map showContentExpired
     run isRight $ QF.readFile Json.Readable testFile3 (Just { offset: 0, limit: 1 })
-    run isRight $ QF.readFileCache Json.Readable testFile3 (Just { offset: 0, limit: 1 }) <#> map showContentExpired
+    run isRight $ QF.readFileDetail Json.Readable testFile3 (Just { offset: 0, limit: 1 }) <#> map showContentExpired
 
     log "\nDeleteData:"
     run isRight $ QF.deleteData (Right testFile1)
