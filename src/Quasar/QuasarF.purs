@@ -22,10 +22,12 @@ module Quasar.QuasarF
 
 import Prelude
 
+import Control.Comonad (class Comonad, extract)
+import Control.Extend (class Extend)
 import DOM.File.Types (Blob)
 import Data.Argonaut (JArray)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype (class Newtype)
 import Data.Time.Duration (Seconds)
 import Data.Traversable (class Foldable, class Traversable, sequenceDefault)
 import Quasar.Data (QData)
@@ -50,14 +52,20 @@ derive instance functorExpiredContent ∷ Functor ExpiredContent
 derive instance newtypeExpiredContent ∷ Newtype (ExpiredContent a) _
 
 instance foldableExpiredContent ∷ Foldable ExpiredContent where
-  foldr f a ec = f (unwrap ec).content a
-  foldl f a ec = f a (unwrap ec).content
-  foldMap f ec = f (unwrap ec).content
+  foldr f a (ExpiredContent { content }) = f content a
+  foldl f a (ExpiredContent { content }) = f a content
+  foldMap f (ExpiredContent { content }) = f content
 
 instance traversableExpiredContent ∷ Traversable ExpiredContent where
   traverse f (ExpiredContent {content, expired}) =
     map (ExpiredContent <<< {expired, content: _}) (f content)
   sequence ec = sequenceDefault ec
+
+instance extendExpiredContent :: Extend ExpiredContent where
+  extend f t@(ExpiredContent { expired, content }) = ExpiredContent { expired, content: f t }
+
+instance comonadExpiredContent :: Comonad ExpiredContent where
+  extract (ExpiredContent { content }) = content
 
 data QuasarF a
   = ServerInfo (ServerInfo :~> a)
@@ -66,8 +74,7 @@ data QuasarF a
   | CompileQuery DirPath SqlQuery Vars (CompileResultR :~> a)
   | FileMetadata FilePath (Unit :~> a)
   | DirMetadata DirPath (Maybe Pagination) ((Array QResource) :~> a)
-  | ReadFile PrecisionMode FilePath (Maybe Pagination) (JArray :~> a)
-  | ReadFileCache PrecisionMode FilePath (Maybe Pagination) (ExpiredContent JArray :~> a)
+  | ReadFile PrecisionMode FilePath (Maybe Pagination) (ExpiredContent JArray :~> a)
   | WriteFile FilePath QData (Unit :~> a)
   | WriteDir DirPath Blob (Unit :~> a)
   | AppendFile FilePath QData (Unit :~> a)
@@ -147,29 +154,29 @@ readFile
   → Maybe Pagination
   → QuasarFE JArray
 readFile mode path pagination =
-  ReadFile mode path pagination id
+  map extract <$> readFileDetail mode path pagination
 
-readFileCache
+readFileDetail
   ∷ PrecisionMode
   → FilePath
   → Maybe Pagination
   → QuasarFE (ExpiredContent JArray)
-readFileCache mode path pagination =
-  ReadFileCache mode path pagination id
+readFileDetail mode path pagination =
+  ReadFile mode path pagination id
 
 readFileEJson
   ∷ FilePath
   → Maybe Pagination
   → QuasarFE (Array EJson)
 readFileEJson path pagination =
-  map (_.content <<< unwrap) <$> readFileEJsonDetail path pagination
+  map extract <$> readFileEJsonDetail path pagination
 
 readFileEJsonDetail
   ∷ FilePath
   → Maybe Pagination
   → QuasarFE (ExpiredContent (Array EJson))
 readFileEJsonDetail path pagination =
-  readFileCache Precise path pagination <#> resultsAsEJson'
+  readFileDetail Precise path pagination <#> resultsAsEJson'
 
 writeFile
   ∷ FilePath
@@ -199,7 +206,7 @@ invokeFile
   → Maybe Pagination
   → QuasarFE JArray
 invokeFile mode path vars pagination =
-  map (_.content <<< unwrap) <$> invokeFileDetail mode path vars pagination
+  map extract <$> invokeFileDetail mode path vars pagination
 
 invokeFileDetail
   ∷ PrecisionMode
@@ -216,7 +223,7 @@ invokeFileEJson
   → Maybe Pagination
   → QuasarFE (Array EJson)
 invokeFileEJson path vars pagination =
-  map (_.content <<< unwrap) <$> invokeFileEJsonDetail path vars pagination
+  map extract <$> invokeFileEJsonDetail path vars pagination
 
 invokeFileEJsonDetail
   ∷ FilePath
