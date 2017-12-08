@@ -30,7 +30,7 @@ import Control.Monad.Reader.Trans (runReaderT)
 import Data.Argonaut ((:=), (~>))
 import Data.Argonaut as J
 import Data.Argonaut.JCursor as JC
-import Data.Either (Either(..), isRight)
+import Data.Either (Either(..), either, isRight)
 import Data.Foldable (traverse_)
 import Data.Functor.Coproduct (left)
 import Data.Maybe (Maybe(..))
@@ -38,6 +38,7 @@ import Data.Path.Pathy (rootDir, dir, file, (</>))
 import Data.Posix.Signal (Signal(SIGTERM))
 import Data.StrMap as SM
 import Data.String as Str
+import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
 import Network.HTTP.Affjax (AJAX)
@@ -83,10 +84,6 @@ config =
   , idToken: Nothing
   , permissions: []
   }
-
-showContentExpired ∷ forall a. Show a => ExpiredContent a -> String
-showContentExpired =
-  \(ExpiredContent {content, expired}) → "content: " <> show content <> " expired: " <> show expired
 
 -- | Used to catch Aff exceptions that don't get caught in main due to them
 -- | being raised asynchronously.
@@ -176,9 +173,9 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
 
     log "\nReadFile:"
     run isRight $ QF.readFile Json.Precise testFile1 (Just { offset: 0, limit: 100 })
-    run isRight $ QF.readFileDetail Json.Precise testFile1 (Just { offset: 0, limit: 100 }) <#> map showContentExpired
+    run isRight $ QF.readFileDetail Json.Precise testFile1 (Just { offset: 0, limit: 100 })
     run isRight $ QF.readFile Json.Readable testFile3 (Just { offset: 0, limit: 1 })
-    run isRight $ QF.readFileDetail Json.Readable testFile3 (Just { offset: 0, limit: 1 }) <#> map showContentExpired
+    run isRight $ QF.readFileDetail Json.Readable testFile3 (Just { offset: 0, limit: 1 })
 
     log "\nDeleteData:"
     run isRight $ QF.deleteData (Right testFile1)
@@ -203,7 +200,12 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
     log "\nInvokeFile:"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
     run isRight $ QF.invokeFile Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
-    run isRight $ QF.invokeFileDetail Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing <#> map showContentExpired
+    run isRight $ QF.invokeFileDetail Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
+
+    log "\nCachedHeaders:"
+    run isRight $ QF.createCachedView (Right testCachedHeader) mountConfig1' (Seconds 0.0)
+    run (either (const false) (\(ExpiredContent { expired }) -> expired ) )
+      $ QF.readFileDetail Json.Readable testCachedHeader Nothing
 
     log "\nDone!"
 
@@ -226,6 +228,7 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
   testMount2 = rootDir </> file "testMount2"
   testMount3 = rootDir </> dir "testMount3" </> dir ""
   testProcess = rootDir </> dir "testMount3" </> file "test"
+  testCachedHeader = rootDir </> dir "testMount4" </> file "test"
 
   isNotFound ∷ ∀ a. Either QError a → Boolean
   isNotFound e = case e of
@@ -241,10 +244,12 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
           , "foo" := "baz" ~> J.jsonEmptyObject
           ]
 
-  mountConfig1 = ViewConfig
+  mountConfig1' =
     { query: unsafeQuery "select * from `/smallZips.json`"
     , vars: SM.empty
     }
+
+  mountConfig1 = ViewConfig mountConfig1'
 
   mountConfig2 = ViewConfig
     { query: unsafeQuery "select * from `/slamengine_commits.json`"

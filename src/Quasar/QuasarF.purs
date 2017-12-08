@@ -26,6 +26,8 @@ import Control.Comonad (class Comonad, extract)
 import Control.Extend (class Extend)
 import DOM.File.Types (Blob)
 import Data.Argonaut (JArray)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Time.Duration (Seconds)
@@ -47,9 +49,12 @@ newtype ExpiredContent a = ExpiredContent
   { content ∷ a
   , expired ∷ Boolean
   }
-
+derive instance genericExpiredContent ∷ Generic (ExpiredContent a) _
 derive instance functorExpiredContent ∷ Functor ExpiredContent
 derive instance newtypeExpiredContent ∷ Newtype (ExpiredContent a) _
+
+instance showExpiredContent ∷ Show a => Show (ExpiredContent a) where
+  show = genericShow
 
 instance foldableExpiredContent ∷ Foldable ExpiredContent where
   foldr f a (ExpiredContent { content }) = f content a
