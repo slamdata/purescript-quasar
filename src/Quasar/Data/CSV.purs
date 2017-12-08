@@ -51,8 +51,8 @@ toMediaType (Options opts) =
   MediaType $
     String.joinWith ";"
       [ "text/csv"
-      , "columnDelimiter=" <> opts.columnDelimiter
-      , "rowDelimiter=" <> opts.rowDelimiter
-      , "quoteChar=" <> opts.quoteChar
-      , "escapeChar=" <> opts.escapeChar
+      , "columnDelimiter=" <> show opts.columnDelimiter
+      , "rowDelimiter=" <> show opts.rowDelimiter
+      , "quoteChar=" <> show opts.quoteChar
+      , "escapeChar=" <> show opts.escapeChar
       ]
