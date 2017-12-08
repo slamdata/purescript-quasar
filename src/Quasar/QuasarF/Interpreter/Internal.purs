@@ -29,6 +29,7 @@ module Quasar.QuasarF.Interpreter.Internal
   , mkFSUrl
   , mkRequest
   , mkRequest'
+  , isHeaderExpired
   , withExpired
   ) where
 
@@ -45,10 +46,11 @@ import Data.Foldable (oneOf)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Monoid (mempty)
 import Data.Path.Pathy (Abs, AnyPath, Path, Rel, RelDir, RelPath, Sandboxed, dir, file, relativeTo, rootDir, unsandbox, (</>))
 import Data.StrMap as SM
+import Data.String as S
 import Data.String as Str
 import Data.Tuple (Tuple(..), snd)
 import Data.URI as URI
@@ -56,6 +58,7 @@ import Data.URI.URIRef as URIRef
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
+import Network.HTTP.ResponseHeader (ResponseHeader)
 import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
 import Quasar.ConfigF as CF
@@ -161,15 +164,17 @@ mkRequest'
   → Free (Coproduct l AXFP) (Either QError (Tuple (AX.AffjaxResponse String) a))
 mkRequest' f = map (handleResult f) <<< liftF <<< right
 
+isHeaderExpired :: ResponseHeader -> Boolean
+isHeaderExpired header =
+  RH.responseHeaderName header == "Warning"
+    && isJust (S.stripPrefix (S.Pattern "110") (RH.responseHeaderValue header))
+
 withExpired ∷ ∀ a b. Tuple (AX.AffjaxResponse a) b → ExpiredContent b
 withExpired (Tuple { headers: hs } content) =
   ExpiredContent
     { content
-    , expired: Array.any isExpired hs
+    , expired: Array.any isHeaderExpired hs
     }
-  where
-    -- TODO: Vince, I really need to make this look beter and work out how to make tests ¯\_(ツ)_/¯
-    isExpired header = RH.responseHeaderName header == "Warning" && Str.contains (Str.Pattern "110 - \"Response is Stale\"") (RH.responseHeaderValue header)
 
 handleResult
   ∷ ∀ a
