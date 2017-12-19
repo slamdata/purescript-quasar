@@ -49,10 +49,10 @@ data MountConfig
 
 instance showMountConfig ∷ Show MountConfig where
   show (ViewConfig { query, vars })
-    = "(ViewConfig { query: " <> Sql.printQuery query
+    = "(ViewConfig { query: " <> show (Sql.printQuery query)
     <> ", vars: " <> show vars <> " })"
   show (ModuleConfig config)
-    = "(ModuleConfig { module: " <> Sql.printModule config."module" <> " })"
+    = "(ModuleConfig { module: " <> show (Sql.printModule config."module") <> " })"
   show (MongoDBConfig { hosts, auth, props })
     = "(MongoDBConfig { hosts: " <> show hosts
     <> ", auth: " <> show auth
