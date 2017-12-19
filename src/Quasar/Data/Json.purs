@@ -19,6 +19,7 @@ module Quasar.Data.Json where
 import Prelude
 
 import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Data.MediaType (MediaType(..))
 import Data.Newtype (class Newtype)
 import Quasar.Data.MediaTypes (applicationJSON, applicationLDJSON)
@@ -41,9 +42,7 @@ derive instance eqPrecisionMode ∷ Eq PrecisionMode
 derive instance ordPrecisionMode ∷ Ord PrecisionMode
 derive instance genericPrecisionMode ∷ Generic PrecisionMode _
 
-instance showPrecisionMode ∷ Show PrecisionMode where
-  show Readable = "Readable"
-  show Precise = "Precise"
+instance showPrecisionMode ∷ Show PrecisionMode where show = genericShow
 
 decorateMode ∷ PrecisionMode → MediaType → MediaType
 decorateMode mode (MediaType mt) = MediaType (mt <> modeToString mode)
@@ -56,6 +55,8 @@ data EncodingStyle = Array | LineDelimited
 derive instance eqEncodingStyle ∷ Eq EncodingStyle
 derive instance ordEncodingStyle ∷ Ord EncodingStyle
 derive instance genericEncodingStyle ∷ Generic EncodingStyle _
+
+instance showEncodingStyle ∷ Show EncodingStyle where show = genericShow
 
 toMediaType ∷ Options → MediaType
 toMediaType (Options { precision, encoding }) =
