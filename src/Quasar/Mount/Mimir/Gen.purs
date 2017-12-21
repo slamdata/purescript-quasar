@@ -18,8 +18,8 @@ module Quasar.Mount.Mimir.Gen where
 
 import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Rec.Class (class MonadRec)
-import Quasar.Mount.Common.Gen (genDirPath)
+import Quasar.Mount.Common.Gen (genAbsDirPath)
 import Quasar.Mount.Mimir as M
 
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m M.Config
-genConfig = genDirPath
+genConfig = genAbsDirPath

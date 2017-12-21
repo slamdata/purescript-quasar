@@ -27,7 +27,7 @@ import Data.Const (Const(..))
 import Data.Identity (Identity(..))
 import Data.NonEmpty ((:|))
 import Data.String.Gen (genUnicodeString)
-import Quasar.Mount.Common.Gen (genAnyPath, genDirPath, genFilePath)
+import Quasar.Mount.Common.Gen (genAnyPath, genAbsDirPath, genAbsFilePath)
 
 
 genMountType :: ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MountType
@@ -45,13 +45,13 @@ genMountType = Gen.oneOf
 
 genMount :: ∀ m. MonadGen m ⇒ MonadRec m ⇒ m Mount
 genMount = Gen.oneOf
-  $ (genFilePath <#> Identity >>> View) :|
-  [ genDirPath <#> Identity >>> Module
-  , genDirPath <#> Identity >>> MongoDB
-  , genDirPath <#> Identity >>> Couchbase
-  , genDirPath <#> Identity >>> MarkLogic
-  , genDirPath <#> Identity >>> SparkHDFS
-  , genDirPath <#> Identity >>> SparkLocal
-  , genDirPath <#> Identity >>> Mimir
+  $ (genAbsFilePath <#> Identity >>> View) :|
+  [ genAbsDirPath <#> Identity >>> Module
+  , genAbsDirPath <#> Identity >>> MongoDB
+  , genAbsDirPath <#> Identity >>> Couchbase
+  , genAbsDirPath <#> Identity >>> MarkLogic
+  , genAbsDirPath <#> Identity >>> SparkHDFS
+  , genAbsDirPath <#> Identity >>> SparkLocal
+  , genAbsDirPath <#> Identity >>> Mimir
   , Unknown <$> genUnicodeString <*> map Identity genAnyPath
   ]
