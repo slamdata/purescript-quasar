@@ -18,8 +18,8 @@ module Quasar.Mount.SparkLocal.Gen where
 
 import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Rec.Class (class MonadRec)
-import Quasar.Mount.Common.Gen (genDirPath)
+import Quasar.Mount.Common.Gen (genAbsDirPath)
 import Quasar.Mount.SparkLocal as SL
 
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m SL.Config
-genConfig = genDirPath
+genConfig = genAbsDirPath
