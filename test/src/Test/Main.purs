@@ -124,8 +124,8 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
         Nothing → throwError (error "Could not set path in quasar config.json")
         Just qconfig' → FSA.writeTextFile UTF8 "test/tmp/quasar/config.json" (J.stringify qconfig')
 
-  spawnQuasarInit "test/tmp/quasar/config.json" "jars/quasar.jar"
-  quasar ← spawnQuasar "test/tmp/quasar/config.json" "jars/quasar.jar" "-C slamdata"
+  spawnQuasarInit "test/tmp/quasar/config.json" "quasar/quasar.jar"
+  quasar ← spawnQuasar "test/tmp/quasar/config.json" "quasar/quasar.jar" "-C slamdata"
 
   result ← attempt do
 
@@ -214,7 +214,7 @@ main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
   testFile2Dir = rootDir </> dir "subdir"
   testFile2 = testFile2Dir </> file "test2"
   testFile3Dir = rootDir </> dir "what"
-  testFile3 = testFile3Dir </> file "test3"
+  testFile3 = testFile3Dir </> file "test2"
   testMount = rootDir </> file "testMount"
   testMount2 = rootDir </> file "testMount2"
   testMount3 = rootDir </> dir "testMount3" </> dir ""
