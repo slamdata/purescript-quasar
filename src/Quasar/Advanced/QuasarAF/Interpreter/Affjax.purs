@@ -145,7 +145,7 @@ evalQuasarAdvanced (SharePermission req k) = do
 evalQuasarAdvanced (DeletePermission pid k) = do
   config ← ask
   url ← mkUrl
-    (Left (Paths.permission </> Pt.dir (Qa.runPermissionId pid)))
+    (Right (Paths.permission </> Pt.file (Qa.runPermissionId pid)))
     mempty
   map k
     $ mkAuthedRequest unitResult
