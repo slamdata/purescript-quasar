@@ -56,8 +56,6 @@ data QuasarF a
   | GetMount AnyPath (MountConfig :~> a)
   | CreateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
   | UpdateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
-  | MoveMount AnyPath AnyPath (Unit :~> a)
-  | DeleteMount AnyPath (Unit :~> a)
   | GetMetastore (Metastore () :~> a)
   | PutMetastore { initialize ∷ Boolean, metastore ∷ Metastore (password ∷ String) } (Unit :~> a)
 
@@ -221,19 +219,6 @@ updateCachedView
   → QuasarFE Unit
 updateCachedView path config maxAge =
   UpdateMount path (ViewConfig config) (Just maxAge) id
-
-moveMount
-  ∷ AnyPath
-  → AnyPath
-  → QuasarFE Unit
-moveMount from to =
-  MoveMount from to id
-
-deleteMount
-  ∷ AnyPath
-  → QuasarFE Unit
-deleteMount path =
-  DeleteMount path id
 
 getMetastore ∷ QuasarFE (Metastore ())
 getMetastore = GetMetastore id
