@@ -37,7 +37,7 @@
     "purescript-node-fs-aff": "^4.0.0",
     "purescript-generics-rep": "^5.1.0",
     "purescript-quickcheck": "^4.4.0",
-    "purescript-quasar-test-starter": "slamdata/quasar-test-starter#^0.6.1",
+    "purescript-quasar-test-starter": "slamdata/quasar-test-starter#^0.6.2",
     "purescript-quickcheck-laws": "^3.0.0"
   }
 }
