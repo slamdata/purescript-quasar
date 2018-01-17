@@ -208,8 +208,7 @@ parseHumanReadableError json =
                $ map (parseHumanReadableError <<< wrapError) errors
            _ → do
              Left "Parse error in multiple errors"
-    , do e ← json .? "error"
-         detail ← e .? "detail"
+    , do detail ← json .? "detail"
          pdfError ← detail .? "PDFError"
          code ← pdfError .? "code"
          case code of
