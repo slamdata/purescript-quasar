@@ -24,7 +24,7 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Console as Console
-import Control.Monad.Eff.Exception (error, throwException)
+import Control.Monad.Eff.Exception (error)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Reader.Trans (runReaderT)
 import Data.Argonaut ((:=), (~>))
@@ -99,7 +99,7 @@ jumpOutOnError aff = do
     Right x' → pure x'
 
 main ∷ Eff Effects Unit
-main = void $ runAff throwException (const (pure unit)) $ jumpOutOnError do
+main = void $ runAff (const (pure unit)) $ jumpOutOnError do
   FS.rmRec "test/tmp/db"
   FS.rmRec "test/tmp/quasar"
   FS.mkdirRec "test/tmp/db"
