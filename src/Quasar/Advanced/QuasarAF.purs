@@ -24,6 +24,7 @@ module Quasar.Advanced.QuasarAF
 
 import Prelude
 
+import Control.Comonad (extract)
 import DOM.File.Types (Blob)
 import Data.Argonaut (JArray)
 import Data.Foldable (class Foldable, foldMap)
@@ -39,7 +40,7 @@ import Quasar.FS (QResource)
 import Quasar.Metastore (Metastore)
 import Quasar.Mount (MountConfig(..))
 import Quasar.Mount.View as View
-import Quasar.QuasarF (QuasarF(..))
+import Quasar.QuasarF (QuasarF(..), ExpiredContent)
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
 import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, CompileResultR)
@@ -133,6 +134,14 @@ readFile
   → Maybe Pagination
   → QuasarAFCE JArray
 readFile mode path pagination =
+  map extract <$> readFileDetail mode path pagination
+
+readFileDetail
+  ∷ PrecisionMode
+  → FilePath
+  → Maybe Pagination
+  → QuasarAFCE (ExpiredContent JArray)
+readFileDetail mode path pagination =
   left $ ReadFile mode path pagination id
 
 readFileEJson

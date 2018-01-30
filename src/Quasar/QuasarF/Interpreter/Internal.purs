@@ -28,6 +28,9 @@ module Quasar.QuasarF.Interpreter.Internal
   , mkUrl
   , mkFSUrl
   , mkRequest
+  , mkRequest'
+  , isHeaderExpired
+  , withExpired
   ) where
 
 import Prelude
@@ -43,21 +46,23 @@ import Data.Foldable (oneOf)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.List (List(..), (:))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Monoid (mempty)
 import Data.Path.Pathy (Abs, AnyPath, Path, Rel, RelDir, RelPath, Sandboxed, dir, file, relativeTo, rootDir, unsandbox, (</>))
 import Data.StrMap as SM
+import Data.String as S
 import Data.String as Str
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..), snd)
 import Data.URI as URI
 import Data.URI.URIRef as URIRef
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
+import Network.HTTP.ResponseHeader (ResponseHeader)
 import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
 import Quasar.ConfigF as CF
-import Quasar.QuasarF (Pagination, QError(..), PDFError(..), UnauthorizedDetails(..))
+import Quasar.QuasarF (ExpiredContent(..), PDFError(..), Pagination, QError(..), UnauthorizedDetails(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -149,32 +154,52 @@ mkRequest
   . (String → Either Error a)
   → AXF.AffjaxF RequestContent String
   → Free (Coproduct l AXFP) (Either QError a)
-mkRequest f = map (handleResult f) <<< liftF <<< right
+mkRequest f a =
+  map (map snd) $ mkRequest' f a
+
+mkRequest'
+  ∷ ∀ a l
+  . (String → Either Error a)
+  → AXF.AffjaxF RequestContent String
+  → Free (Coproduct l AXFP) (Either QError (Tuple (AX.AffjaxResponse String) a))
+mkRequest' f = map (handleResult f) <<< liftF <<< right
+
+isHeaderExpired :: ResponseHeader -> Boolean
+isHeaderExpired header =
+  RH.responseHeaderName header == "Warning"
+    && isJust (S.stripPrefix (S.Pattern "110") (RH.responseHeaderValue header))
+
+withExpired ∷ ∀ a b. Tuple (AX.AffjaxResponse a) b → ExpiredContent b
+withExpired (Tuple { headers: hs } content) =
+  ExpiredContent
+    { content
+    , expired: Array.any isHeaderExpired hs
+    }
 
 handleResult
   ∷ ∀ a
   . (String → Either Error a)
   → Either Error (AX.AffjaxResponse String)
-  → Either QError a
+  → Either QError (Tuple (AX.AffjaxResponse String) a)
 handleResult f =
   case _ of
-    Right { status: StatusCode code, response, headers }
-      | code >= 200 && code < 300 → lmap Error (f response)
-      | code == 404 → Left NotFound
-      | code == 403 → Left Forbidden
-      | code == 402 → Left PaymentRequired
-      | code == 401 →
-          Left
-            $ Unauthorized
-            $ (UnauthorizedDetails <<< show)
-            <$> (Array.index headers =<< Array.findIndex isWWWAuthenticate headers)
-      | otherwise →
-          let
-            parseResult = parseHumanReadableError =<< hush (Json.decodeJson =<< Json.jsonParser response)
-            fallbackError = Error $ error $ "An unknown error ocurred: " <> show code <> " " <> show response
-          in
-            Left (fromMaybe fallbackError parseResult)
-    Left err → Left (Error err)
+  Right resp@{ status: StatusCode code, response, headers }
+    | code >= 200 && code < 300 → bimap Error (Tuple resp) (f response)
+    | code == 404 → Left NotFound
+    | code == 403 → Left Forbidden
+    | code == 402 → Left PaymentRequired
+    | code == 401 →
+      Left
+        $ Unauthorized
+        $ (UnauthorizedDetails <<< show)
+          <$> (Array.index headers =<< Array.findIndex isWWWAuthenticate headers)
+    | otherwise →
+        let
+          parseResult = parseHumanReadableError =<< hush (Json.decodeJson =<< Json.jsonParser response)
+          fallbackError = Error $ error $ "An unknown error ocurred: " <> show code <> " " <> show response
+        in
+          Left (fromMaybe fallbackError parseResult)
+  Left err → Left (Error err)
   where
   isWWWAuthenticate ∷ RH.ResponseHeader → Boolean
   isWWWAuthenticate = eq "www-authenticate" <<< Str.toLower <<< RH.responseHeaderName
