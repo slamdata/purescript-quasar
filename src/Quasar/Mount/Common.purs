@@ -18,22 +18,12 @@ module Quasar.Mount.Common where
 
 import Prelude
 
-import Data.Either (Either(..))
-import Data.Maybe (Maybe(..))
+import Data.Lens (view)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (class Newtype)
-import Data.String as Str
-import Data.Tuple (Tuple)
-import Data.URI as URI
-
-type Host = Tuple URI.Host (Maybe URI.Port)
-
-extractHost ∷ Maybe URI.Authority → Either String Host
-extractHost (Just (URI.Authority _ hs)) =
-  case hs of
-    [h] → Right h
-    [] → Left "No host specified"
-    _ → Left "Multiple hosts specified"
-extractHost _ = Left "No host specified"
+import Quasar.Data.URI as URI
+import Data.URI.Authority (_userInfo)
+import Data.URI.Extra.UserPassInfo (UserPassInfo(..))
 
 newtype Credentials = Credentials { user ∷ String, password ∷ String }
 
@@ -45,21 +35,12 @@ instance showCredentials ∷ Show Credentials where
   show (Credentials { user, password }) =
     "(Credentials { user: " <> show user <> ", password: " <> show password <> " })"
 
-combineCredentials ∷ Credentials → URI.UserInfo
-combineCredentials (Credentials { user, password })
-  | Str.null password = URI.UserInfo user
-  | otherwise = URI.UserInfo (user <> ":" <> password)
+combineCredentials ∷ Credentials → UserPassInfo
+combineCredentials (Credentials { user, password }) = UserPassInfo { user, password: Just password }
 
-extractCredentials ∷ Maybe URI.Authority → Maybe Credentials
-extractCredentials auth = do
-  URI.UserInfo userInfo ← (\(URI.Authority mui _) → mui) =<< auth
-  pure $ Credentials $
-    case Str.indexOf (Str.Pattern ":") userInfo of
-      Nothing →
-        { user: userInfo
-        , password: ""
-        }
-      Just ix →
-        { user: Str.take ix userInfo
-        , password: Str.drop (ix + 1) userInfo
-        }
+extractCredentials ∷ ∀ hosts. Maybe (URI.Authority UserPassInfo hosts) → Maybe Credentials
+extractCredentials mbAuth = 
+  let 
+    mbUI = mbAuth >>= view _userInfo
+  in
+    mbUI <#> (\(UserPassInfo u) -> Credentials u{ password = fromMaybe "" u.password})

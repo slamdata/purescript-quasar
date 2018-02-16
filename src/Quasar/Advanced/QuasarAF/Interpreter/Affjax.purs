@@ -32,14 +32,12 @@ import Data.Either (Either(..))
 import Data.Foldable (foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
 import Data.HTTP.Method (Method(..))
-import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (mempty)
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Pt
 import Data.String as Str
 import Data.Tuple (Tuple(..), snd)
-import Data.URI as URI
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
@@ -51,6 +49,7 @@ import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
 import Quasar.Advanced.QuasarAF.Interpreter.Internal (mkGroupUrl)
 import Quasar.Advanced.Types as Qa
 import Quasar.ConfigF as CF
+import Quasar.Data.URI as URI
 import Quasar.Error (QResponse)
 import Quasar.QuasarF.Interpreter.Affjax as QCI
 import Quasar.QuasarF.Interpreter.Internal (ask, defaultRequest, jsonResult, mkRequest, mkUrl, unitResult)
@@ -121,14 +120,14 @@ evalQuasarAdvanced (PermissionInfo pid k) = do
   config ← ask
   url ← mkUrl
     (Right (Paths.permission </> Pt.file (Qa.runPermissionId pid)))
-    (URI.Query (List.singleton (Tuple "transitive" Nothing)))
+    (URI.QueryPairs [Tuple "transitive" Nothing])
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runPermission)
     $ _{ url = url }
 evalQuasarAdvanced (PermissionChildren pid isTransitive k) = do
   config ← ask
   url ← mkUrl
-    (Right (Paths.permission </> Pt.dir (Qa.runPermissionId pid) </> Pt.file "children"))
+    (Right (Paths.permission </> Pt.dir (Qa.runPermissionId pid) </> Paths.children ))
     (transitiveQuery isTransitive)
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
@@ -214,9 +213,9 @@ evalQuasarAdvanced (PDFInfo k) = do
     $ mkAuthedRequest (const (Right unit))
     $ _{ url = url  }
 
-transitiveQuery ∷ Boolean → URI.Query
+transitiveQuery ∷ Boolean → URI.QQuery
 transitiveQuery b =
-  if b then URI.Query (List.singleton (Tuple "transitive" Nothing)) else mempty
+  if b then URI.QueryPairs [Tuple "transitive" Nothing] else mempty
 
 mkAuthedRequest
   ∷ ∀ a r

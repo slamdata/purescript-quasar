@@ -22,18 +22,15 @@ import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (~>), (:=))
 import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..))
 import Data.Foldable (foldMap)
-import Data.List ((:), List(..))
-import Data.List as List
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.String as Str
 import Data.Tuple (Tuple(..), lookup)
-import Data.URI as URI
-import Data.URI.AbsoluteURI as AbsoluteURI
+import Quasar.Data.URI as URI
 import Quasar.Types (Vars)
 import SqlSquared (SqlQuery)
 import SqlSquared as Sql
-import Text.Parsing.Parser (ParseError(..))
+import Text.Parsing.Parser (ParseError(..), runParser)
 import Text.Parsing.Parser.Pos (Position(..))
 
 type Config =
@@ -43,33 +40,33 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = AbsoluteURI.print (toURI config)
+  let uri = URI.qAbsoluteURI.print (toURI config)
   in "view" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< AbsoluteURI.parse
+  <=< lmap show <<< flip runParser URI.qAbsoluteURI.parser
   <=< (_ .? "connectionUri")
   <=< (_ .? "view")
   <=< decodeJson
 
-toURI ∷ Config → URI.AbsoluteURI
+toURI ∷ Config → URI.QAbsoluteURI
 toURI { query, vars } =
   URI.AbsoluteURI
-    (Just uriScheme)
-    (URI.HierarchicalPart Nothing Nothing)
-    (Just (URI.Query props))
+    (uriScheme)
+    (URI.HierarchicalPartNoAuth Nothing)
+    (Just (URI.QueryPairs props))
   where
-  props ∷ List (Tuple String (Maybe String))
+  props ∷ Array (Tuple String (Maybe String))
   props
-    = Tuple "q" (Just $ Sql.printQuery query)
-    : (bimap ("var." <> _) Just <$> SM.toUnfoldable vars)
+    = [ Tuple "q" (Just $ Sql.printQuery query) ]
+    <> (bimap ("var." <> _) Just <$> SM.toUnfoldable vars)
 
-fromURI ∷ URI.AbsoluteURI → Either String Config
+fromURI ∷ URI.QAbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme _ query) = do
-  unless (scheme == Just uriScheme) $ Left "Expected 'sql2' URL scheme"
-  let queryMap = maybe List.Nil (\(URI.Query q) → q) query
+  unless (scheme == uriScheme) $ Left "Expected 'sql2' URL scheme"
+  let queryMap = maybe [] (\(URI.QueryPairs q) → q) query
   query' ← maybe (Left "Expected 'q' query variable") pure (extractQuery queryMap)
   q ← Sql.parseQuery query' # lmap \(ParseError err (Position { line , column })) →
     "Expected 'q' query variable to contain valid query, " <> "but at line "
@@ -78,11 +75,11 @@ fromURI (URI.AbsoluteURI scheme _ query) = do
   pure { query: q, vars }
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.Scheme "sql2"
+uriScheme = URI.unsafeSchemaFromString "sql2"
 
-extractQuery ∷ List (Tuple String (Maybe String)) → Maybe String
+extractQuery ∷ Array (Tuple String (Maybe String)) → Maybe String
 extractQuery= join <<< lookup "q"
 
-extractVar ∷ Tuple String (Maybe String) → List (Tuple String String)
-extractVar (Tuple key val) = maybe Nil List.singleton $
+extractVar ∷ Tuple String (Maybe String) → Array (Tuple String String)
+extractVar (Tuple key val) = maybe [] pure $
   Tuple <$> Str.stripPrefix (Str.Pattern "var.") key <*> val

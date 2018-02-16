@@ -21,29 +21,24 @@ module Quasar.Mount.MongoDB
   , fromJSON
   , toURI
   , fromURI
-  , module Exports
   ) where
 
 import Prelude
 
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
-import Data.Array as Arr
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Foldable (null)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
-import Data.NonEmpty (NonEmpty(..), oneOf)
 import Data.Path.Pathy as P
 import Data.StrMap as SM
-import Data.URI as URI
-import Data.URI.AbsoluteURI as AbsoluteURI
-import Quasar.Mount.Common (Host, Credentials(..)) as Exports
-import Quasar.Mount.Common (Host, Credentials, combineCredentials, extractCredentials)
+import Quasar.Data.URI as URI
 import Quasar.Types (AnyPath)
+import Text.Parsing.Parser (runParser)
 
-newtype Auth = Auth { path ∷ AnyPath, credentials ∷ Credentials }
+newtype Auth = Auth { path ∷ AnyPath, credentials ∷ URI.UserPassInfo }
 
 derive instance newtypeAuth ∷ Newtype Auth _
 derive instance eqAuth ∷ Eq Auth
@@ -54,59 +49,53 @@ instance showAuth ∷ Show Auth where
     "(Auth { path: " <> show path <> ", credentials: " <> show credentials <> " })"
 
 type Config =
-  { hosts ∷ NonEmpty Array Host
+  { hosts ∷ URI.QURIHost
+  -- { hosts ∷ NonEmpty Array Host
   , auth ∷ Maybe Auth
   , props ∷ SM.StrMap (Maybe String)
   }
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = AbsoluteURI.print (toURI config)
+  let uri = URI.qAbsoluteURI.print (toURI config)
   in "mongodb" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< AbsoluteURI.parse
+  <=< lmap show <<< flip runParser URI.qAbsoluteURI.parser
   <=< (_ .? "connectionUri")
   <=< (_ .? "mongodb")
   <=< decodeJson
 
-toURI ∷ Config → URI.AbsoluteURI
+toURI ∷ Config → URI.QAbsoluteURI
 toURI { hosts, auth, props } =
   URI.AbsoluteURI
-    (Just uriScheme)
-    (URI.HierarchicalPart
-      (Just
-        (URI.Authority
-          (combineCredentials <<< _.credentials <<< unwrap <$> auth)
-          (oneOf hosts)))
+    uriScheme
+    (URI.HierarchicalPartAuth
+      (URI.Authority
+        (_.credentials <<< unwrap <$> auth)
+        hosts)
       (map (_.path <<< unwrap) auth <|> Just (Left P.rootDir)))
     (if null props
       then Nothing
-      else Just (URI.Query (SM.toUnfoldable props)))
+      else Just (URI.QueryPairs (SM.toUnfoldable props)))
 
 
-fromURI ∷ URI.AbsoluteURI → Either String Config
-fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
-  unless (scheme == Just uriScheme) $ Left "Expected 'mongodb' URL scheme"
-  hosts ← extractHosts auth
-  auth' ← case extractCredentials auth, path of
-    Just credentials, Just p → pure $ Just (Auth { path: p, credentials })
+fromURI ∷ URI.QAbsoluteURI → Either String Config
+fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartNoAuth _) _) = do
+  Left "Expected 'auth' part in URI"
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority credentials hosts) path) query) = do
+  unless (scheme == uriScheme) $ Left "Expected 'mongodb' URL scheme"
+  auth' ← case credentials, path of
+    Just c, Just p → pure $ Just (Auth { path: p, credentials: c })
     Nothing, Nothing → pure $ Nothing
     Just _, Nothing → Left "User credentials were specified, but no auth database"
     Nothing, Just p
       | p /= Left P.rootDir → Left "An auth database was specified, but no user credentials"
       | otherwise → pure $ Nothing
-  let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
+  let props = maybe SM.empty (\(URI.QueryPairs qs) → SM.fromFoldable qs) query
   pure { hosts, auth: auth', props }
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.Scheme "mongodb"
-
-extractHosts ∷ Maybe URI.Authority → Either String (NonEmpty Array Host)
-extractHosts = maybe err Right <<< (toNonEmpty <=< map getHosts)
-  where
-  getHosts (URI.Authority _ hs) = hs
-  toNonEmpty hs = NonEmpty <$> Arr.head hs <*> Arr.tail hs
-  err = Left "Host list must not be empty"
+uriScheme = URI.unsafeSchemaFromString "mongodb"

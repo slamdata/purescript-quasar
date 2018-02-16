@@ -21,8 +21,9 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Either (Either(..))
-import Data.Maybe (Maybe)
-import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
+import Data.Maybe (Maybe, maybe)
+import Data.Path.Pathy (Dir, File, Name, dir, file, pathName, (</>))
+import Data.String.NonEmpty (fromString)
 import Quasar.FS.Mount as Mount
 import Quasar.Types (AnyPath, FilePath, DirPath)
 
@@ -44,7 +45,8 @@ fromJSON parent json
   = Mount <$> Mount.fromJSON parent json
   <|> do
     obj ← decodeJson json
-    name ← obj .? "name"
+    name' ← obj .? "name"
+    name <- maybe (Left "empty name") Right $ fromString name'
     obj .? "type" >>= case _ of
       "directory" → Right $ Directory (parent </> dir name)
       "file" → Right $ File (parent </> file name)
@@ -55,5 +57,5 @@ getPath (File p) = Right p
 getPath (Directory p) = Left p
 getPath (Mount m) = Mount.getPath m
 
-getName ∷ QResource → Either (Maybe DirName) FileName
+getName ∷ QResource → Either (Maybe (Name Dir)) (Name File)
 getName = pathName <<< getPath

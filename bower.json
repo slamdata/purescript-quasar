@@ -25,8 +25,10 @@
     "purescript-nonempty": "^4.1.1",
     "purescript-numbers": "^5.0.0",
     "purescript-oidc-crypt-utils": "^7.0.1",
-    "purescript-pathy": "^4.1.0",
-    "purescript-uri": "^4.2.3",
+    "purescript-pathy": "safareli/purescript-pathy#refactor",
+    "purescript-string-parsers": "^3.0.0",
+    "purescript-strings": "^3.5.0",
+    "purescript-uri": "garyb/purescript-uri#next",
     "purescript-sql-squared": "^0.10.0",
     "purescript-const": "^3.2.0"
   },
@@ -39,5 +41,8 @@
     "purescript-quickcheck": "^4.6.1",
     "purescript-quasar-test-starter": "slamdata/quasar-test-starter#^1.0.0",
     "purescript-quickcheck-laws": "^3.0.1"
+  },
+  "resolutions": {
+    "purescript-pathy": "refactor"
   }
 }

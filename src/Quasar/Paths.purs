@@ -16,31 +16,33 @@ limitations under the License.
 
 module Quasar.Paths where
 
-import Data.Path.Pathy (RelDir, RelFile, Sandboxed, file, dir, (</>))
+import Data.Path.Pathy (RelDir, RelFile, Sandboxed, (</>))
+import Data.Symbol (SProxy(..))
+import Quasar.Internal (file_, dir_)
 
 upload ∷ RelFile Sandboxed
-upload = file "upload"
+upload = file_ (SProxy :: SProxy "upload")
 
 metadata ∷ RelDir Sandboxed
-metadata = dir "metadata" </> dir "fs"
+metadata = dir_ (SProxy :: SProxy "metadata") </> dir_ (SProxy :: SProxy "fs")
 
 metastore ∷ RelFile Sandboxed
-metastore = file "metastore"
+metastore = file_ (SProxy :: SProxy "metastore")
 
 mount ∷ RelDir Sandboxed
-mount = dir "mount" </> dir "fs"
+mount = dir_ (SProxy :: SProxy "mount") </> dir_ (SProxy :: SProxy "fs")
 
 data_ ∷ RelDir Sandboxed
-data_ = dir "data" </> dir "fs"
+data_ = dir_ (SProxy :: SProxy "data") </> dir_ (SProxy :: SProxy "fs")
 
 query ∷ RelDir Sandboxed
-query = dir "query" </> dir "fs"
+query = dir_ (SProxy :: SProxy "query") </> dir_ (SProxy :: SProxy "fs")
 
 compile ∷ RelDir Sandboxed
-compile = dir "compile" </> dir "fs"
+compile = dir_ (SProxy :: SProxy "compile") </> dir_ (SProxy :: SProxy "fs")
 
 serverInfo ∷ RelFile Sandboxed
-serverInfo = dir "server" </> file "info"
+serverInfo = dir_ (SProxy :: SProxy "server") </> file_ (SProxy :: SProxy "info")
 
 invoke ∷ RelDir Sandboxed
-invoke = dir "invoke" </> dir "fs"
+invoke = dir_ (SProxy :: SProxy "invoke") </> dir_ (SProxy :: SProxy "fs")

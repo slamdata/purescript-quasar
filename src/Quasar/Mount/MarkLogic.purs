@@ -21,7 +21,6 @@ module Quasar.Mount.MarkLogic
   , fromJSON
   , toURI
   , fromURI
-  , module Exports
   ) where
 
 import Prelude
@@ -29,20 +28,17 @@ import Prelude
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.List as L
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
-import Data.URI as URI
-import Data.URI.AbsoluteURI as AbsoluteURI
-import Quasar.Mount.Common (Host, Credentials(..)) as Exports
-import Quasar.Mount.Common (Host, Credentials, combineCredentials, extractCredentials, extractHost)
+import Quasar.Data.URI as URI
 import Quasar.Types (AnyPath)
+import Text.Parsing.Parser (runParser)
 
 type Config =
-  { host ∷ Host
+  { host ∷ URI.QURIHost
   , path ∷ Maybe AnyPath
-  , credentials ∷ Maybe Credentials
+  , credentials ∷ Maybe URI.UserPassInfo
   , format ∷ Format
   }
 
@@ -60,39 +56,36 @@ instance showFormat ∷ Show Format where
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = AbsoluteURI.print (toURI config)
+  let uri = URI.qAbsoluteURI.print (toURI config)
   in "marklogic" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< AbsoluteURI.parse
+  <=< lmap show <<< flip runParser URI.qAbsoluteURI.parser
   <=< (_ .? "connectionUri")
   <=< (_ .? "marklogic")
   <=< decodeJson
 
-toURI ∷ Config → URI.AbsoluteURI
+toURI ∷ Config → URI.QAbsoluteURI
 toURI { host, path, credentials, format } =
   URI.AbsoluteURI
-    (Just uriScheme)
-    (URI.HierarchicalPart (Just (URI.Authority (combineCredentials <$> credentials) (pure host))) path)
-    (Just (URI.Query props))
+    uriScheme
+    (URI.HierarchicalPartAuth (URI.Authority credentials host) path)
+    (Just (URI.QueryPairs [ (Tuple "format" (Just formatStr)) ]))
   where
-  props ∷ L.List (Tuple String (Maybe String))
-  props = L.singleton (Tuple "format" (Just formatStr))
-
   formatStr ∷ String
   formatStr = case format of
     JSON → "json"
     XML  → "xml"
 
-fromURI ∷ URI.AbsoluteURI → Either String Config
-fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
-  unless (scheme == Just uriScheme) $ Left "Expected 'xcc' URL scheme"
-  host ← extractHost auth
+fromURI ∷ URI.QAbsoluteURI → Either String Config
+fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartNoAuth _) _) = do
+  Left "Expected 'auth' part in URI"
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority credentials host) path) query) = do
+  unless (scheme == uriScheme) $ Left "Expected 'xcc' URL scheme"
   let
-    credentials = extractCredentials auth
-    props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
+    props = maybe SM.empty (\(URI.QueryPairs qs) → SM.fromFoldable qs) query
   format ← case join $ SM.lookup "format" props of
     Nothing → pure XML
     Just "xml" → pure XML
@@ -101,4 +94,4 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
   pure { host, path, credentials, format}
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.Scheme "xcc"
+uriScheme = URI.unsafeSchemaFromString "xcc"

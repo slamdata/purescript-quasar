@@ -28,7 +28,7 @@ import Quasar.Mount.MongoDB as MDB
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MDB.Config
 genConfig =
   { hosts: _, auth: _, props: _ }
-    <$> GenC.genNonEmpty genHost
+    <$> genHost
     <*> GenC.genMaybe genAuth
     <*> SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
 

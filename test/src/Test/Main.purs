@@ -38,8 +38,9 @@ import Data.Path.Pathy (rootDir, dir, file, (</>))
 import Data.Posix.Signal (Signal(SIGTERM))
 import Data.StrMap as SM
 import Data.String as Str
+import Data.Symbol (SProxy(..))
+import Data.These (These(..))
 import Data.Tuple (Tuple(..))
-import Data.URI as URI
 import Network.HTTP.Affjax (AJAX)
 import Node.ChildProcess as CP
 import Node.Encoding (Encoding(..))
@@ -51,6 +52,8 @@ import Partial.Unsafe (unsafePartial)
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..))
 import Quasar.Data.Json as Json
+import Quasar.Data.URI as URI
+import Quasar.Internal (dir_, file_)
 import Quasar.Mount (MountConfig(..))
 import Quasar.QuasarF (QuasarF, QError(..))
 import Quasar.QuasarF as QF
@@ -76,8 +79,8 @@ run pred qf = do
 config ∷ Config ()
 config =
   { basePath: Left
-    { scheme: URI.Scheme "http"
-    , authority: Just (URI.Authority Nothing [Tuple (URI.NameAddress "localhost") (Just (URI.Port 53174))])
+    { scheme: URI.unsafeSchemaFromString "http"
+    , authority: Just (URI.Authority Nothing [Both (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") (URI.unsafePortFromInt 53174)])
     , path: rootDir
     }
   , idToken: Nothing
@@ -209,16 +212,16 @@ main = void $ runAff (const (pure unit)) $ jumpOutOnError do
 
   where
   testDbAnyDir = rootDir
-  nonexistant = rootDir </> file "nonexistant"
-  testFile1 = rootDir </> file "test1"
-  testFile2Dir = rootDir </> dir "subdir"
-  testFile2 = testFile2Dir </> file "test2"
-  testFile3Dir = rootDir </> dir "what"
-  testFile3 = testFile3Dir </> file "test2"
-  testMount = rootDir </> file "testMount"
-  testMount2 = rootDir </> file "testMount2"
-  testMount3 = rootDir </> dir "testMount3" </> dir ""
-  testProcess = rootDir </> dir "testMount3" </> file "test"
+  nonexistant = rootDir </> file_ (SProxy :: SProxy "nonexistant")
+  testFile1 = rootDir </> file_ (SProxy :: SProxy "test1")
+  testFile2Dir = rootDir </> dir_ (SProxy :: SProxy "subdir")
+  testFile2 = testFile2Dir </> file_ (SProxy :: SProxy "test2")
+  testFile3Dir = rootDir </> dir_ (SProxy :: SProxy "what")
+  testFile3 = testFile3Dir </> file_ (SProxy :: SProxy "test2")
+  testMount = rootDir </> file_ (SProxy :: SProxy "testMount")
+  testMount2 = rootDir </> file_ (SProxy :: SProxy "testMount2")
+  testMount3 = rootDir </> dir_ (SProxy :: SProxy "testMount3")
+  testProcess = rootDir </> dir_ (SProxy :: SProxy "testMount3") </> file_ (SProxy :: SProxy "test")
 
   isNotFound ∷ ∀ a. Either QError a → Boolean
   isNotFound e = case e of

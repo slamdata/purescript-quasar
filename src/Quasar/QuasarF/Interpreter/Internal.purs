@@ -42,26 +42,25 @@ import Data.Either (Either(..), either)
 import Data.Foldable (oneOf)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
-import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (mempty)
-import Data.Path.Pathy (Abs, AnyPath, Path, Rel, RelDir, RelPath, Sandboxed, dir, file, relativeTo, rootDir, unsandbox, (</>))
+import Data.Path.Pathy (class SplitDirOrFile, Abs, AnyPath, Path, Rel, RelDir, RelPath, Sandboxed, Unsandboxed, relativify, (</>))
+
 import Data.StrMap as SM
 import Data.String as Str
 import Data.Tuple (Tuple(..))
-import Data.URI as URI
-import Data.URI.URIRef as URIRef
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
 import Quasar.ConfigF as CF
+import Quasar.Data.URI as URI
 import Quasar.QuasarF (Pagination, QError(..), PDFError(..), UnauthorizedDetails(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
-import Unsafe.Coerce (unsafeCoerce)
 
 type AXFP = AXF.AffjaxFP RequestContent String
+type AjaxM r a = Free (Coproduct (CF.ConfigF (Config r)) AXFP) a
 
 ask ∷ ∀ c r. Free (Coproduct (CF.ConfigF c) r) c
 ask = liftF $ left $ CF.GetConfig id
@@ -75,13 +74,15 @@ strResult = Right
 unitResult ∷ String → Either Error Unit
 unitResult = const (Right unit)
 
-toVarParams ∷ SM.StrMap String → URI.Query
-toVarParams = URI.Query <<< map (bimap ("var." <> _) Just) <<< SM.toUnfoldable
+toVarParams ∷ SM.StrMap String → URI.QQuery
+toVarParams = URI.QueryPairs <<< map (bimap ("var." <> _) Just) <<< SM.toUnfoldable
 
-toPageParams ∷ Maybe Pagination → URI.Query
+toPageParams ∷ Maybe Pagination → URI.QQuery
 toPageParams Nothing = mempty
-toPageParams (Just { offset, limit })
-  = URI.Query $ Tuple "offset" (Just (show offset)) : Tuple "limit" (Just (show limit)) : Nil
+toPageParams (Just { offset, limit }) = URI.QueryPairs
+  [ Tuple "offset" (Just (show offset))
+  , Tuple "limit" (Just (show limit))
+  ]
 
 defaultRequest ∷ AX.AffjaxRequest RequestContent
 defaultRequest = AX.defaultRequest { content = Nothing }
@@ -96,53 +97,57 @@ delete ∷ AX.URL → AXF.AffjaxF RequestContent String
 delete u = AXF.affjax (defaultRequest { method = Left DELETE, url = u })
 
 mkFSUrl
-  ∷ ∀ s s' r
-  . RelDir s
-  → AnyPath Abs s'
-  → URI.Query
-  → Free (Coproduct (CF.ConfigF (Config r)) AXFP) String
+  ∷ ∀ r
+  . RelDir Sandboxed
+  → AnyPath Abs Sandboxed
+  → URI.QQuery
+  → AjaxM r String
 mkFSUrl relDir fsPath q = do
-  uri ← URIRef.print <$> mkFSUrl' relDir fsPath q
+  uri ← URI.qURIRef.print <$> mkFSUrl' relDir fsPath q
   pure uri
 
 mkFSUrl'
-  ∷ ∀ s s' r
-  . RelDir s
-  → AnyPath Abs s'
-  → URI.Query
-  → Free (Coproduct (CF.ConfigF (Config r)) AXFP) URI.URIRef
-mkFSUrl' relDir fsPath = mkUrl' (bimap (baseify (dir "/")) (baseify (file "")) fsPath)
+  ∷ ∀ r
+  . RelDir Sandboxed
+  → AnyPath Abs Sandboxed
+  → URI.QQuery
+  → AjaxM r URI.QURIRef
+mkFSUrl' relDir fsPath = mkUrl' (bimap baseify baseify fsPath)
   where
-    baseify ∷ ∀ b. Path Rel b s → Path Abs b s' → Path Rel b s
-    baseify x p = relDir </> fromMaybe x (p `relativeTo` rootDir)
+    baseify ∷ ∀ b. SplitDirOrFile b => Path Abs b Sandboxed → Path Rel b Sandboxed
+    baseify p = relDir </> relativify p
 
-mkUrl ∷ ∀ s r. RelPath s → URI.Query → Free (Coproduct (CF.ConfigF (Config r)) AXFP) String
-mkUrl relPath q = URIRef.print <$> mkUrl' relPath q
+mkUrl ∷ ∀ s r. RelPath Sandboxed → URI.QQuery → AjaxM r String
+mkUrl relPath q = URI.qURIRef.print <$> mkUrl' relPath q
 
-mkUrl' ∷ ∀ s r. RelPath s → URI.Query → Free (Coproduct (CF.ConfigF (Config r)) AXFP) URI.URIRef
+mkUrl' ∷ ∀ s r. RelPath Sandboxed → URI.QQuery → AjaxM r URI.QURIRef
 mkUrl' relPath q = do
   { basePath } ← ask
   pure (bimap toURI toRelativeRef basePath)
   where
     toURI { scheme, authority, path } =
       URI.URI
-        (Just scheme)
-        (URI.HierarchicalPart
-          authority
-          (Just (bimap ((path </> _) <<< sandbox) ((path </> _) <<< sandbox) relPath)))
+        scheme
+        (case authority of
+          Nothing ->
+            URI.HierarchicalPartNoAuth 
+              (Just (bimap (path </> _) (path </> _) relPath))
+          Just authority' -> 
+            URI.HierarchicalPartAuth 
+              authority'
+              (Just (bimap (path </> _) (path </> _) relPath))
+        )
         (if q == mempty then Nothing else Just q)
         Nothing
 
-    sandbox ∷ ∀ a b. Path a b s → Path a b Sandboxed
-    sandbox = unsafeCoerce
-
-    toRelativeRef relDir =
+    toRelativeRef :: RelDir Unsandboxed -> URI.QRelativeRef
+    toRelativeRef relDir = 
       URI.RelativeRef
-        (URI.RelativePart
-          Nothing
-          (Just (bimap ((relDir </> _) <<< unsandbox) ((relDir </> _) <<< unsandbox) relPath)))
+        (URI.RelativePartNoAuth
+          (Just $ Right (bimap (relDir </> _) (relDir </> _) relPath)))
         (if q == mempty then Nothing else Just q)
         Nothing
+
 
 mkRequest
   ∷ ∀ a l

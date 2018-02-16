@@ -2,7 +2,7 @@
 Copyright 2017 SlamData, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
+you may not use this file_ except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
@@ -16,31 +16,38 @@ limitations under the License.
 
 module Quasar.Advanced.Paths where
 
-import Data.Path.Pathy (RelDir, RelFile, Sandboxed, file, dir, (</>))
+import Data.Path.Pathy (RelDir, RelFile, Sandboxed, (</>))
+import Data.Symbol (SProxy(..))
+import Quasar.Internal (dir_, file_)
 
 oidcProviders ∷ RelFile Sandboxed
-oidcProviders = dir "security" </> dir "oidc" </> file "providers"
+oidcProviders = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "oidc") </> file_ (SProxy :: SProxy "providers")
 
 token ∷ RelDir Sandboxed
-token = dir "security" </> dir "token"
+token = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "token")
 
 group ∷ RelDir Sandboxed
-group = dir "security" </> dir "group"
+group = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "group")
 
 permission ∷ RelDir Sandboxed
-permission = dir "security" </> dir "permission"
+permission = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "permission")
+
+children ∷ RelFile Sandboxed
+children = file_ (SProxy :: SProxy "children")
 
 authority ∷ RelDir Sandboxed
-authority = dir "security" </> dir "authority"
+authority = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "authority")
 
 licenseInfo ∷ RelFile Sandboxed
-licenseInfo = dir "server" </> file "licenseInfo"
+licenseInfo = dir_ (SProxy :: SProxy "server") </> file_ (SProxy :: SProxy "licenseInfo")
 
 licensee ∷ RelFile Sandboxed
-licensee = dir "server" </> file "licensee"
+licensee = dir_ (SProxy :: SProxy "server") </> file_ (SProxy :: SProxy "licensee")
 
 pdfInfo ∷ RelFile Sandboxed
-pdfInfo = dir "service" </> dir "pdf" </> file "info"
+pdfInfo = dir_ (SProxy :: SProxy "service") </> dir_ (SProxy :: SProxy "pdf") </> file_ (SProxy :: SProxy "info")
 
 generatePdf ∷ RelFile Sandboxed
-generatePdf = dir "service" </> dir "pdf" </> file "generate"
+generatePdf = dir_ (SProxy :: SProxy "service") </> dir_ (SProxy :: SProxy "pdf") </> file_ (SProxy :: SProxy "generate")
+
+

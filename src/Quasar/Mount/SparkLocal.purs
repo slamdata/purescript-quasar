@@ -19,22 +19,22 @@ module Quasar.Mount.SparkLocal
   , toJSON
   , fromJSON
   , parseDirPath
-  , module Exports
   ) where
 
 import Prelude
-import Data.Path.Pathy as P
+
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Either (Either(..))
 import Data.Maybe (Maybe, maybe)
-import Data.Path.Pathy (Abs, Dir, Path, Sandboxed, Unsandboxed, (</>))
-import Quasar.Mount.Common (Host) as Exports
+import Data.Path.Pathy (class SplitDirOrFile, Abs, Dir, Path, Sandboxed, Unsandboxed, (</>))
+import Data.Path.Pathy as P
 
 type Config = Path Abs Dir Sandboxed
 
 sandbox
   ∷ forall a
-  . Path Abs a Unsandboxed
+  . SplitDirOrFile a
+  =>  Path Abs a Unsandboxed
   → Maybe (Path Abs a Sandboxed)
 sandbox =
   map (P.rootDir </> _) <<< P.sandbox P.rootDir

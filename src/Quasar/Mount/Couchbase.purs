@@ -20,7 +20,6 @@ module Quasar.Mount.Couchbase
   , fromJSON
   , toURI
   , fromURI
-  , module Exports
   ) where
 
 import Prelude
@@ -28,23 +27,21 @@ import Prelude
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
-import Data.List as L
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Newtype (un)
 import Data.Number as Num
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as P
 import Data.StrMap as SM
+import Data.String.NonEmpty (NonEmptyString)
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
-import Data.URI as URI
-import Data.URI.AbsoluteURI as AbsoluteURI
-import Quasar.Mount.Common (Host) as Exports
-import Quasar.Mount.Common (Host, extractHost)
+import Quasar.Data.URI as URI
+import Text.Parsing.Parser (runParser)
 
 type Config =
-  { host ∷ Host
-  , bucketName ∷ String
+  { host ∷ URI.QURIHost
+  , bucketName ∷ Maybe NonEmptyString
   , password ∷ String
   , docTypeKey ∷ String
   , queryTimeout ∷ Maybe Seconds
@@ -52,43 +49,54 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = AbsoluteURI.print (toURI config)
+  let uri = URI.qAbsoluteURI.print (toURI config)
   in "couchbase" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< AbsoluteURI.parse
+  <=< lmap show <<< flip runParser URI.qAbsoluteURI.parser
   <=< (_ .? "connectionUri")
   <=< (_ .? "couchbase")
   <=< decodeJson
 
-toURI ∷ Config → URI.AbsoluteURI
+toURI ∷ Config → URI.QAbsoluteURI
 toURI { host, bucketName, password, docTypeKey, queryTimeout } =
   URI.AbsoluteURI
-    (Just uriScheme)
-    (URI.HierarchicalPart
-      (Just (URI.Authority Nothing (pure host)))
-      (Just (Right (P.rootDir </> P.file bucketName))))
-    (Just (URI.Query props))
+    uriScheme
+    hierarchicalPart
+    (Just (URI.QueryPairs props))
   where
-  props ∷ L.List (Tuple String (Maybe String))
-  props = L.Nil
-    <> pure (Tuple "password" (Just password))
-    <> pure (Tuple "docTypeKey" (Just docTypeKey))
-    <> maybe L.Nil (pure <<< Tuple "queryTimeoutSeconds" <<< Just <<< show <<< un Seconds) queryTimeout
+  hierarchicalPart :: URI.QHierarchicalPart
+  hierarchicalPart =
+    URI.HierarchicalPartAuth
+      authority
+      (case bucketName of
+        Nothing -> Just $ Left P.rootDir
+        Just n -> Just $ Right $ P.rootDir </> P.file n
+      )
 
-fromURI ∷ URI.AbsoluteURI → Either String Config
-fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
-  unless (scheme == Just uriScheme) $ Left "Expected 'couchbase' URL scheme"
-  host ← extractHost auth
+  authority :: URI.QAuthority
+  authority = URI.Authority Nothing host
+
+  props ∷ Array (Tuple String (Maybe String))
+  props =
+    [ Tuple "password" (Just password)
+    , Tuple "docTypeKey" (Just docTypeKey)
+    ] <> maybe [] (pure <<< Tuple "queryTimeoutSeconds" <<< Just <<< show <<< un Seconds) queryTimeout
+
+fromURI ∷ URI.QAbsoluteURI → Either String Config
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartNoAuth path) query) = 
+  Left "Expected 'auth' part in URI"
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ host) path) query) = do
+  unless (scheme == uriScheme) $ Left "Expected 'couchbase' URL scheme"
   bucketName ← case path of
     Nothing → Left "Path is missing from URL"
     Just (Left p)
-      | p == P.rootDir → pure ""
+      | p == P.rootDir → pure Nothing
       | otherwise → Left "Expected a file path"
-    Just (Right p) → pure $ P.runFileName $ P.fileName p
-  let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
+    Just (Right p) → pure $ Just $ un P.Name $ P.fileName p
+  let props = maybe SM.empty (\(URI.QueryPairs qs) → SM.fromFoldable qs) query
   pure
     { host
     , bucketName
@@ -98,4 +106,5 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth path) query) = do
     }
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.Scheme "couchbase"
+uriScheme = URI.unsafeSchemaFromString "couchbase"
+

@@ -25,15 +25,19 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
 import Data.NonEmpty as NE
+import Data.String.NonEmpty (fromString)
+import Data.These (These(..))
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
-import Data.URI as URI
 import Data.URI.AbsoluteURI as AbsoluteURI
+import Quasar.Data.URI (portFromInt)
+import Quasar.Data.URI as URI
 import Quasar.Mount as QM
 import Quasar.Mount.Couchbase as CB
 import Quasar.Mount.MongoDB as Mongo
 import Test.Assert (ASSERT, assert')
 import Test.Property.Mount.Couchbase as CBT
+import Text.Parsing.Parser (runParser)
 
 main ∷ ∀ eff. Eff (assert ∷ ASSERT, console ∷ CONSOLE | eff) Unit
 main = do
@@ -51,8 +55,8 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost/testBucket?password=&docTypeKey="
       (CBT.TestConfig
-        { host: Tuple (URI.NameAddress "localhost") Nothing
-        , bucketName: "testBucket"
+        { host: [ This (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") ]
+        , bucketName: fromString "testBucket"
         , password: ""
         , docTypeKey: ""
         , queryTimeout: Nothing
@@ -61,16 +65,16 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost:99999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
       (CBT.TestConfig
-        { host: Tuple (URI.NameAddress "localhost") (Just (URI.Port 99999))
-        , bucketName: "testBucket"
+        { host: [Both (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") (URI.unsafePortFromInt 99999)]
+        , bucketName: fromString "testBucket"
         , password: "pass"
         , docTypeKey: "type"
         , queryTimeout: Just (Seconds (20.0))
         })
   let mongoURI =
-        AbsoluteURI.print
+        URI.qAbsoluteURI.print
           (Mongo.toURI
-            { hosts: NE.singleton (Tuple (URI.NameAddress "localhost") (Just (URI.Port 12345)))
+            { hosts: [Both (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") (URI.unsafePortFromInt 12345)]
             , auth: Nothing
             , props: mempty})
   if mongoURI == "mongodb://localhost:12345/"
@@ -81,12 +85,12 @@ testURIParse
   ∷ ∀ a eff
   . Eq a
   ⇒ Show a
-  ⇒ (URI.AbsoluteURI → Either String a)
+  ⇒ (URI.QAbsoluteURI → Either String a)
   → String
   → a
   → Eff (assert :: ASSERT | eff) Unit
 testURIParse fromURI uri expected =
-  case AbsoluteURI.parse uri of
+  case runParser uri URI.qAbsoluteURI.parser of
     Left err → fail $ "Test URI failed to parse as a URI even: \n\n\t" <> uri <> "\n\n\t" <> show err <> "\n\n"
     Right auri →
       case fromURI auri of

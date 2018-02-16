@@ -28,26 +28,26 @@ import Control.Monad.Free (Free)
 import Data.Argonaut (Json, JObject, jsonEmptyObject, (:=), (~>))
 import Data.Array (catMaybes)
 import Data.Bifunctor (lmap)
+import Data.Bitraversable (bitraverse)
 import Data.Either (Either(..), either)
 import Data.Foldable (class Foldable, foldl, foldMap)
 import Data.Functor.Coproduct (Coproduct)
 import Data.HTTP.Method (Method(..))
 import Data.Int as Int
-import Data.List (singleton)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..))
 import Data.MediaType.Common (applicationJSON)
 import Data.Monoid (mempty)
-import Data.Path.Pathy (peel, printPath, rootDir, runDirName, runFileName)
+import Data.Path.Pathy (absolutify, peel, printPath, rootDir, runName, sandbox)
 import Data.StrMap as SM
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.URI as URI
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
 import Quasar.ConfigF as CF
 import Quasar.Data.Json as Json
 import Quasar.Data.MediaTypes (applicationZip)
+import Quasar.Data.URI as URI
 import Quasar.FS.DirMetadata as DirMetadata
 import Quasar.Metastore as Metastore
 import Quasar.Mount as Mount
@@ -142,7 +142,7 @@ eval = case _ of
   InvokeFile mode path vars pagination k → do
     -- We can't use toVarParams here, as the format is different for invokeFile,
     -- instead of var.x=3 it's just x=3
-    url ← mkFSUrl Paths.invoke (Right path) (URI.Query (map Just <$> SM.toUnfoldable vars) <> toPageParams pagination)
+    url ← mkFSUrl Paths.invoke (Right path) (URI.QueryPairs (map Just <$> SM.toUnfoldable vars) <> toPageParams pagination)
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
         { url = url
@@ -162,11 +162,21 @@ eval = case _ of
         })
 
   CreateMount path config mbMaxAge k → do
-    let pathParts = either peel peel path
-        parentDir = maybe rootDir fst pathParts
-        name = maybe "" (either runDirName runFileName <<< snd) pathParts
-        filenameHeader = Tuple "X-File-Name" name
-    url ← mkFSUrl Paths.mount (Left parentDir) (headerParams [filenameHeader])
+    let
+      -- TODO simplify this
+      Tuple parentDir name = case bitraverse peel peel path of
+        Nothing -> Tuple rootDir ""
+        Just (Left (Tuple parentDir name)) -> case sandbox rootDir parentDir of
+          Nothing ->
+            Tuple rootDir "" 
+          Just spd ->
+            Tuple (absolutify spd) (runName name)
+        Just (Right (Tuple parentDir name)) -> case sandbox rootDir parentDir of
+          Nothing ->
+            Tuple rootDir "" 
+          Just spd ->
+            Tuple (absolutify spd) (runName name)
+    url ← mkFSUrl Paths.mount (Left parentDir) (headerParams [Tuple "X-File-Name" name])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
@@ -193,8 +203,8 @@ eval = case _ of
     k <$> mkRequest metastoreResult (get url)
 
   PutMetastore { initialize, metastore } k → do
-    let query = if initialize then URI.Query (singleton (Tuple "initialize" Nothing)) else mempty
-    url ← mkUrl (Right Paths.metastore) query
+    let query = if initialize then [Tuple "initialize" Nothing] else []
+    url ← mkUrl (Right Paths.metastore) (URI.QueryPairs query)
     k <$> (mkRequest unitResult $ put url $ snd (toRequest (Metastore.toJSON metastore)))
 
 
@@ -216,10 +226,10 @@ fileMetaResult = map (\(_ ∷ JObject) → unit) <<< jsonResult
 metastoreResult ∷ String → Either Error (Metastore.Metastore ())
 metastoreResult = lmap error <$> Metastore.fromJSON <=< jsonResult
 
-querySingleton ∷ String → String → URI.Query
-querySingleton k v = URI.Query $ singleton $ Tuple k (Just v)
+querySingleton ∷ String → String → URI.QQuery
+querySingleton k v = URI.QueryPairs [ Tuple k (Just v) ]
 
-headerParams ∷ ∀ f. Foldable f ⇒ f (Tuple String String) → URI.Query
+headerParams ∷ ∀ f. Foldable f ⇒ f (Tuple String String) → URI.QQuery
 headerParams ps = querySingleton "request-headers" (show (foldl go jsonEmptyObject ps))
   where
   go ∷ Json → Tuple String String → Json

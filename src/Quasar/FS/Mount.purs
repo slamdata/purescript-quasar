@@ -24,10 +24,11 @@ import Data.Const (Const(..))
 import Data.Either (Either(..))
 import Data.Eq (class Eq1, eq1)
 import Data.Identity (Identity(..))
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe, maybe)
 import Data.Newtype (unwrap)
 import Data.Ord (class Ord1, compare1)
-import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
+import Data.Path.Pathy (Dir, File, Name, dir, file, pathName, (</>))
+import Data.String.NonEmpty (fromString)
 import Data.TacitString as TS
 import Quasar.Types (AnyPath, DirPath, FilePath)
 
@@ -116,7 +117,8 @@ fromJSON ∷ DirPath → Json → Either String Mount
 fromJSON parent = decodeJson >=> \obj → do
   mount ← obj .? "mount"
   typ ← obj .? "type"
-  name ← obj .? "name"
+  name' ← obj .? "name"
+  name <- maybe (Left "empty name") Right $ fromString name'
   let
     err :: forall a. Either String a
     err = Left $ "Unexpected type '" <> typ <> "' for mount '" <> mount <> "'"
@@ -143,7 +145,7 @@ foldPath onDir onPath = overPath (onDir >>> Const) (onPath >>> Const) >>> unwrap
 getPath ∷ Mount → AnyPath
 getPath = foldPath Left Right
 
-getName ∷ Mount → Either (Maybe DirName) FileName
+getName ∷ Mount → Either (Maybe (Name Dir)) (Name File)
 getName = getPath >>> pathName
 
 typeFromName ∷ String → MountType

@@ -24,7 +24,7 @@ import Data.Functor.Coproduct (Coproduct)
 import Data.Maybe (Maybe(..))
 import Data.Path.Pathy (rootDir)
 import Data.String as String
-import Data.URI as URI
+import Quasar.Data.URI as URI
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
 import Quasar.Advanced.Paths as Paths
@@ -38,7 +38,7 @@ type AXFP = AXF.AffjaxFP RequestContent String
 mkGroupUrl
   ∷ ∀ r
   . GroupPath
-  → URI.Query
+  → URI.QQuery
   → Free (Coproduct (CF.ConfigF (Config r)) AXFP) String
 mkGroupUrl (GroupPath gp) q = do
   url ← mkFSUrl Paths.group (Left gp) q

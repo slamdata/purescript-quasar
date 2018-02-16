@@ -11,6 +11,7 @@ import Data.Newtype as Newtype
 import Data.Path.Pathy ((</>))
 import Data.Path.Pathy as Pt
 import Data.String as Str
+import Data.String.NonEmpty (NonEmptyString, fromString, toString)
 import Data.Traversable (traverse)
 import OIDC.Crypt.JSONWebKey (JSONWebKey)
 import OIDC.Crypt.Types (Issuer(..), ClientId(..))
@@ -159,47 +160,56 @@ instance decodeJsonAction ∷ DecodeJson Action where
     <*> (obj .? "accessType")
     <#> Action
 
-newtype UserId = UserId String
+newtype UserId = UserId NonEmptyString
 
-runUserId ∷ UserId → String
+runUserId ∷ UserId → NonEmptyString
 runUserId (UserId s) = s
 
 derive instance eqUserId ∷ Eq UserId
 derive instance ordUserId ∷ Ord UserId
 
 instance encodeJsonUserId ∷ EncodeJson UserId where
-  encodeJson = encodeJson <<< runUserId
+  encodeJson = encodeNEString <<< runUserId
 
 instance decodeJsonUserId ∷ DecodeJson UserId where
-  decodeJson = map UserId <<< decodeJson
+  decodeJson = map UserId <<< decodeNEString
 
+encodeNEString :: NonEmptyString -> Json
+encodeNEString = encodeJson <<< toString
 
-newtype TokenId = TokenId String
+decodeNEString :: Json -> Either String NonEmptyString
+decodeNEString j = do
+  str <- decodeJson j
+  case fromString str of
+    Nothing -> Left "Expected string to be non empty"
+    Just a -> pure a
 
-runTokenId ∷ TokenId → String
+newtype TokenId = TokenId NonEmptyString
+
+runTokenId ∷ TokenId → NonEmptyString
 runTokenId (TokenId s) = s
 
 derive instance eqTokenId ∷ Eq TokenId
 derive instance ordTokenId ∷ Ord TokenId
 
 instance encodeJsonTokenId ∷ EncodeJson TokenId where
-  encodeJson = runTokenId >>> encodeJson
+  encodeJson = encodeNEString <<< runTokenId
 
 instance decodeJsonTokenId ∷ DecodeJson TokenId where
-  decodeJson = map TokenId <<< decodeJson
+  decodeJson = map TokenId <<< decodeNEString
 
-newtype PermissionId = PermissionId String
-runPermissionId ∷ PermissionId → String
+newtype PermissionId = PermissionId NonEmptyString
+runPermissionId ∷ PermissionId → NonEmptyString
 runPermissionId (PermissionId s) = s
 
 derive instance eqPermissionId ∷ Eq PermissionId
 derive instance ordPermissionId ∷ Ord PermissionId
 
 instance encodeJsonPermissionId ∷ EncodeJson PermissionId where
-  encodeJson = encodeJson <<< runPermissionId
+  encodeJson = encodeNEString <<< runPermissionId
 
 instance decodeJsonPermissionId ∷ DecodeJson PermissionId where
-  decodeJson = map PermissionId <<< decodeJson
+  decodeJson = map PermissionId <<< decodeNEString
 
 
 data GrantedTo
@@ -234,11 +244,15 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
 
     parseUserId ∷ String → Either String UserId
     parseUserId str =
-      Str.stripPrefix (Str.Pattern "user:") str # maybe (Left "Incorrect user") (pure <<< UserId)
+      Str.stripPrefix (Str.Pattern "user:") str
+      >>= fromString 
+      # maybe (Left "Incorrect user") (pure <<< UserId)
 
     parseTokenId ∷ String → Either String TokenId
     parseTokenId str =
-      Str.stripPrefix (Str.Pattern "token:") str # maybe (Left "Incorrect token") (pure <<< TokenId)
+      Str.stripPrefix (Str.Pattern "token:") str
+      >>= fromString 
+      # maybe (Left "Incorrect token") (pure <<< TokenId)
 
 parseGroup ∷ String → Either String GroupPath
 parseGroup string =
@@ -325,7 +339,7 @@ data ShareableSubject
 
 instance encodeJsonShareableSubject ∷ EncodeJson ShareableSubject where
   encodeJson (UserSubject (UserId uid)) =
-    encodeJson $ "user:" <> uid
+    encodeJson $ "user:" <> toString uid
   encodeJson (GroupSubject gpt) =
     encodeJson $ printGroupPath gpt
 
@@ -343,7 +357,7 @@ runShareRequest (ShareRequest r) = r
 
 instance encodeJsonShareRequest ∷ EncodeJson ShareRequest where
   encodeJson (ShareRequest obj) =
-    "subjects" := ((map (append "user:" <<< runUserId) obj.users)
+    "subjects" := ((map (append "user:" <<< toString <<< runUserId) obj.users)
                    <> map (append "group:" <<< printGroupPath) obj.groups)
     ~> "actions" := (map Action $ obj.actions)
     ~> jsonEmptyObject

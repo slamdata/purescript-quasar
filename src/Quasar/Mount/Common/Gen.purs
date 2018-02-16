@@ -24,47 +24,73 @@ import Prelude
 import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common as GenC
-import Control.Monad.Rec.Class (class MonadRec)
+import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
 import Data.Char.Gen as CG
 import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
 import Data.Path.Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
 import Data.String as S
 import Data.String.Gen as SG
-import Data.Tuple (Tuple(..))
-import Data.URI as URI
-import Quasar.Mount.Common (Credentials(..))
-import Quasar.Mount.MongoDB as MDB
+import Data.String.NonEmpty (NonEmptyString, cons)
+import Data.These (These(..))
+import Data.URI.Host.IPv4Address (fromInts) as IPv4Address
+import Quasar.Data.URI as URI
 import Quasar.Types (AnyPath)
 
 genAlphaNumericString ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m String
-genAlphaNumericString = SG.genString $ Gen.oneOf $ CG.genDigitChar :| [CG.genAlpha]
+genAlphaNumericString = SG.genString genAlphaNumericChar
+
+genAlphaNumericNEString ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m NonEmptyString
+genAlphaNumericNEString = cons <$> genAlphaNumericChar <*> SG.genString genAlphaNumericChar
+
+genAlphaNumericChar ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m Char
+genAlphaNumericChar = Gen.oneOf $ CG.genDigitChar :| [CG.genAlpha]
 
 genHostURI ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.Host
 genHostURI = Gen.oneOf $ genIPv4 :| [genName]
   where
-  genIPv4 = do
+  genIPv4 = filtered do
     a ← Gen.chooseInt 1 254
     b ← Gen.chooseInt 1 254
     c ← Gen.chooseInt 1 254
     d ← Gen.chooseInt 1 254
-    pure $ URI.IPv4Address $ S.joinWith "." $ show <$> [a, b, c, d]
-  genName = do
+    pure $ URI.IPv4Address <$> IPv4Address.fromInts a b c d
+  genName = URI.NameAddress <$> genRegName
+  genRegName = filtered do
     head ← S.singleton <$> CG.genAlpha
     tail ← genAlphaNumericString
-    pure $ URI.NameAddress $ head <> tail
+    pure $ URI.regNameFromString $ head <> tail
 
-genPort ∷ ∀ m. MonadGen m ⇒ m URI.Port
-genPort = URI.Port <$> Gen.chooseInt 50000 65535
+genPort ∷ ∀ m. MonadRec m => MonadGen m ⇒ m URI.Port
+genPort = filtered $ URI.portFromInt <$> Gen.chooseInt 50000 65535
 
-genHost ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MDB.Host
-genHost = Tuple <$> genHostURI <*> GenC.genMaybe genPort
+genHost ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHost
+genHost = Gen.unfoldable $ genThese genHostURI genPort
 
-genCredentials ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m Credentials
+genThese ∷ ∀ m a b. MonadGen m ⇒ MonadRec m ⇒ m a -> m b -> m (These a b)
+genThese ma mb = filtered do
+  a' <- GenC.genMaybe ma
+  b' <- GenC.genMaybe mb
+  pure case a', b' of
+    Just a, Just b -> Just $ Both a b
+    Just a, Nothing -> Just $ This a
+    Nothing, Just b -> Just $ That b
+    Nothing, Nothing -> Nothing
+
+genCredentials ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.UserPassInfo
 genCredentials =
-  Credentials <$> ({ user: _, password: _ }
+  URI.UserPassInfo <$> ({ user: _, password: _ }
     <$> genAlphaNumericString
-    <*> Gen.choose (pure "") genAlphaNumericString)
+    <*> Gen.choose (pure Nothing) (Just <$> genAlphaNumericString))
 
 genAnyPath ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m AnyPath
 genAnyPath = Gen.oneOf $ (Left <$> PGen.genAbsDirPath) :| [Right <$> PGen.genAbsFilePath]
+
+filtered :: forall m a. MonadRec m => MonadGen m => m (Maybe a) -> m a
+filtered gen = tailRecM go unit
+  where
+  go :: Unit -> m (Step Unit a)
+  go _ = gen <#> \a -> case a of
+    Nothing -> Loop unit
+    Just a -> Done a
