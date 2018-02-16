@@ -150,8 +150,7 @@ opts =
   printPath = bimap Py.viewDir Py.viewFile >>>case _ of
     Left d ->
       URI.Path
-        $ fromFoldable d 
-        <#> Py.runName >>> segmentFromString
+        $ (fromFoldable d <#> Py.runName >>> segmentFromString) <> [ segmentFromString "" ]
     Right (Tuple d n) -> 
       URI.Path
       $ (fromFoldable d <#> asSegment) <> [asSegment n]
@@ -185,7 +184,7 @@ opts =
     Left Nil -> PathAbsolute.PathAbsolute Nothing
     Left (Cons head tail) -> PathAbsolute.PathAbsolute $ Just
       $ Tuple (asSegmentNZ head)
-      $ (asSegment <$> fromFoldable tail)
+      $ (asSegment <$> fromFoldable tail) <> [ segmentFromString "" ]
     Right (Tuple d n) -> case d of
       Nil -> PathAbsolute.PathAbsolute $ Just $ Tuple (asSegmentNZ n) []
       Cons head tail -> PathAbsolute.PathAbsolute
@@ -197,9 +196,10 @@ opts =
   _printRelPath = bimap Py.viewDirUnsandboxed Py.viewFileUnsandboxed >>> case _ of
     Left Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString "./") []
     Left (Cons head tail) ->
-    PathNoScheme.PathNoScheme
-      $ Tuple (unsafeSegmentNZNCFromString $ maybe "../" Py.runName head)
-      $ (segmentFromString <<< maybe "../" Py.runName <$> fromFoldable tail)
+      PathNoScheme.PathNoScheme
+        $ Tuple (unsafeSegmentNZNCFromString $ maybe "../" Py.runName head)
+        $ (segmentFromString <<< maybe "../" Py.runName <$> fromFoldable tail) <> [ segmentFromString "" ]
+
     Right (Tuple d n) -> case d of
       Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString $ Py.runName n) []
       Cons head tail -> PathNoScheme.PathNoScheme
