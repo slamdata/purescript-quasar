@@ -24,13 +24,9 @@ import Data.Argonaut.Parser as JP
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
-import Data.NonEmpty as NE
 import Data.String.NonEmpty (fromString)
 import Data.These (These(..))
 import Data.Time.Duration (Seconds(..))
-import Data.Tuple (Tuple(..))
-import Data.URI.AbsoluteURI as AbsoluteURI
-import Quasar.Data.URI (portFromInt)
 import Quasar.Data.URI as URI
 import Quasar.Mount as QM
 import Quasar.Mount.Couchbase as CB
