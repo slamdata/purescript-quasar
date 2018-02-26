@@ -5,18 +5,18 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, JString, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..))
+import Data.Either (Either(..), note)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Newtype as Newtype
-import Data.Path.Pathy ((</>))
-import Data.Path.Pathy as Pt
 import Data.String as Str
 import Data.String.NonEmpty (NonEmptyString, fromString, toString)
 import Data.Traversable (traverse)
 import OIDC.Crypt.JSONWebKey (JSONWebKey)
 import OIDC.Crypt.Types (Issuer(..), ClientId(..))
+import Pathy (rootDir)
+import Quasar.Types (DirPath, FilePath, parseQDirPath, parseQFilePath, printQPath)
 
-newtype GroupPath = GroupPath (Pt.AbsDir Pt.Sandboxed)
+newtype GroupPath = GroupPath DirPath
 
 derive instance eqGroupPath ∷ Eq GroupPath
 derive instance ordGroupPath ∷ Ord GroupPath
@@ -28,13 +28,13 @@ printGroupPath gp =
     dir = Newtype.un GroupPath gp
   in
    -- TODO(Christoph): Get rid of this once quasar treats Groups as directories
-    if dir == Pt.rootDir
-    then Pt.printPath dir
-    else fromMaybe "/" (Str.stripSuffix (Str.Pattern "/") (Pt.printPath dir))
+    if dir == rootDir
+    then printQPath dir
+    else fromMaybe "/" (Str.stripSuffix (Str.Pattern "/") (printQPath dir))
 
 parseGroupPath ∷ String → Either String GroupPath
 -- TODO(Christoph): Clean this up once Quasar treats Groups as directories
-parseGroupPath s = map GroupPath if s == "/" then Right Pt.rootDir else parseDir (s <> "/")
+parseGroupPath s = map GroupPath if s == "/" then Right rootDir else parseDir (s <> "/")
 
 data Operation
   = Add
@@ -84,16 +84,16 @@ instance decodeJsonAccessType ∷ DecodeJson AccessType where
 
 
 data QResource
-  = File (Pt.AbsFile Pt.Sandboxed)
-  | Dir (Pt.AbsDir Pt.Sandboxed)
+  = File FilePath
+  | Dir DirPath
   | Group GroupPath
 
 derive instance eqQResource ∷ Eq QResource
 derive instance ordQResource ∷ Ord QResource
 
 instance encodeJsonQResource ∷ EncodeJson QResource where
-  encodeJson (File pt) = encodeJson $ "data:" <> Pt.printPath pt
-  encodeJson (Dir pt) = encodeJson $ "data:" <> Pt.printPath pt
+  encodeJson (File pt) = encodeJson $ "data:" <> printQPath pt
+  encodeJson (Dir pt) = encodeJson $ "data:" <> printQPath pt
   encodeJson (Group gpt) = encodeJson $ "group:" <> printGroupPath gpt
 
 instance decodeJsonQResource ∷ DecodeJson QResource where
@@ -113,19 +113,11 @@ instance decodeJsonQResource ∷ DecodeJson QResource where
         <|>
         (map Dir $ lmap (const $ "Incorrect directory resource") $ parseDir pt)
 
-parseFile ∷ String → Either String (Pt.AbsFile Pt.Sandboxed)
-parseFile pt =
-  Pt.parseAbsFile pt
-  >>= Pt.sandbox Pt.rootDir
-  <#> (Pt.rootDir </> _)
-  # maybe (Left "Incorrect resource") pure
+parseFile ∷ String → Either String FilePath
+parseFile = parseQFilePath >>> note "Incorrect resource"
 
-parseDir ∷ String → Either String (Pt.AbsDir Pt.Sandboxed)
-parseDir pt =
-  Pt.parseAbsDir pt
-  >>= Pt.sandbox Pt.rootDir
-  <#> (Pt.rootDir </> _)
-  # maybe (Left "Incorrect resource") pure
+parseDir ∷ String → Either String DirPath
+parseDir = parseQDirPath >>> note "Incorrect resource"
 
 
 type ActionR =
@@ -246,18 +238,22 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
     parseUserId str =
       Str.stripPrefix (Str.Pattern "user:") str
       >>= fromString 
-      # maybe (Left "Incorrect user") (pure <<< UserId)
+      # map UserId
+      # note "Incorrect user"
+      
 
     parseTokenId ∷ String → Either String TokenId
     parseTokenId str =
       Str.stripPrefix (Str.Pattern "token:") str
       >>= fromString 
-      # maybe (Left "Incorrect token") (pure <<< TokenId)
+      # map TokenId
+      # note "Incorrect token"
+      
 
 parseGroup ∷ String → Either String GroupPath
 parseGroup string =
   Str.stripPrefix (Str.Pattern "group:") string
-  # maybe (Left "Incorrect group") pure
+  # note "Incorrect group"
   >>= parseGroupPath
 
 
@@ -310,12 +306,8 @@ instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
       traverse \x →
         note "Incorrect subgroup" do
           -- Quasar returns file paths for the subgroups, so we have to append a slash
-          dir ← Pt.parseAbsDir (x <> "/")
-          sandboxed ← Pt.sandbox Pt.rootDir dir
-          pure $ GroupPath $ Pt.rootDir </> sandboxed
-
-note :: ∀ a b. a → Maybe b → Either a b
-note n m = maybe (Left n) Right m
+          dir ← parseQDirPath (x <> "/")
+          pure $ GroupPath dir
 
 
 type GroupPatchR =

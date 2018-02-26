@@ -20,16 +20,18 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, (.?))
+import Data.Bifunctor (bimap)
 import Data.Const (Const(..))
-import Data.Either (Either(..))
+import Data.Either (Either(..), note)
 import Data.Eq (class Eq1, eq1)
 import Data.Identity (Identity(..))
-import Data.Maybe (Maybe, maybe)
+import Data.Maybe (Maybe)
 import Data.Newtype (unwrap)
 import Data.Ord (class Ord1, compare1)
-import Data.Path.Pathy (Dir, File, Name, dir, file, pathName, (</>))
 import Data.String.NonEmpty (fromString)
 import Data.TacitString as TS
+import Pathy (Dir, File, Name(..), dir', file', fileName, name, (</>))
+
 import Quasar.Types (AnyPath, DirPath, FilePath)
 
 data MountF f
@@ -118,14 +120,14 @@ fromJSON parent = decodeJson >=> \obj → do
   mount ← obj .? "mount"
   typ ← obj .? "type"
   name' ← obj .? "name"
-  name <- maybe (Left "empty name") Right $ fromString name'
+  name <- note "empty name" $ fromString name'
   let
     err :: forall a. Either String a
     err = Left $ "Unexpected type '" <> typ <> "' for mount '" <> mount <> "'"
     onFile :: Either String (Identity FilePath)
-    onFile = if typ == "file" then Right $ Identity $ parent </> file name else err
+    onFile = if typ == "file" then Right $ Identity $ parent </> file' (Name name) else err
     onDir :: Either String (Identity DirPath)
-    onDir = if typ == "directory" then Right $ Identity $ parent </> dir name else err
+    onDir = if typ == "directory" then Right $ Identity $ parent </> dir' (Name name) else err
     onAnyPath :: Either String (Identity AnyPath)
     onAnyPath = map (map Left) onDir <|> map (map Right) onFile
   case typeFromName mount of
@@ -146,7 +148,7 @@ getPath ∷ Mount → AnyPath
 getPath = foldPath Left Right
 
 getName ∷ Mount → Either (Maybe (Name Dir)) (Name File)
-getName = getPath >>> pathName
+getName = getPath >>> bimap name fileName
 
 typeFromName ∷ String → MountType
 typeFromName = case _ of

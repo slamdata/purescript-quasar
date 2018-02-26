@@ -34,8 +34,6 @@ import Data.Functor.Coproduct (Coproduct, left, right, coproduct)
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.Monoid (mempty)
-import Data.Path.Pathy ((</>))
-import Data.Path.Pathy as Pt
 import Data.String as Str
 import Data.Tuple (Tuple(..), snd)
 import Network.HTTP.Affjax as AX
@@ -43,6 +41,8 @@ import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
 import OIDC.Crypt.Types as OIDC
+import Pathy (Name(..), (</>))
+import Pathy as Pt
 import Quasar.Advanced.Paths as Paths
 import Quasar.Advanced.QuasarAF (QuasarAFC, QuasarAF(..))
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
@@ -119,7 +119,7 @@ evalQuasarAdvanced (AuthorityList k) = do
 evalQuasarAdvanced (PermissionInfo pid k) = do
   config ← ask
   url ← mkUrl
-    (Right (Paths.permission </> Pt.file (Qa.runPermissionId pid)))
+    (Right (Paths.permission </> Pt.file' (Name $ Qa.runPermissionId pid)))
     (URI.QueryPairs [Tuple "transitive" Nothing])
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runPermission)
@@ -127,7 +127,7 @@ evalQuasarAdvanced (PermissionInfo pid k) = do
 evalQuasarAdvanced (PermissionChildren pid isTransitive k) = do
   config ← ask
   url ← mkUrl
-    (Right (Paths.permission </> Pt.dir (Qa.runPermissionId pid) </> Paths.children ))
+    (Right (Paths.permission </> Pt.dir' (Name $ Qa.runPermissionId pid) </> Paths.children ))
     (transitiveQuery isTransitive)
   map k
     $ mkAuthedRequest (jsonResult >>> map (map Qa.runPermission))
@@ -144,7 +144,7 @@ evalQuasarAdvanced (SharePermission req k) = do
 evalQuasarAdvanced (DeletePermission pid k) = do
   config ← ask
   url ← mkUrl
-    (Right (Paths.permission </> Pt.file (Qa.runPermissionId pid)))
+    (Right (Paths.permission </> Pt.file' (Name $ Qa.runPermissionId pid)))
     mempty
   map k
     $ mkAuthedRequest unitResult
@@ -160,7 +160,7 @@ evalQuasarAdvanced (TokenList k) = do
 evalQuasarAdvanced (TokenInfo tid k) = do
   config ← ask
   url ← mkUrl
-    (Right (Paths.token </> Pt.file (Qa.runTokenId tid)))
+    (Right (Paths.token </> Pt.file' (Name $ Qa.runTokenId tid)))
     mempty
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
@@ -181,7 +181,7 @@ evalQuasarAdvanced (CreateToken mbName actions k) = do
 evalQuasarAdvanced (DeleteToken tid k) = do
   config ← ask
   url ← mkUrl
-    (Right (Paths.token </> Pt.file (Qa.runTokenId tid)))
+    (Right (Paths.token </> Pt.file' (Name $ Qa.runTokenId tid)))
     mempty
   map k
     $ mkAuthedRequest unitResult

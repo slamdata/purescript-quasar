@@ -19,11 +19,8 @@ module Quasar.Query.OutputMeta where
 import Prelude
 
 import Data.Argonaut (Json, JArray, decodeJson, (.?))
-import Data.Either (Either(..))
-import Data.Maybe (Maybe, maybe)
-import Data.Path.Pathy (parseAbsFile, rootDir, sandbox, (</>))
-
-import Quasar.Types (FilePath)
+import Data.Either (Either, note)
+import Quasar.Types (FilePath, parseQFilePath)
 
 type OutputMeta =
   { out ∷ FilePath
@@ -34,9 +31,6 @@ fromJSON ∷ Json → Either String OutputMeta
 fromJSON json = do
   obj ← decodeJson json
   path ← obj .? "out"
-  out ← maybe (Left "Could not parse 'out' path") Right $ parsePath path
+  out ← note "Could not parse 'out' path" $ parseQFilePath path
   phases ← obj .? "phases"
   pure { out, phases }
-  where
-  parsePath ∷ String -> Maybe FilePath
-  parsePath = map (rootDir </> _) <<< sandbox rootDir <=< parseAbsFile

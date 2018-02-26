@@ -29,7 +29,7 @@
     "purescript-string-parsers": "^3.0.0",
     "purescript-strings": "^3.5.0",
     "purescript-uri": "garyb/purescript-uri#next",
-    "purescript-sql-squared": "^0.10.0",
+    "purescript-sql-squared": "safareli/purescript-sql-squared#pathy",
     "purescript-const": "^3.2.0"
   },
   "devDependencies": {

@@ -44,8 +44,6 @@ import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (mempty)
-import Data.Path.Pathy (class SplitDirOrFile, Abs, AnyPath, Path, Rel, RelDir, RelPath, Sandboxed, Unsandboxed, relativify, (</>))
-
 import Data.StrMap as SM
 import Data.String as Str
 import Data.Tuple (Tuple(..))
@@ -54,6 +52,7 @@ import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
+import Pathy (class IsDirOrFile, Abs, AbsPath, Path, Rel, RelDir, RelPath, relativeTo, rootDir, (</>))
 import Quasar.ConfigF as CF
 import Quasar.Data.URI as URI
 import Quasar.QuasarF (Pagination, QError(..), PDFError(..), UnauthorizedDetails(..))
@@ -98,29 +97,19 @@ delete u = AXF.affjax (defaultRequest { method = Left DELETE, url = u })
 
 mkFSUrl
   ∷ ∀ r
-  . RelDir Sandboxed
-  → AnyPath Abs Sandboxed
+  . RelDir
+  → AbsPath
   → URI.QQuery
   → AjaxM r String
-mkFSUrl relDir fsPath q = do
-  uri ← URI.qURIRef.print <$> mkFSUrl' relDir fsPath q
-  pure uri
-
-mkFSUrl'
-  ∷ ∀ r
-  . RelDir Sandboxed
-  → AnyPath Abs Sandboxed
-  → URI.QQuery
-  → AjaxM r URI.QURIRef
-mkFSUrl' relDir fsPath = mkUrl' (bimap baseify baseify fsPath)
+mkFSUrl relDir fsPath q = mkUrl (bimap baseify baseify fsPath) q 
   where
-    baseify ∷ ∀ b. SplitDirOrFile b => Path Abs b Sandboxed → Path Rel b Sandboxed
-    baseify p = relDir </> relativify p
+    baseify ∷ ∀ b. IsDirOrFile b => Path Abs b → Path Rel b
+    baseify p = relDir </> p `relativeTo` rootDir
 
-mkUrl ∷ ∀ s r. RelPath Sandboxed → URI.QQuery → AjaxM r String
+mkUrl ∷ ∀ s r. RelPath → URI.QQuery → AjaxM r String
 mkUrl relPath q = URI.qURIRef.print <$> mkUrl' relPath q
 
-mkUrl' ∷ ∀ s r. RelPath Sandboxed → URI.QQuery → AjaxM r URI.QURIRef
+mkUrl' ∷ ∀ s r. RelPath → URI.QQuery → AjaxM r URI.QURIRef
 mkUrl' relPath q = do
   { basePath } ← ask
   pure (bimap toURI toRelativeRef basePath)
@@ -140,7 +129,7 @@ mkUrl' relPath q = do
         (if q == mempty then Nothing else Just q)
         Nothing
 
-    toRelativeRef :: RelDir Unsandboxed -> URI.QRelativeRef
+    toRelativeRef :: RelDir -> URI.QRelativeRef
     toRelativeRef relDir = 
       URI.RelativeRef
         (URI.RelativePartNoAuth

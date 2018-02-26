@@ -32,7 +32,7 @@ import Data.Either (Either(..))
 import Data.Foldable (null)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
-import Data.Path.Pathy as P
+import Pathy as P
 import Data.StrMap as SM
 import Quasar.Data.URI as URI
 import Quasar.Types (AnyPath)

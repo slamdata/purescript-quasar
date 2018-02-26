@@ -20,7 +20,7 @@ import Prelude
 
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (~>), (:=))
 import Data.Bifunctor (bimap, lmap)
-import Data.Either (Either(..))
+import Data.Either (Either(..), note)
 import Data.Foldable (foldMap)
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
@@ -67,7 +67,7 @@ fromURI ∷ URI.QAbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme _ query) = do
   unless (scheme == uriScheme) $ Left "Expected 'sql2' URL scheme"
   let queryMap = maybe [] (\(URI.QueryPairs q) → q) query
-  query' ← maybe (Left "Expected 'q' query variable") pure (extractQuery queryMap)
+  query' ← note "Expected 'q' query variable" $ extractQuery queryMap
   q ← Sql.parseQuery query' # lmap \(ParseError err (Position { line , column })) →
     "Expected 'q' query variable to contain valid query, " <> "but at line "
     <> show line <> "and column " <> show column <> " got parse error: \n" <> err

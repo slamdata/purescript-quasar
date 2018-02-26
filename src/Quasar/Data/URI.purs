@@ -42,14 +42,15 @@ module Quasar.Data.URI
 import Prelude
 
 import Data.Array (fromFoldable)
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (bimap, lmap)
 import Data.Bitraversable (bitraverse)
-import Data.Either (Either(..), either)
-import Data.List (List(..))
+import Data.Either (Either(..), either, note)
+import Data.List (List(..), reverse)
 import Data.Maybe (Maybe(..), maybe)
-import Data.Path.Pathy (class SplitDirOrFile)
-import Data.Path.Pathy (Abs, AbsPath, Name, viewDir, viewDirUnsandboxed, viewFile, viewFileUnsandboxed, Path, RelPath, Sandboxed, Unsandboxed, appendPath, parsePath, rootDir, runName, sandbox) as Py
+import Data.Newtype (un)
 import Data.Record.Builder as Builder
+import Data.String.NonEmpty (NonEmptyString)
+import Data.String.NonEmpty as NES
 import Data.Tuple (Tuple(..))
 import Data.URI (PathAbsolute, PathRootless, RegName)
 import Data.URI (URI(..), RelativePart(..), Authority(..), AbsoluteURI(..), HierarchicalPart(..), HierPath, Host(..), Path(..), Port, RelativeRef(..), URIRef, Fragment, Query, UserInfo) as URI
@@ -77,11 +78,15 @@ import Data.URI.Scheme (unsafeFromString, print) as Scheme
 import Data.URI.URI (URIOptions) as URI
 import Data.URI.URIRef (URIRefOptions) as URI
 import Data.URI.URIRef (print, parser) as URIRef
+import Partial.Unsafe (unsafeCrashWith)
+import Pathy (foldPath, posixParser)
+import Pathy as Py
 import Text.Parsing.Parser (Parser)
 import Type.Row (class RowListNub, class RowToList)
+import Unsafe.Coerce (unsafeCoerce)
 
-type AbsPath = Py.AbsPath Py.Sandboxed
-type RelPath' = Py.RelPath Py.Unsandboxed
+type AbsPath = Py.AbsPath
+type RelPath' = Py.RelPath
 type AnyPath = Either AbsPath RelPath'
 type QURIHost = URI.MultiHostPortPair URI.Host URI.Port
 type QAuthority = URI.Authority URI.UserPassInfo QURIHost
@@ -147,10 +152,10 @@ opts =
   parsePath :: Path -> Either URIPartParseError AbsPath
   parsePath = parseAbsSandboxedPath <<< Path.print
   printPath ∷ AbsPath → Path
-  printPath = bimap Py.viewDir Py.viewFile >>>case _ of
+  printPath = bimap viewAbsDir viewAbsFile >>>case _ of
     Left d ->
       URI.Path
-        $ (fromFoldable d <#> Py.runName >>> segmentFromString) <> [ segmentFromString "" ]
+        $ (fromFoldable d <#> runName >>> segmentFromString) <> [ segmentFromString "" ]
     Right (Tuple d n) -> 
       URI.Path
       $ (fromFoldable d <#> asSegment) <> [asSegment n]
@@ -180,7 +185,7 @@ opts =
       _printRelPath
 
   _printAbsPath :: AbsPath → PathAbsolute
-  _printAbsPath = bimap Py.viewDir Py.viewFile >>> case _ of
+  _printAbsPath = bimap viewAbsDir viewAbsFile >>> case _ of
     Left Nil -> PathAbsolute.PathAbsolute Nothing
     Left (Cons head tail) -> PathAbsolute.PathAbsolute $ Just
       $ Tuple (asSegmentNZ head)
@@ -193,46 +198,39 @@ opts =
         $ (asSegment <$> fromFoldable tail) <> [ asSegment n ]
   
   _printRelPath :: RelPath' → PathNoScheme.PathNoScheme
-  _printRelPath = bimap Py.viewDirUnsandboxed Py.viewFileUnsandboxed >>> case _ of
+  _printRelPath = bimap viewRelDir viewRelFile >>> case _ of
     Left Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString "./") []
     Left (Cons head tail) ->
       PathNoScheme.PathNoScheme
-        $ Tuple (unsafeSegmentNZNCFromString $ maybe "../" Py.runName head)
-        $ (segmentFromString <<< maybe "../" Py.runName <$> fromFoldable tail) <> [ segmentFromString "" ]
+        $ Tuple (unsafeSegmentNZNCFromString $ maybe "../" runName head)
+        $ (segmentFromString <<< maybe "../" runName <$> fromFoldable tail) <> [ segmentFromString "" ]
 
     Right (Tuple d n) -> case d of
-      Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString $ Py.runName n) []
+      Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString $ runName n) []
       Cons head tail -> PathNoScheme.PathNoScheme
-        $ Tuple (unsafeSegmentNZNCFromString $ maybe "../" Py.runName head)
-        $ (segmentFromString <<< maybe "../" Py.runName <$> fromFoldable tail) <> [ asSegment n ]
+        $ Tuple (unsafeSegmentNZNCFromString $ maybe "../" runName head)
+        $ (segmentFromString <<< maybe "../" runName <$> fromFoldable tail) <> [ asSegment n ]
 
 
   parseAbsSandboxedPath :: String -> Either URIPartParseError AbsPath
-  parseAbsSandboxedPath = 
-    Py.parsePath
+  parseAbsSandboxedPath =
+    Py.parsePath posixParser
       (const Nothing)
-      (map Left <<< sandbox)
+      (Just <<< Left)
       (const Nothing)
-      (map Right <<< sandbox)
-      (const Nothing)
-    >>> maybe (Left $ URIPartParseError "got invalid path") Right
+      (Just <<< Right)
+      Nothing
+    >>> note (URIPartParseError "got invalid path")
 
   parseRelUnsandboxedPath :: String -> Either URIPartParseError RelPath'
-  parseRelUnsandboxedPath = 
-    Py.parsePath
+  parseRelUnsandboxedPath =
+    Py.parsePath posixParser
       (Just <<< Left)
       (const Nothing)
       (Just <<< Right)
       (const Nothing)
-      (const Nothing)
-    >>> maybe (Left $ URIPartParseError "got invalid path") Right
-
-  sandbox
-    :: forall b s
-    . SplitDirOrFile b
-    => Py.Path Py.Abs b s
-    -> Maybe (Py.Path Py.Abs b Py.Sandboxed)
-  sandbox p = Py.appendPath Py.rootDir <$> Py.sandbox Py.rootDir p
+      Nothing
+    >>> note (URIPartParseError "got invalid path")
 
 
 printScheme :: URI.Scheme -> String
@@ -265,7 +263,32 @@ union
 union r1 r2 = Builder.build (Builder.merge r2) r1
 
 asSegmentNZ :: forall a. Py.Name a -> PathSegmentNZ
-asSegmentNZ = Py.runName >>> unsafeSegmentNZFromString
+asSegmentNZ = runName >>> unsafeSegmentNZFromString
 
 asSegment :: forall a. Py.Name a -> PathSegment
-asSegment = Py.runName >>> segmentFromString 
+asSegment = runName >>> segmentFromString 
+
+runName :: forall a. Py.Name a -> String
+runName = un Py.Name >>> NES.toString
+
+viewAbsDir :: Py.Path Py.Abs Py.Dir -> List (Py.Name Py.Dir)
+viewAbsDir = reverse <<< go
+  where
+  go p = foldPath Nil
+    (\_ -> unsafeCrashWith "ParentOf node in viewDir")
+    (flip Cons <<< go) p
+
+viewAbsFile :: Py.Path Py.Abs Py.File -> Tuple (List (Py.Name Py.Dir)) (Py.Name Py.File)
+viewAbsFile = Py.peelFile >>> lmap viewAbsDir
+
+
+viewRelDir :: Py.Path Py.Rel Py.Dir -> List (Maybe (Py.Name Py.Dir))
+viewRelDir = reverse <<< go
+  where
+  go p' = foldPath Nil
+    (\p -> Cons Nothing (go p))
+    (\p n -> Cons (Just n) (go p)) p'
+
+viewRelFile :: Py.Path Py.Rel Py.File -> Tuple (List (Maybe (Py.Name Py.Dir))) (Py.Name Py.File)
+viewRelFile = Py.peelFile >>> lmap viewRelDir
+

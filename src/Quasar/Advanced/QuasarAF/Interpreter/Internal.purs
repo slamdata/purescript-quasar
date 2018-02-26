@@ -22,7 +22,7 @@ import Control.Monad.Free (Free)
 import Data.Either (Either(..))
 import Data.Functor.Coproduct (Coproduct)
 import Data.Maybe (Maybe(..))
-import Data.Path.Pathy (rootDir)
+import Pathy (rootDir)
 import Data.String as String
 import Quasar.Data.URI as URI
 import Network.HTTP.Affjax.Request (RequestContent)

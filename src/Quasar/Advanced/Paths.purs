@@ -2,7 +2,7 @@
 Copyright 2017 SlamData, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file_ except in compliance with the License.
+you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
@@ -16,38 +16,37 @@ limitations under the License.
 
 module Quasar.Advanced.Paths where
 
-import Data.Path.Pathy (RelDir, RelFile, Sandboxed, (</>))
+import Pathy (RelDir, RelFile, dir, file, (</>))
 import Data.Symbol (SProxy(..))
-import Quasar.Internal (dir_, file_)
 
-oidcProviders ∷ RelFile Sandboxed
-oidcProviders = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "oidc") </> file_ (SProxy :: SProxy "providers")
+oidcProviders ∷ RelFile
+oidcProviders = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "oidc") </> file (SProxy :: SProxy "providers")
 
-token ∷ RelDir Sandboxed
-token = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "token")
+token ∷ RelDir
+token = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "token")
 
-group ∷ RelDir Sandboxed
-group = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "group")
+group ∷ RelDir
+group = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "group")
 
-permission ∷ RelDir Sandboxed
-permission = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "permission")
+permission ∷ RelDir
+permission = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "permission")
 
-children ∷ RelFile Sandboxed
-children = file_ (SProxy :: SProxy "children")
+children ∷ RelFile
+children = file (SProxy :: SProxy "children")
 
-authority ∷ RelDir Sandboxed
-authority = dir_ (SProxy :: SProxy "security") </> dir_ (SProxy :: SProxy "authority")
+authority ∷ RelDir
+authority = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "authority")
 
-licenseInfo ∷ RelFile Sandboxed
-licenseInfo = dir_ (SProxy :: SProxy "server") </> file_ (SProxy :: SProxy "licenseInfo")
+licenseInfo ∷ RelFile
+licenseInfo = dir (SProxy :: SProxy "server") </> file (SProxy :: SProxy "licenseInfo")
 
-licensee ∷ RelFile Sandboxed
-licensee = dir_ (SProxy :: SProxy "server") </> file_ (SProxy :: SProxy "licensee")
+licensee ∷ RelFile
+licensee = dir (SProxy :: SProxy "server") </> file (SProxy :: SProxy "licensee")
 
-pdfInfo ∷ RelFile Sandboxed
-pdfInfo = dir_ (SProxy :: SProxy "service") </> dir_ (SProxy :: SProxy "pdf") </> file_ (SProxy :: SProxy "info")
+pdfInfo ∷ RelFile
+pdfInfo = dir (SProxy :: SProxy "service") </> dir (SProxy :: SProxy "pdf") </> file (SProxy :: SProxy "info")
 
-generatePdf ∷ RelFile Sandboxed
-generatePdf = dir_ (SProxy :: SProxy "service") </> dir_ (SProxy :: SProxy "pdf") </> file_ (SProxy :: SProxy "generate")
+generatePdf ∷ RelFile
+generatePdf = dir (SProxy :: SProxy "service") </> dir (SProxy :: SProxy "pdf") </> file (SProxy :: SProxy "generate")
 
 

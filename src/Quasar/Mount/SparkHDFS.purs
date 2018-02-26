@@ -27,14 +27,13 @@ import Prelude
 import Data.Argonaut (Json, (.?), (:=), (~>))
 import Data.Argonaut as J
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..))
+import Data.Either (Either(..), note)
 import Data.Maybe (Maybe(..), maybe)
-import Data.Path.Pathy (parseAbsDir, printPath, rootDir, sandbox, (</>))
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
 import Global (encodeURIComponent, decodeURIComponent)
 import Quasar.Data.URI as URI
-import Quasar.Types (DirPath)
+import Quasar.Types (DirPath, parseQDirPath, printQPath)
 import Text.Parsing.Parser (runParser)
 
 type Config =
@@ -64,7 +63,7 @@ toURI cfg =
   requiredProps ∷ Array (Tuple String (Maybe String))
   requiredProps = 
     [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ URI.qAbsoluteURI.print $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
-    , Tuple "rootPath" $ Just $ printPath cfg.path
+    , Tuple "rootPath" $ Just $ printQPath cfg.path
     ]
 
   optionalProps ∷ Array (Tuple String (Maybe String))
@@ -85,9 +84,7 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ spark
 
   Tuple path props'' ← case SM.pop "rootPath" props' of
     Just (Tuple (Just value) rest) → do
-      dirPath ← case parseAbsDir value >>= sandbox rootDir of
-        Just dp → pure $ rootDir </> dp
-        Nothing → Left "Expected `rootPath` to be a directory path"
+      dirPath ← note "Expected `rootPath` to be a directory path" $ parseQDirPath value
       pure (Tuple dirPath rest)
     _ → Left "Expected `rootPath` query parameter"
 

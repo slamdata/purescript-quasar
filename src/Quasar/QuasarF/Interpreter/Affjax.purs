@@ -37,13 +37,15 @@ import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.MediaType.Common (applicationJSON)
 import Data.Monoid (mempty)
-import Data.Path.Pathy (absolutify, peel, printPath, rootDir, runName, sandbox)
+import Data.Newtype (un)
 import Data.StrMap as SM
+import Data.String.NonEmpty (toString)
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
+import Pathy (Name(..), peel, rootDir)
 import Quasar.ConfigF as CF
 import Quasar.Data.Json as Json
 import Quasar.Data.MediaTypes (applicationZip)
@@ -57,6 +59,7 @@ import Quasar.QuasarF.Interpreter.Config (Config)
 import Quasar.QuasarF.Interpreter.Internal (defaultRequest, delete, get, jsonResult, mkFSUrl, mkRequest, mkUrl, put, strResult, toPageParams, toVarParams, unitResult)
 import Quasar.Query.OutputMeta as QueryOutputMeta
 import Quasar.ServerInfo as ServerInfo
+import Quasar.Types (printQPath)
 import Quasar.Types as QT
 import SqlSquared as Sql
 
@@ -86,7 +89,7 @@ eval = case _ of
         })
 
   WriteQuery path file sql vars k → do
-    let destHeader = Tuple "Destination" (printPath file)
+    let destHeader = Tuple "Destination" (printQPath file)
     url ← mkFSUrl Paths.query (Left path) (headerParams [destHeader] <> toVarParams vars)
     k <$> mkRequest writeQueryResult
       (AXF.affjax $ defaultRequest
@@ -153,7 +156,7 @@ eval = case _ of
     k <$> (mkRequest unitResult <<< delete =<< mkFSUrl Paths.data_ path mempty)
 
   MoveData fromPath toPath k → do
-    let destHeader = Tuple "Destination" (either printPath printPath toPath)
+    let destHeader = Tuple "Destination" (either printQPath printQPath toPath)
     url ← mkFSUrl Paths.data_ fromPath (headerParams [destHeader])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
@@ -166,16 +169,10 @@ eval = case _ of
       -- TODO simplify this
       Tuple parentDir name = case bitraverse peel peel path of
         Nothing -> Tuple rootDir ""
-        Just (Left (Tuple parentDir name)) -> case sandbox rootDir parentDir of
-          Nothing ->
-            Tuple rootDir "" 
-          Just spd ->
-            Tuple (absolutify spd) (runName name)
-        Just (Right (Tuple parentDir name)) -> case sandbox rootDir parentDir of
-          Nothing ->
-            Tuple rootDir "" 
-          Just spd ->
-            Tuple (absolutify spd) (runName name)
+        Just (Left (Tuple parentDir name)) ->
+          Tuple parentDir (toString $ un Name name)
+        Just (Right (Tuple parentDir name)) -> 
+          Tuple parentDir (toString $ un Name name)
     url ← mkFSUrl Paths.mount (Left parentDir) (headerParams [Tuple "X-File-Name" name])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest

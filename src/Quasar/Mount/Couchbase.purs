@@ -30,12 +30,12 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Newtype (un)
 import Data.Number as Num
-import Data.Path.Pathy ((</>))
-import Data.Path.Pathy as P
 import Data.StrMap as SM
 import Data.String.NonEmpty (NonEmptyString)
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
+import Pathy (Name(..), (</>))
+import Pathy as P
 import Quasar.Data.URI as URI
 import Text.Parsing.Parser (runParser)
 
@@ -73,7 +73,7 @@ toURI { host, bucketName, password, docTypeKey, queryTimeout } =
       authority
       (case bucketName of
         Nothing -> Just $ Left P.rootDir
-        Just n -> Just $ Right $ P.rootDir </> P.file n
+        Just n -> Just $ Right $ P.rootDir </> P.file' (Name n)
       )
 
   authority :: URI.QAuthority

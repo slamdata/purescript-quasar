@@ -29,7 +29,7 @@ import Data.Char.Gen as CG
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
-import Data.Path.Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
+import Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
 import Data.String as S
 import Data.String.Gen as SG
 import Data.String.NonEmpty (NonEmptyString, cons)
