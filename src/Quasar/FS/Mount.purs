@@ -119,15 +119,14 @@ fromJSON ∷ DirPath → Json → Either String Mount
 fromJSON parent = decodeJson >=> \obj → do
   mount ← obj .? "mount"
   typ ← obj .? "type"
-  name' ← obj .? "name"
-  name <- note "empty name" $ fromString name'
+  name' ← note "empty name" <<< fromString =<< (obj .? "name")
   let
     err :: forall a. Either String a
     err = Left $ "Unexpected type '" <> typ <> "' for mount '" <> mount <> "'"
     onFile :: Either String (Identity FilePath)
-    onFile = if typ == "file" then Right $ Identity $ parent </> file' (Name name) else err
+    onFile = if typ == "file" then Right $ Identity $ parent </> file' (Name name') else err
     onDir :: Either String (Identity DirPath)
-    onDir = if typ == "directory" then Right $ Identity $ parent </> dir' (Name name) else err
+    onDir = if typ == "directory" then Right $ Identity $ parent </> dir' (Name name') else err
     onAnyPath :: Either String (Identity AnyPath)
     onAnyPath = map (map Left) onDir <|> map (map Right) onFile
   case typeFromName mount of

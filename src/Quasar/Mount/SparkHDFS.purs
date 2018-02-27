@@ -90,21 +90,20 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ spark
 
   pure { sparkHost, hdfsHost, path, props: props'' }
 
-mkURI :: URI.Scheme -> URI.QURIHost -> Maybe URI.QQuery -> URI.QAbsoluteURI
+mkURI ∷ URI.Scheme → URI.QURIHost → Maybe URI.QQuery → URI.QAbsoluteURI
 mkURI scheme host params =
   URI.AbsoluteURI
     (scheme)
     (URI.HierarchicalPartAuth (URI.Authority Nothing host) Nothing)
     params
 
-
 extractHost' ∷ URI.Scheme → String → Either String URI.QURIHost
 extractHost' scheme uri = do
   URI.AbsoluteURI scheme' hierPart _ ← lmap show $ runParser uri URI.qAbsoluteURI.parser
   unless (scheme' == scheme) $ Left $ "Expected '" <> URI.printScheme scheme <> "' URL scheme"
   case hierPart of
-    URI.HierarchicalPartNoAuth _ -> Left $ "Expected auth part to be present in URL"
-    URI.HierarchicalPartAuth (URI.Authority _ host) _ -> pure host
+    URI.HierarchicalPartNoAuth _ → Left $ "Expected auth part to be present in URL"
+    URI.HierarchicalPartAuth (URI.Authority _ host) _ → pure host
 
 sparkURIScheme ∷ URI.Scheme
 sparkURIScheme = URI.unsafeSchemaFromString "spark"

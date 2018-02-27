@@ -196,7 +196,7 @@ main = void $ runAff (const (pure unit)) $ jumpOutOnError do
     log "\nDeleteData (mount):"
     run isRight $ QF.deleteData (Right testMount2)
 
-    log "\nInvokeFile:"
+    log "\nInvokeFile"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
     run isRight $ QF.invokeFile Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
 

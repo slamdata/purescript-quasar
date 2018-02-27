@@ -50,7 +50,6 @@ instance showAuth ∷ Show Auth where
 
 type Config =
   { hosts ∷ URI.QURIHost
-  -- { hosts ∷ NonEmpty Array Host
   , auth ∷ Maybe Auth
   , props ∷ SM.StrMap (Maybe String)
   }

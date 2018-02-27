@@ -21,20 +21,20 @@ module Quasar.Mount.Common.Gen
 
 import Prelude
 
-import Control.Monad.Gen (class MonadGen)
+import Control.Monad.Gen (class MonadGen, filtered)
 import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common as GenC
-import Control.Monad.Rec.Class (class MonadRec, Step(..), tailRecM)
+import Control.Monad.Rec.Class (class MonadRec)
 import Data.Char.Gen as CG
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
-import Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
 import Data.String as S
 import Data.String.Gen as SG
 import Data.String.NonEmpty (NonEmptyString, cons)
 import Data.These (These(..))
 import Data.URI.Host.IPv4Address (fromInts) as IPv4Address
+import Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
 import Quasar.Data.URI as URI
 import Quasar.Types (AnyPath)
 
@@ -86,11 +86,3 @@ genCredentials =
 
 genAnyPath ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m AnyPath
 genAnyPath = Gen.oneOf $ (Left <$> PGen.genAbsDirPath) :| [Right <$> PGen.genAbsFilePath]
-
-filtered :: forall m a. MonadRec m => MonadGen m => m (Maybe a) -> m a
-filtered gen = tailRecM go unit
-  where
-  go :: Unit -> m (Step Unit a)
-  go _ = gen <#> \a -> case a of
-    Nothing -> Loop unit
-    Just a -> Done a

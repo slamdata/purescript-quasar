@@ -27,8 +27,7 @@ import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free)
 import Data.Argonaut (Json, JObject, jsonEmptyObject, (:=), (~>))
 import Data.Array (catMaybes)
-import Data.Bifunctor (lmap)
-import Data.Bitraversable (bitraverse)
+import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
 import Data.Foldable (class Foldable, foldl, foldMap)
 import Data.Functor.Coproduct (Coproduct)
@@ -45,7 +44,7 @@ import Data.Tuple (Tuple(..), fst, snd)
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
-import Pathy (Name(..), peel, rootDir)
+import Pathy (Name(..), peel, peelFile, rootDir)
 import Quasar.ConfigF as CF
 import Quasar.Data.Json as Json
 import Quasar.Data.MediaTypes (applicationZip)
@@ -166,13 +165,10 @@ eval = case _ of
 
   CreateMount path config mbMaxAge k → do
     let
-      -- TODO simplify this
-      Tuple parentDir name = case bitraverse peel peel path of
-        Nothing -> Tuple rootDir ""
-        Just (Left (Tuple parentDir name)) ->
-          Tuple parentDir (toString $ un Name name)
-        Just (Right (Tuple parentDir name)) -> 
-          Tuple parentDir (toString $ un Name name)
+      Tuple parentDir name = case bimap peel peelFile path of
+        Left Nothing -> Tuple rootDir ""
+        Left (Just dp) -> dp <#> un Name >>> toString >>> (_ <> "/")
+        Right fp -> fp <#> un Name >>> toString
     url ← mkFSUrl Paths.mount (Left parentDir) (headerParams [Tuple "X-File-Name" name])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
