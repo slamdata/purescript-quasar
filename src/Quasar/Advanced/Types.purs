@@ -6,7 +6,7 @@ import Control.Alt ((<|>))
 import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, JString, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), note)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Newtype as Newtype
 import Data.String as Str
 import Data.String.NonEmpty (NonEmptyString, fromString, toString)

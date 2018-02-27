@@ -106,10 +106,10 @@ mkFSUrl relDir fsPath q = mkUrl (bimap baseify baseify fsPath) q
     baseify ∷ ∀ b. IsDirOrFile b => Path Abs b → Path Rel b
     baseify p = relDir </> p `relativeTo` rootDir
 
-mkUrl ∷ ∀ s r. RelPath → URI.QQuery → AjaxM r String
+mkUrl ∷ ∀ r. RelPath → URI.QQuery → AjaxM r String
 mkUrl relPath q = URI.qURIRef.print <$> mkUrl' relPath q
 
-mkUrl' ∷ ∀ s r. RelPath → URI.QQuery → AjaxM r URI.QURIRef
+mkUrl' ∷ ∀ r. RelPath → URI.QQuery → AjaxM r URI.QURIRef
 mkUrl' relPath q = do
   { basePath } ← ask
   pure (bimap toURI toRelativeRef basePath)

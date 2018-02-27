@@ -49,7 +49,6 @@ import Data.List (List(..), reverse)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (un)
 import Data.Record.Builder as Builder
-import Data.String.NonEmpty (NonEmptyString)
 import Data.String.NonEmpty as NES
 import Data.Tuple (Tuple(..))
 import Data.URI (PathAbsolute, PathRootless, RegName)
@@ -83,7 +82,6 @@ import Pathy (foldPath, posixParser)
 import Pathy as Py
 import Text.Parsing.Parser (Parser)
 import Type.Row (class RowListNub, class RowToList)
-import Unsafe.Coerce (unsafeCoerce)
 
 type AbsPath = Py.AbsPath
 type RelPath' = Py.RelPath

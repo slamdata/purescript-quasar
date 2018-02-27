@@ -20,8 +20,8 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Argonaut (class DecodeJson, decodeJson, (.?), jsonParser)
-import Data.Either (Either(..), note)
-import Data.Maybe (Maybe, maybe)
+import Data.Either (Either, note)
+import Data.Maybe (Maybe)
 import Data.StrMap (StrMap)
 import Data.Traversable (traverse)
 import Pathy (class IsDirOrFile, Abs, AbsPath, Dir, File, Path, parseAbsDir, parseAbsFile, posixParser, posixPrinter, printPath, sandboxAny)
