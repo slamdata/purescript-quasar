@@ -26,6 +26,7 @@ import Prelude
 
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Bifunctor (lmap)
+import Data.Codec (decode, encode)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Newtype (un)
@@ -37,7 +38,6 @@ import Data.Tuple (Tuple(..))
 import Pathy (Name(..), (</>))
 import Pathy as P
 import Quasar.Data.URI as URI
-import Text.Parsing.Parser (runParser)
 
 type Config =
   { host ∷ URI.QURIHost
@@ -49,13 +49,13 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = URI.qAbsoluteURI.print (toURI config)
+  let uri = encode URI.qAbsoluteURI (toURI config)
   in "couchbase" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< flip runParser URI.qAbsoluteURI.parser
+  <=< lmap show <<< decode URI.qAbsoluteURI
   <=< (_ .? "connectionUri")
   <=< (_ .? "couchbase")
   <=< decodeJson

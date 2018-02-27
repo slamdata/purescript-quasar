@@ -44,6 +44,7 @@ import Prelude
 import Data.Array (fromFoldable)
 import Data.Bifunctor (bimap, lmap)
 import Data.Bitraversable (bitraverse)
+import Data.Codec (BasicCodec, basicCodec)
 import Data.Either (Either(..), either, note)
 import Data.List (List(..), reverse)
 import Data.Maybe (Maybe(..), maybe)
@@ -80,7 +81,7 @@ import Data.URI.URIRef (print, parser) as URIRef
 import Partial.Unsafe (unsafeCrashWith)
 import Pathy (foldPath, posixParser)
 import Pathy as Py
-import Text.Parsing.Parser (Parser)
+import Text.Parsing.Parser (ParseError, Parser, runParser)
 import Type.Row (class RowListNub, class RowToList)
 
 type AbsPath = Py.AbsPath
@@ -103,13 +104,20 @@ type QURIRefOptions =      URI.URIRefOptions URI.UserPassInfo QURIHost AbsPath A
 type QURI =                URI.URI           URI.UserPassInfo QURIHost AbsPath AbsPath         QQuery URI.Fragment
 type QURIOptions =         URI.URIOptions    URI.UserPassInfo QURIHost AbsPath AbsPath         QQuery URI.Fragment
 
-type PrintParse from = { print :: from → String, parser :: Parser String from }
-qAbsoluteURI ∷ PrintParse QAbsoluteURI
-qAbsoluteURI = { print: AbsoluteURI.print opts.absoluteURI, parser: AbsoluteURI.parser opts.absoluteURI }
-qRelativeRef ∷ PrintParse QRelativeRef
-qRelativeRef = { print: RelativeRef.print opts.relativeRef, parser: RelativeRef.parser opts.relativeRef }
-qURIRef ∷ PrintParse QURIRef
-qURIRef = { print: URIRef.print opts.uriRef, parser: URIRef.parser opts.uriRef }
+qAbsoluteURI ∷ BasicCodec (Either ParseError) String QAbsoluteURI
+qAbsoluteURI = basicCodec
+  (flip runParser $ AbsoluteURI.parser opts.absoluteURI)
+  (AbsoluteURI.print opts.absoluteURI)
+
+qRelativeRef ∷ BasicCodec (Either ParseError) String QRelativeRef
+qRelativeRef = basicCodec
+  (flip runParser $ RelativeRef.parser opts.relativeRef)
+  (RelativeRef.print opts.relativeRef)
+
+qURIRef ∷ BasicCodec (Either ParseError) String QURIRef
+qURIRef = basicCodec
+  (flip runParser $ URIRef.parser opts.uriRef)
+  (URIRef.print opts.uriRef)
 
 opts :: 
   { absoluteURI ∷ Record QAbsoluteURIOptions

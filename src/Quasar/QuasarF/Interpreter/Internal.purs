@@ -38,6 +38,7 @@ import Data.Argonaut as Json
 import Data.Argonaut.Decode.Combinators ((.?), (.??))
 import Data.Array as Array
 import Data.Bifunctor (bimap, lmap)
+import Data.Codec (encode)
 import Data.Either (Either(..), either)
 import Data.Foldable (oneOf)
 import Data.Functor.Coproduct (Coproduct, left, right)
@@ -107,7 +108,7 @@ mkFSUrl relDir fsPath q = mkUrl (bimap baseify baseify fsPath) q
     baseify p = relDir </> p `relativeTo` rootDir
 
 mkUrl ∷ ∀ r. RelPath → URI.QQuery → AjaxM r String
-mkUrl relPath q = URI.qURIRef.print <$> mkUrl' relPath q
+mkUrl relPath q = encode URI.qURIRef <$> mkUrl' relPath q
 
 mkUrl' ∷ ∀ r. RelPath → URI.QQuery → AjaxM r URI.QURIRef
 mkUrl' relPath q = do

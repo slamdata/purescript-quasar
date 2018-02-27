@@ -30,7 +30,8 @@
     "purescript-strings": "^3.5.0",
     "purescript-uri": "garyb/purescript-uri#next",
     "purescript-sql-squared": "safareli/purescript-sql-squared#pathy",
-    "purescript-const": "^3.2.0"
+    "purescript-const": "^3.2.0",
+    "purescript-codec": "^2.1.0"
   },
   "devDependencies": {
     "purescript-assert": "^3.0.0",

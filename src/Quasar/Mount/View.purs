@@ -20,6 +20,7 @@ import Prelude
 
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (~>), (:=))
 import Data.Bifunctor (bimap, lmap)
+import Data.Codec (decode, encode)
 import Data.Either (Either(..), note)
 import Data.Foldable (foldMap)
 import Data.Maybe (Maybe(..), maybe)
@@ -30,7 +31,7 @@ import Quasar.Data.URI as URI
 import Quasar.Types (Vars)
 import SqlSquared (SqlQuery)
 import SqlSquared as Sql
-import Text.Parsing.Parser (ParseError(..), runParser)
+import Text.Parsing.Parser (ParseError(..))
 import Text.Parsing.Parser.Pos (Position(..))
 
 type Config =
@@ -40,13 +41,13 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = URI.qAbsoluteURI.print (toURI config)
+  let uri = encode URI.qAbsoluteURI (toURI config)
   in "view" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< flip runParser URI.qAbsoluteURI.parser
+  <=< lmap show <<< decode URI.qAbsoluteURI
   <=< (_ .? "connectionUri")
   <=< (_ .? "view")
   <=< decodeJson

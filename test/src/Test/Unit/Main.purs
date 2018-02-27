@@ -21,6 +21,7 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Data.Argonaut.Parser as JP
+import Data.Codec (decode, encode)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
@@ -33,7 +34,6 @@ import Quasar.Mount.Couchbase as CB
 import Quasar.Mount.MongoDB as Mongo
 import Test.Assert (ASSERT, assert')
 import Test.Property.Mount.Couchbase as CBT
-import Text.Parsing.Parser (runParser)
 
 main ∷ ∀ eff. Eff (assert ∷ ASSERT, console ∷ CONSOLE | eff) Unit
 main = do
@@ -68,7 +68,7 @@ main = do
         , queryTimeout: Just (Seconds (20.0))
         })
   let mongoURI =
-        URI.qAbsoluteURI.print
+        encode URI.qAbsoluteURI
           (Mongo.toURI
             { hosts: [Both (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") (URI.unsafePortFromInt 12345)]
             , auth: Nothing
@@ -86,7 +86,7 @@ testURIParse
   → a
   → Eff (assert :: ASSERT | eff) Unit
 testURIParse fromURI uri expected =
-  case runParser uri URI.qAbsoluteURI.parser of
+  case decode URI.qAbsoluteURI uri of
     Left err → fail $ "Test URI failed to parse as a URI even: \n\n\t" <> uri <> "\n\n\t" <> show err <> "\n\n"
     Right auri →
       case fromURI auri of

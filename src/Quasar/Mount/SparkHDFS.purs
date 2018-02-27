@@ -27,6 +27,7 @@ import Prelude
 import Data.Argonaut (Json, (.?), (:=), (~>))
 import Data.Argonaut as J
 import Data.Bifunctor (lmap)
+import Data.Codec (decode, encode)
 import Data.Either (Either(..), note)
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
@@ -35,7 +36,6 @@ import Global (encodeURIComponent, decodeURIComponent)
 import Pathy (AbsDir)
 import Quasar.Data.URI as URI
 import Quasar.Types (parseQDirPath, printQPath)
-import Text.Parsing.Parser (runParser)
 
 type Config =
   { sparkHost ∷ URI.QURIHost
@@ -46,13 +46,13 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = URI.qAbsoluteURI.print (toURI config)
+  let uri = encode URI.qAbsoluteURI (toURI config)
   in "spark-hdfs" := ("connectionUri" := uri ~> J.jsonEmptyObject) ~> J.jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< flip runParser URI.qAbsoluteURI.parser
+  <=< lmap show <<< decode URI.qAbsoluteURI
   <=< (_ .? "connectionUri")
   <=< (_ .? "spark-hdfs")
   <=< J.decodeJson
@@ -63,7 +63,7 @@ toURI cfg =
   where
   requiredProps ∷ Array (Tuple String (Maybe String))
   requiredProps = 
-    [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ URI.qAbsoluteURI.print $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
+    [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ encode URI.qAbsoluteURI $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
     , Tuple "rootPath" $ Just $ printQPath cfg.path
     ]
 
@@ -100,7 +100,7 @@ mkURI scheme host params =
 
 extractHost' ∷ URI.Scheme → String → Either String URI.QURIHost
 extractHost' scheme uri = do
-  URI.AbsoluteURI scheme' hierPart _ ← lmap show $ runParser uri URI.qAbsoluteURI.parser
+  URI.AbsoluteURI scheme' hierPart _ ← lmap show $ decode URI.qAbsoluteURI uri
   unless (scheme' == scheme) $ Left $ "Expected '" <> URI.printScheme scheme <> "' URL scheme"
   case hierPart of
     URI.HierarchicalPartNoAuth _ → Left $ "Expected auth part to be present in URL"

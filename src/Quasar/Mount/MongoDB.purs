@@ -28,14 +28,14 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Bifunctor (lmap)
+import Data.Codec (decode, encode)
 import Data.Either (Either(..))
 import Data.Foldable (null)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
-import Pathy as P
 import Data.StrMap as SM
+import Pathy as P
 import Quasar.Data.URI as URI
-import Text.Parsing.Parser (runParser)
 
 newtype Auth = Auth { path ∷ P.AbsPath, credentials ∷ URI.UserPassInfo }
 
@@ -55,13 +55,13 @@ type Config =
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = URI.qAbsoluteURI.print (toURI config)
+  let uri = encode URI.qAbsoluteURI (toURI config)
   in "mongodb" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< flip runParser URI.qAbsoluteURI.parser
+  <=< lmap show <<< decode URI.qAbsoluteURI
   <=< (_ .? "connectionUri")
   <=< (_ .? "mongodb")
   <=< decodeJson
