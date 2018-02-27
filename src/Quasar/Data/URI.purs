@@ -19,7 +19,6 @@ module Quasar.Data.URI
   , QURIHost
   , QQuery
   , AbsPath
-  , RelPath'
   , AnyPath
   , QAuthority
   , QAbsoluteURI
@@ -85,24 +84,24 @@ import Text.Parsing.Parser (ParseError, Parser, runParser)
 import Type.Row (class RowListNub, class RowToList)
 
 type AbsPath = Py.AbsPath
-type RelPath' = Py.RelPath
-type AnyPath = Either AbsPath RelPath'
+type AnyPath = Either Py.AbsPath Py.RelPath
+
 type QURIHost = URI.MultiHostPortPair URI.Host URI.Port
 type QAuthority = URI.Authority URI.UserPassInfo QURIHost
 type QQuery = URI.QueryPairs String String
-type QHierarchicalPart = URI.HierarchicalPart   URI.UserPassInfo QURIHost AbsPath AbsPath
+type QHierarchicalPart = URI.HierarchicalPart URI.UserPassInfo QURIHost AbsPath AbsPath
 
-type QAbsoluteURI =        URI.AbsoluteURI        URI.UserPassInfo QURIHost AbsPath AbsPath QQuery
+type QAbsoluteURI = URI.AbsoluteURI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery
 type QAbsoluteURIOptions = URI.AbsoluteURIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery
 
-type QRelativeRef =        URI.RelativeRef        URI.UserPassInfo QURIHost AbsPath AnyPath QQuery URI.Fragment
+type QRelativeRef = URI.RelativeRef URI.UserPassInfo QURIHost AbsPath AnyPath QQuery URI.Fragment
 type QRelativeRefOptions = URI.RelativeRefOptions URI.UserPassInfo QURIHost AbsPath AnyPath QQuery URI.Fragment
 
-type QURIRef =             URI.URIRef        URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
-type QURIRefOptions =      URI.URIRefOptions URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
+type QURIRef = URI.URIRef URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
+type QURIRefOptions = URI.URIRefOptions URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
 
-type QURI =                URI.URI           URI.UserPassInfo QURIHost AbsPath AbsPath         QQuery URI.Fragment
-type QURIOptions =         URI.URIOptions    URI.UserPassInfo QURIHost AbsPath AbsPath         QQuery URI.Fragment
+type QURI = URI.URI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
+type QURIOptions = URI.URIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
 
 qAbsoluteURI ∷ BasicCodec (Either ParseError) String QAbsoluteURI
 qAbsoluteURI = basicCodec
