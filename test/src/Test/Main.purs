@@ -34,13 +34,15 @@ import Data.Either (Either(..), isRight)
 import Data.Foldable (traverse_)
 import Data.Functor.Coproduct (left)
 import Data.Maybe (Maybe(..))
-import Pathy (rootDir, dir, file, (</>))
 import Data.Posix.Signal (Signal(SIGTERM))
 import Data.StrMap as SM
 import Data.String as Str
 import Data.Symbol (SProxy(..))
 import Data.These (These(..))
 import Data.Tuple (Tuple(..))
+import Data.URI.Host.RegName as RegName
+import Data.URI.Port as Port
+import Data.URI.Scheme as Scheme
 import Network.HTTP.Affjax (AJAX)
 import Node.ChildProcess as CP
 import Node.Encoding (Encoding(..))
@@ -49,6 +51,7 @@ import Node.Process (PROCESS)
 import Node.Process as Proc
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
+import Pathy (rootDir, dir, file, (</>))
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..))
 import Quasar.Data.Json as Json
@@ -78,8 +81,8 @@ run pred qf = do
 config ∷ Config ()
 config =
   { basePath: Left
-    { scheme: URI.unsafeSchemeFromString "http"
-    , authority: Just (URI.Authority Nothing [Both (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") (URI.unsafePortFromInt 53174)])
+    { scheme: Scheme.unsafeFromString "http"
+    , authority: Just (URI.Authority Nothing [Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 53174)])
     , path: rootDir
     }
   , idToken: Nothing

@@ -32,6 +32,7 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
+import Data.URI.Scheme as Scheme
 import Pathy (AbsPath)
 import Quasar.Data.URI as URI
 
@@ -94,4 +95,4 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority credent
   pure { host, path, credentials, format}
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.unsafeSchemeFromString "xcc"
+uriScheme = Scheme.unsafeFromString "xcc"

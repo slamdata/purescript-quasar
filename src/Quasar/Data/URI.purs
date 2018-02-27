@@ -15,26 +15,19 @@ limitations under the License.
 -}
 
 module Quasar.Data.URI 
-  ( QHierarchicalPart
-  , QURIHost
-  , QQuery
-  , AbsPath
-  , AnyPath
-  , QAuthority
-  , QAbsoluteURI
+  ( QAbsoluteURI
   , qAbsoluteURI
   , QRelativeRef
   , qRelativeRef
   , QURIRef
   , qURIRef
-  , QURI
+  , QHierarchicalPart
+  , QURIHost
+  , QQuery
+  , AbsPath
+  , AnyPath
+  , QAuthority
   , opts
-  , regNameFromString
-  , portFromInt
-  , printScheme
-  , unsafeSchemeFromString
-  , unsafePortFromInt
-  , unsafeRegNameFromString
   , module URI
   ) where
 
@@ -51,7 +44,7 @@ import Data.Newtype (un)
 import Data.Record.Builder as Builder
 import Data.String.NonEmpty as NES
 import Data.Tuple (Tuple(..))
-import Data.URI (PathAbsolute, PathRootless, RegName)
+import Data.URI (PathAbsolute, PathRootless)
 import Data.URI (URI(..), RelativePart(..), Authority(..), AbsoluteURI(..), HierarchicalPart(..), HierPath, Host(..), Path(..), Port, RelativeRef(..), URIRef, Fragment, Query, UserInfo) as URI
 import Data.URI.AbsoluteURI (AbsoluteURIOptions) as URI
 import Data.URI.AbsoluteURI (print, parser) as AbsoluteURI
@@ -62,18 +55,15 @@ import Data.URI.Extra.QueryPairs (QueryPairs(..), Key, Value) as URI
 import Data.URI.Extra.QueryPairs (print, parse, keyToString, valueToString, keyFromString, valueFromString) as QueryPairs
 import Data.URI.Extra.UserPassInfo (UserPassInfo(..)) as URI
 import Data.URI.Extra.UserPassInfo (print, parse) as UserPassInfo
-import Data.URI.Host.RegName (fromString, unsafeFromString) as RegName
 import Data.URI.Path (Path)
 import Data.URI.Path (print) as Path
 import Data.URI.Path.Absolute (print, PathAbsolute(..)) as PathAbsolute
 import Data.URI.Path.NoScheme (print, PathNoScheme(..)) as PathNoScheme
 import Data.URI.Path.Rootless (print) as PathRootless
 import Data.URI.Path.Segment (PathSegment, PathSegmentNZ, segmentFromString, unsafeSegmentNZFromString, unsafeSegmentNZNCFromString)
-import Data.URI.Port (fromInt, unsafeFromInt) as Port
 import Data.URI.RelativeRef (RelativeRefOptions) as URI
 import Data.URI.RelativeRef (print, parser, RelPath) as RelativeRef
 import Data.URI.Scheme (Scheme) as URI
-import Data.URI.Scheme (unsafeFromString, print) as Scheme
 import Data.URI.URI (URIOptions) as URI
 import Data.URI.URIRef (URIRefOptions) as URI
 import Data.URI.URIRef (print, parser) as URIRef
@@ -100,8 +90,8 @@ type QRelativeRefOptions = URI.RelativeRefOptions URI.UserPassInfo QURIHost AbsP
 type QURIRef = URI.URIRef URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
 type QURIRefOptions = URI.URIRefOptions URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
 
-type QURI = URI.URI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
-type QURIOptions = URI.URIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
+-- type QURI = URI.URI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
+-- type QURIOptions = URI.URIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
 
 qAbsoluteURI ∷ BasicCodec (Either ParseError) String QAbsoluteURI
 qAbsoluteURI = basicCodec
@@ -155,7 +145,7 @@ opts =
   printHosts = MultiHostPortPair.print id id
 
   parsePath :: Path -> Either URIPartParseError AbsPath
-  parsePath = parseAbsSandboxedPath <<< Path.print
+  parsePath = _parseAbsPath <<< Path.print
   printPath ∷ AbsPath → Path
   printPath = bimap viewAbsDir viewAbsFile >>>case _ of
     Left d ->
@@ -167,7 +157,7 @@ opts =
       
 
   parseHierPath :: Either PathAbsolute PathRootless -> Either URIPartParseError AbsPath
-  parseHierPath = parseAbsSandboxedPath <<< either PathAbsolute.print PathRootless.print
+  parseHierPath = _parseAbsPath <<< either PathAbsolute.print PathRootless.print
   printHierPath ∷ AbsPath → Either PathAbsolute PathRootless
   printHierPath = _printAbsPath >>> Left
 
@@ -176,20 +166,14 @@ opts =
   printFragment :: URI.Fragment -> URI.Fragment
   printFragment = id
 
-  parseRelPath :: RelativeRef.RelPath -> Either URIPartParseError AnyPath
-  parseRelPath = 
-    bitraverse
-      (PathAbsolute.print >>> parseAbsSandboxedPath)
-      (PathNoScheme.print >>> parseRelUnsandboxedPath)
-  
-  
   printRelPath :: AnyPath -> RelativeRef.RelPath
-  printRelPath = 
-    bimap
-      _printAbsPath
-      _printRelPath
+  printRelPath = bimap _printAbsPath _printRelPath
+  parseRelPath :: RelativeRef.RelPath -> Either URIPartParseError AnyPath
+  parseRelPath = bitraverse
+    (PathAbsolute.print >>> _parseAbsPath)
+    (PathNoScheme.print >>> _parseRelPath)
 
-  _printAbsPath :: AbsPath → PathAbsolute
+  _printAbsPath :: Py.AbsPath → PathAbsolute
   _printAbsPath = bimap viewAbsDir viewAbsFile >>> case _ of
     Left Nil -> PathAbsolute.PathAbsolute Nothing
     Left (Cons head tail) -> PathAbsolute.PathAbsolute $ Just
@@ -202,7 +186,7 @@ opts =
         $ Tuple (asSegmentNZ head) 
         $ (asSegment <$> fromFoldable tail) <> [ asSegment n ]
   
-  _printRelPath :: RelPath' → PathNoScheme.PathNoScheme
+  _printRelPath :: Py.RelPath → PathNoScheme.PathNoScheme
   _printRelPath = bimap viewRelDir viewRelFile >>> case _ of
     Left Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString "./") []
     Left (Cons head tail) ->
@@ -217,44 +201,25 @@ opts =
         $ (segmentFromString <<< maybe "../" runName <$> fromFoldable tail) <> [ asSegment n ]
 
 
-  parseAbsSandboxedPath :: String -> Either URIPartParseError AbsPath
-  parseAbsSandboxedPath =
+  _parseAbsPath :: String -> Either URIPartParseError Py.AbsPath
+  _parseAbsPath =
     Py.parsePath posixParser
       (const Nothing)
       (Just <<< Left)
       (const Nothing)
       (Just <<< Right)
       Nothing
-    >>> note (URIPartParseError "got invalid path")
+    >>> note (URIPartParseError "Could not parse valid absolute path")
 
-  parseRelUnsandboxedPath :: String -> Either URIPartParseError RelPath'
-  parseRelUnsandboxedPath =
+  _parseRelPath :: String -> Either URIPartParseError Py.RelPath
+  _parseRelPath =
     Py.parsePath posixParser
       (Just <<< Left)
       (const Nothing)
       (Just <<< Right)
       (const Nothing)
       Nothing
-    >>> note (URIPartParseError "got invalid path")
-
-
-printScheme :: URI.Scheme -> String
-printScheme = Scheme.print
-
-unsafeSchemeFromString :: String -> URI.Scheme
-unsafeSchemeFromString = Scheme.unsafeFromString
-
-regNameFromString :: String -> Maybe RegName
-regNameFromString = RegName.fromString
-
-unsafeRegNameFromString :: String -> RegName
-unsafeRegNameFromString = RegName.unsafeFromString
-
-unsafePortFromInt :: Int -> URI.Port
-unsafePortFromInt = Port.unsafeFromInt
-
-portFromInt :: Int -> Maybe URI.Port
-portFromInt = Port.fromInt
+    >>> note (URIPartParseError "Could not parse valid relative path")
 
 -- Union which rejects duplicates
 union 

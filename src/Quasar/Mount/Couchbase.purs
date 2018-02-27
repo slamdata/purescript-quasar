@@ -35,6 +35,7 @@ import Data.StrMap as SM
 import Data.String.NonEmpty (NonEmptyString)
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
+import Data.URI.Scheme as Scheme
 import Pathy (Name(..), (</>))
 import Pathy as P
 import Quasar.Data.URI as URI
@@ -106,5 +107,5 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ host)
     }
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.unsafeSchemeFromString "couchbase"
+uriScheme = Scheme.unsafeFromString "couchbase"
 

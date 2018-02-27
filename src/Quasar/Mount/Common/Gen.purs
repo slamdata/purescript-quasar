@@ -33,6 +33,8 @@ import Data.String.Gen as SG
 import Data.String.NonEmpty (NonEmptyString, cons)
 import Data.These (These(..))
 import Data.URI.Host.IPv4Address (fromInts) as IPv4Address
+import Data.URI.Host.RegName as RegName
+import Data.URI.Port as Port
 import Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
 import Quasar.Data.URI as URI
 
@@ -58,10 +60,10 @@ genHostURI = Gen.oneOf $ genIPv4 :| [genName]
   genRegName = filtered do
     head ← S.singleton <$> CG.genAlpha
     tail ← genAlphaNumericString
-    pure $ URI.regNameFromString $ head <> tail
+    pure $ RegName.fromString $ head <> tail
 
 genPort ∷ ∀ m. MonadRec m => MonadGen m ⇒ m URI.Port
-genPort = filtered $ URI.portFromInt <$> Gen.chooseInt 50000 65535
+genPort = filtered $ Port.fromInt <$> Gen.chooseInt 50000 65535
 
 genHost ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHost
 genHost = Gen.unfoldable $ genThese genHostURI genPort

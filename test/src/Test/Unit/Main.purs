@@ -28,6 +28,8 @@ import Data.Monoid (mempty)
 import Data.String.NonEmpty (fromString)
 import Data.These (These(..))
 import Data.Time.Duration (Seconds(..))
+import Data.URI.Host.RegName as RegName
+import Data.URI.Port as Port
 import Quasar.Data.URI as URI
 import Quasar.Mount as QM
 import Quasar.Mount.Couchbase as CB
@@ -51,7 +53,7 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost/testBucket?password=&docTypeKey="
       (CBT.TestConfig
-        { host: [ This (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") ]
+        { host: [ This (URI.NameAddress $ RegName.unsafeFromString "localhost") ]
         , bucketName: fromString "testBucket"
         , password: ""
         , docTypeKey: ""
@@ -61,7 +63,7 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost:99999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
       (CBT.TestConfig
-        { host: [Both (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") (URI.unsafePortFromInt 99999)]
+        { host: [Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 99999)]
         , bucketName: fromString "testBucket"
         , password: "pass"
         , docTypeKey: "type"
@@ -70,7 +72,7 @@ main = do
   let mongoURI =
         encode URI.qAbsoluteURI
           (Mongo.toURI
-            { hosts: [Both (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") (URI.unsafePortFromInt 12345)]
+            { hosts: [Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 12345)]
             , auth: Nothing
             , props: mempty})
   if mongoURI == "mongodb://localhost:12345/"

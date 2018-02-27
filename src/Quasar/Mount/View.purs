@@ -27,6 +27,7 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.String as Str
 import Data.Tuple (Tuple(..), lookup)
+import Data.URI.Scheme as Scheme
 import Quasar.Data.URI as URI
 import Quasar.Types (Vars)
 import SqlSquared (SqlQuery)
@@ -76,7 +77,7 @@ fromURI (URI.AbsoluteURI scheme _ query) = do
   pure { query: q, vars }
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.unsafeSchemeFromString "sql2"
+uriScheme = Scheme.unsafeFromString "sql2"
 
 extractQuery ∷ Array (Tuple String (Maybe String)) → Maybe String
 extractQuery= join <<< lookup "q"

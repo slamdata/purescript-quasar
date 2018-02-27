@@ -32,6 +32,7 @@ import Data.Either (Either(..), note)
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
+import Data.URI.Scheme as Scheme
 import Global (encodeURIComponent, decodeURIComponent)
 import Pathy (AbsDir)
 import Quasar.Data.URI as URI
@@ -101,13 +102,13 @@ mkURI scheme host params =
 extractHost' ∷ URI.Scheme → String → Either String URI.QURIHost
 extractHost' scheme uri = do
   URI.AbsoluteURI scheme' hierPart _ ← lmap show $ decode URI.qAbsoluteURI uri
-  unless (scheme' == scheme) $ Left $ "Expected '" <> URI.printScheme scheme <> "' URL scheme"
+  unless (scheme' == scheme) $ Left $ "Expected '" <> Scheme.print scheme <> "' URL scheme"
   case hierPart of
     URI.HierarchicalPartNoAuth _ → Left $ "Expected auth part to be present in URL"
     URI.HierarchicalPartAuth (URI.Authority _ host) _ → pure host
 
 sparkURIScheme ∷ URI.Scheme
-sparkURIScheme = URI.unsafeSchemeFromString "spark"
+sparkURIScheme = Scheme.unsafeFromString "spark"
 
 hdfsURIScheme ∷ URI.Scheme
-hdfsURIScheme = URI.unsafeSchemeFromString "hdfs"
+hdfsURIScheme = Scheme.unsafeFromString "hdfs"

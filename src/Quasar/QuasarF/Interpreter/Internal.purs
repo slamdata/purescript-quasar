@@ -116,19 +116,13 @@ mkUrl' relPath q = do
   pure (bimap toURI toRelativeRef basePath)
   where
     toURI { scheme, authority, path } =
-      URI.URI
-        scheme
-        (case authority of
-          Nothing ->
-            URI.HierarchicalPartNoAuth 
-              (Just (bimap (path </> _) (path </> _) relPath))
-          Just authority' -> 
-            URI.HierarchicalPartAuth 
-              authority'
-              (Just (bimap (path </> _) (path </> _) relPath))
-        )
-        (if q == mempty then Nothing else Just q)
-        Nothing
+      let
+        hierPath = (Just (bimap (path </> _) (path </> _) relPath))
+        hierPart = case authority of
+          Nothing -> URI.HierarchicalPartNoAuth hierPath
+          Just authority' -> URI.HierarchicalPartAuth authority' hierPath
+        query = if q == mempty then Nothing else Just q
+      in URI.URI scheme hierPart query Nothing
 
     toRelativeRef :: RelDir -> URI.QRelativeRef
     toRelativeRef relDir = 

@@ -34,6 +34,7 @@ import Data.Foldable (null)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.StrMap as SM
+import Data.URI.Scheme as Scheme
 import Pathy as P
 import Quasar.Data.URI as URI
 
@@ -96,4 +97,4 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority credent
   pure { hosts, auth: auth', props }
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.unsafeSchemeFromString "mongodb"
+uriScheme = Scheme.unsafeFromString "mongodb"
