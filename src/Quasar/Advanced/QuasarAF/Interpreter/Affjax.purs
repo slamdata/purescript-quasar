@@ -179,6 +179,18 @@ evalQuasarAdvanced (CreateToken mbName actions k) = do
              ~> "actions" := (map Qa.Action actions)
              ~> jsonEmptyObject
        }
+evalQuasarAdvanced (UpdateToken tid actions k) = do
+  config ← ask
+  url ← mkUrl (Right (Paths.token </> Pt.file (Qa.runTokenId tid))) mempty
+  map k
+    $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
+    $ _{ url = url
+       , method = Left PUT
+       , content =
+           Just $ snd $ toRequest
+             $ "actions" := (map Qa.Action actions)
+             ~> jsonEmptyObject
+       }
 evalQuasarAdvanced (DeleteToken tid k) = do
   config ← ask
   url ← mkUrl
