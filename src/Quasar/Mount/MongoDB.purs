@@ -35,10 +35,9 @@ import Data.Newtype (class Newtype, unwrap)
 import Pathy as P
 import Data.StrMap as SM
 import Quasar.Data.URI as URI
-import Quasar.Types (AnyPath)
 import Text.Parsing.Parser (runParser)
 
-newtype Auth = Auth { path ∷ AnyPath, credentials ∷ URI.UserPassInfo }
+newtype Auth = Auth { path ∷ P.AbsPath, credentials ∷ URI.UserPassInfo }
 
 derive instance newtypeAuth ∷ Newtype Auth _
 derive instance eqAuth ∷ Eq Auth

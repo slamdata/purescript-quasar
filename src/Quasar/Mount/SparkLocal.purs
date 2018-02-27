@@ -24,9 +24,10 @@ import Prelude
 
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
 import Data.Either (Either, note)
-import Quasar.Types (DirPath, parseQDirPath, printQPath)
+import Pathy (AbsDir)
+import Quasar.Types (parseQDirPath, printQPath)
 
-type Config = DirPath
+type Config = AbsDir
 
 toJSON ∷ Config → Json
 toJSON config =

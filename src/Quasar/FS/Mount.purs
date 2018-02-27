@@ -30,20 +30,19 @@ import Data.Newtype (unwrap)
 import Data.Ord (class Ord1, compare1)
 import Data.String.NonEmpty (fromString)
 import Data.TacitString as TS
-import Pathy (Dir, File, Name(..), dir', file', fileName, name, (</>))
+import Pathy (AbsDir, AbsFile, Dir, File, Name(..), AbsPath, dir', file', fileName, name, (</>))
 
-import Quasar.Types (AnyPath, DirPath, FilePath)
 
 data MountF f
-  = View (f FilePath)
-  | Module (f DirPath)
-  | MongoDB (f DirPath)
-  | Couchbase (f DirPath)
-  | MarkLogic (f DirPath)
-  | SparkHDFS (f DirPath)
-  | SparkLocal (f DirPath)
-  | Mimir (f DirPath)
-  | Unknown String (f AnyPath)
+  = View (f AbsFile)
+  | Module (f AbsDir)
+  | MongoDB (f AbsDir)
+  | Couchbase (f AbsDir)
+  | MarkLogic (f AbsDir)
+  | SparkHDFS (f AbsDir)
+  | SparkLocal (f AbsDir)
+  | Mimir (f AbsDir)
+  | Unknown String (f AbsPath)
 
 type Mount = MountF Identity
 type MountType = MountF (Const Unit)
@@ -115,7 +114,7 @@ instance showMount ∷ (Show (f TS.TacitString), Functor f) ⇒ Show (MountF f) 
 
 -- | Attempts to decode a mount listing value from Quasar's filesystem metadata,
 -- | for a mount in the specified parent directory.
-fromJSON ∷ DirPath → Json → Either String Mount
+fromJSON ∷ AbsDir → Json → Either String Mount
 fromJSON parent = decodeJson >=> \obj → do
   mount ← obj .? "mount"
   typ ← obj .? "type"
@@ -123,11 +122,11 @@ fromJSON parent = decodeJson >=> \obj → do
   let
     err :: forall a. Either String a
     err = Left $ "Unexpected type '" <> typ <> "' for mount '" <> mount <> "'"
-    onFile :: Either String (Identity FilePath)
+    onFile :: Either String (Identity AbsFile)
     onFile = if typ == "file" then Right $ Identity $ parent </> file' (Name name') else err
-    onDir :: Either String (Identity DirPath)
+    onDir :: Either String (Identity AbsDir)
     onDir = if typ == "directory" then Right $ Identity $ parent </> dir' (Name name') else err
-    onAnyPath :: Either String (Identity AnyPath)
+    onAnyPath :: Either String (Identity AbsPath)
     onAnyPath = map (map Left) onDir <|> map (map Right) onFile
   case typeFromName mount of
     View _ → View <$> onFile
@@ -140,10 +139,10 @@ fromJSON parent = decodeJson >=> \obj → do
     Mimir _ → Mimir <$> onDir
     Unknown n _ → Unknown n <$> onAnyPath
 
-foldPath ∷ ∀ r. (DirPath → r) → (FilePath → r) → Mount → r
+foldPath ∷ ∀ r. (AbsDir → r) → (AbsFile → r) → Mount → r
 foldPath onDir onPath = overPath (onDir >>> Const) (onPath >>> Const) >>> unwrap
 
-getPath ∷ Mount → AnyPath
+getPath ∷ Mount → AbsPath
 getPath = foldPath Left Right
 
 getName ∷ Mount → Either (Maybe (Name Dir)) (Name File)
@@ -161,7 +160,7 @@ typeFromName = case _ of
   "mimir" → Mimir $ Const unit
   other → Unknown other $ Const unit
 
-overPath ∷ ∀ f. Functor f ⇒ (DirPath → f DirPath) → (FilePath → f FilePath) → Mount → f Mount
+overPath ∷ ∀ f. Functor f ⇒ (AbsDir → f AbsDir) → (AbsFile → f AbsFile) → Mount → f Mount
 overPath overDir overFile = case _ of
   View (Identity file) → overFile file <#> Identity >>> View
   Module (Identity dir) → overDir dir <#> Identity >>> Module

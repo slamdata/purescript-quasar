@@ -13,10 +13,10 @@ import Data.String.NonEmpty (NonEmptyString, fromString, toString)
 import Data.Traversable (traverse)
 import OIDC.Crypt.JSONWebKey (JSONWebKey)
 import OIDC.Crypt.Types (Issuer(..), ClientId(..))
-import Pathy (rootDir)
-import Quasar.Types (DirPath, FilePath, parseQDirPath, parseQFilePath, printQPath)
+import Pathy (AbsDir, AbsFile, rootDir)
+import Quasar.Types (parseQDirPath, parseQFilePath, printQPath)
 
-newtype GroupPath = GroupPath DirPath
+newtype GroupPath = GroupPath AbsDir
 
 derive instance eqGroupPath ∷ Eq GroupPath
 derive instance ordGroupPath ∷ Ord GroupPath
@@ -84,8 +84,8 @@ instance decodeJsonAccessType ∷ DecodeJson AccessType where
 
 
 data QResource
-  = File FilePath
-  | Dir DirPath
+  = File AbsFile
+  | Dir AbsDir
   | Group GroupPath
 
 derive instance eqQResource ∷ Eq QResource
@@ -113,10 +113,10 @@ instance decodeJsonQResource ∷ DecodeJson QResource where
         <|>
         (map Dir $ lmap (const $ "Incorrect directory resource") $ parseDir pt)
 
-parseFile ∷ String → Either String FilePath
+parseFile ∷ String → Either String AbsFile
 parseFile = parseQFilePath >>> note "Incorrect resource"
 
-parseDir ∷ String → Either String DirPath
+parseDir ∷ String → Either String AbsDir
 parseDir = parseQDirPath >>> note "Incorrect resource"
 
 

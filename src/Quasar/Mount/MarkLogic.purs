@@ -31,13 +31,13 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
+import Pathy (AbsPath)
 import Quasar.Data.URI as URI
-import Quasar.Types (AnyPath)
 import Text.Parsing.Parser (runParser)
 
 type Config =
   { host ∷ URI.QURIHost
-  , path ∷ Maybe AnyPath
+  , path ∷ Maybe AbsPath
   , credentials ∷ Maybe URI.UserPassInfo
   , format ∷ Format
   }

@@ -24,19 +24,15 @@ import Data.Either (Either, note)
 import Data.Maybe (Maybe)
 import Data.StrMap (StrMap)
 import Data.Traversable (traverse)
-import Pathy (class IsDirOrFile, Abs, AbsPath, Dir, File, Path, parseAbsDir, parseAbsFile, posixParser, posixPrinter, printPath, sandboxAny)
-
-type AnyPath = AbsPath
-type DirPath = Path Abs Dir
-type FilePath = Path Abs File
+import Pathy (class IsDirOrFile, Abs, AbsDir, AbsFile, Path, parseAbsDir, parseAbsFile, posixParser, posixPrinter, printPath, sandboxAny)
 
 printQPath :: forall b. IsDirOrFile b => Path Abs b -> String
 printQPath = sandboxAny >>> printPath posixPrinter
 
-parseQFilePath :: String -> Maybe FilePath
+parseQFilePath :: String -> Maybe AbsFile
 parseQFilePath = parseAbsFile posixParser
 
-parseQDirPath :: String -> Maybe DirPath
+parseQDirPath :: String -> Maybe AbsDir
 parseQDirPath = parseAbsDir posixParser
 
 type Vars = StrMap String
@@ -44,7 +40,7 @@ type Vars = StrMap String
 type Pagination = { offset ∷ Int, limit ∷ Int }
 
 type CompileResultR =
-  { inputs ∷ Array FilePath
+  { inputs ∷ Array AbsFile
   , physicalPlan ∷ String
   }
 
@@ -61,7 +57,7 @@ instance decodeJsonCompileResult ∷ DecodeJson CompileResult where
       <*> ((obj .? "physicalPlan") <|> pure "")
       <#> CompileResult
 
-parseFile ∷ String → Either String FilePath
+parseFile ∷ String → Either String AbsFile
 parseFile = parseQFilePath >>> note "Incorrect resource"
 
 compileResultFromString ∷ String → Either String CompileResultR

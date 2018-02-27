@@ -24,13 +24,12 @@ import Data.Bifunctor (bimap)
 import Data.Either (Either(..), note)
 import Data.Maybe (Maybe)
 import Data.String.NonEmpty (fromString)
-import Pathy (Dir, File, Name(..), dir', file', fileName, name, (</>))
+import Pathy (AbsDir, AbsFile, Dir, File, Name(..), AbsPath, dir', file', fileName, name, (</>))
 import Quasar.FS.Mount as Mount
-import Quasar.Types (AnyPath, FilePath, DirPath)
 
 data QResource
-  = File FilePath
-  | Directory DirPath
+  = File AbsFile
+  | Directory AbsDir
   | Mount Mount.Mount
 
 derive instance eqQResource ∷ Eq QResource
@@ -41,7 +40,7 @@ instance showQResource ∷ Show QResource where
   show (Directory p) = "(Directory " <> show p <> ")"
   show (Mount m) = "(Mount " <> show m <> ")"
 
-fromJSON ∷ DirPath → Json → Either String QResource
+fromJSON ∷ AbsDir → Json → Either String QResource
 fromJSON parent json
   = Mount <$> Mount.fromJSON parent json
   <|> do
@@ -52,7 +51,7 @@ fromJSON parent json
       "file" → Right $ File (parent </> file' (Name name'))
       typ → Left $ "unknown resource type " <> typ
 
-getPath ∷ QResource → AnyPath
+getPath ∷ QResource → AbsPath
 getPath (File p) = Right p
 getPath (Directory p) = Left p
 getPath (Mount m) = Mount.getPath m

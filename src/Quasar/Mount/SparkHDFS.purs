@@ -32,14 +32,15 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
 import Global (encodeURIComponent, decodeURIComponent)
+import Pathy (AbsDir)
 import Quasar.Data.URI as URI
-import Quasar.Types (DirPath, parseQDirPath, printQPath)
+import Quasar.Types (parseQDirPath, printQPath)
 import Text.Parsing.Parser (runParser)
 
 type Config =
   { sparkHost ∷ URI.QURIHost
   , hdfsHost ∷ URI.QURIHost
-  , path ∷ DirPath
+  , path ∷ AbsDir
   , props ∷ SM.StrMap (Maybe String)
   }
 

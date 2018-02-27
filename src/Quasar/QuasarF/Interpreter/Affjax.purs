@@ -44,7 +44,7 @@ import Data.Tuple (Tuple(..), fst, snd)
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
-import Pathy (Name(..), peel, peelFile, rootDir)
+import Pathy (Name(..), AbsDir, peel, peelFile, rootDir)
 import Quasar.ConfigF as CF
 import Quasar.Data.Json as Json
 import Quasar.Data.MediaTypes (applicationZip)
@@ -53,7 +53,7 @@ import Quasar.FS.DirMetadata as DirMetadata
 import Quasar.Metastore as Metastore
 import Quasar.Mount as Mount
 import Quasar.Paths as Paths
-import Quasar.QuasarF (QuasarF(..), DirPath)
+import Quasar.QuasarF (QuasarF(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Quasar.QuasarF.Interpreter.Internal (defaultRequest, delete, get, jsonResult, mkFSUrl, mkRequest, mkUrl, put, strResult, toPageParams, toVarParams, unitResult)
 import Quasar.Query.OutputMeta as QueryOutputMeta
@@ -207,7 +207,7 @@ serverInfoResult = lmap error <$> ServerInfo.fromJSON <=< jsonResult
 writeQueryResult ∷ String → Either Error QueryOutputMeta.OutputMeta
 writeQueryResult = lmap error <$> QueryOutputMeta.fromJSON <=< jsonResult
 
-resourcesResult ∷ DirPath → String → Either Error DirMetadata.DirMetadata
+resourcesResult ∷ AbsDir → String → Either Error DirMetadata.DirMetadata
 resourcesResult path = lmap error <$> DirMetadata.fromJSON path <=< jsonResult
 
 mountConfigResult ∷ String → Either Error Mount.MountConfig

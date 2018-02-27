@@ -19,7 +19,6 @@ module Quasar.FS.Mount.Gen where
 
 import Prelude
 
-import Quasar.FS.Mount (MountF(..), Mount, MountType)
 import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Gen as Gen
 import Control.Monad.Rec.Class (class MonadRec)
@@ -27,7 +26,9 @@ import Data.Const (Const(..))
 import Data.Identity (Identity(..))
 import Data.NonEmpty ((:|))
 import Data.String.Gen (genUnicodeString)
-import Quasar.Mount.Common.Gen (genAnyPath, genAbsDirPath, genAbsFilePath)
+import Pathy.Gen (genAbsAnyPath)
+import Quasar.FS.Mount (MountF(..), Mount, MountType)
+import Quasar.Mount.Common.Gen (genAbsDirPath, genAbsFilePath)
 
 
 genMountType :: ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MountType
@@ -53,5 +54,5 @@ genMount = Gen.oneOf
   , genAbsDirPath <#> Identity >>> SparkHDFS
   , genAbsDirPath <#> Identity >>> SparkLocal
   , genAbsDirPath <#> Identity >>> Mimir
-  , Unknown <$> genUnicodeString <*> map Identity genAnyPath
+  , Unknown <$> genUnicodeString <*> map Identity genAbsAnyPath
   ]

@@ -26,7 +26,6 @@ import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.Char.Gen as CG
-import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
 import Data.String as S
@@ -36,7 +35,6 @@ import Data.These (These(..))
 import Data.URI.Host.IPv4Address (fromInts) as IPv4Address
 import Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
 import Quasar.Data.URI as URI
-import Quasar.Types (AnyPath)
 
 genAlphaNumericString ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m String
 genAlphaNumericString = SG.genString genAlphaNumericChar
@@ -83,6 +81,3 @@ genCredentials =
   URI.UserPassInfo <$> ({ user: _, password: _ }
     <$> genAlphaNumericString
     <*> Gen.choose (pure Nothing) (Just <$> genAlphaNumericString))
-
-genAnyPath ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m AnyPath
-genAnyPath = Gen.oneOf $ (Left <$> PGen.genAbsDirPath) :| [Right <$> PGen.genAbsFilePath]

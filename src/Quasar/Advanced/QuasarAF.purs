@@ -30,6 +30,7 @@ import Data.Foldable (class Foldable, foldMap)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Seconds)
+import Pathy (AbsDir, AbsFile, AbsPath)
 import Quasar.Advanced.Types as QA
 import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
@@ -42,7 +43,7 @@ import Quasar.Mount.View as View
 import Quasar.QuasarF (QuasarF(..))
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
-import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, CompileResultR)
+import Quasar.Types (Pagination, Vars, CompileResultR)
 import SqlSquared (SqlQuery)
 
 data QuasarAF a
@@ -80,7 +81,7 @@ serverInfo =
 
 readQuery
   ∷ PrecisionMode
-  → DirPath
+  → AbsDir
   → SqlQuery
   → Vars
   → Maybe Pagination
@@ -89,7 +90,7 @@ readQuery mode path sql vars pagination =
   left $ ReadQuery mode path sql vars pagination id
 
 readQueryEJson
-  ∷ DirPath
+  ∷ AbsDir
   → SqlQuery
   → Vars
   → Maybe Pagination
@@ -98,8 +99,8 @@ readQueryEJson path sql vars pagination =
   readQuery Precise path sql vars pagination <#> resultsAsEJson
 
 writeQuery
-  ∷ DirPath
-  → FilePath
+  ∷ AbsDir
+  → AbsFile
   → SqlQuery
   → Vars
   → QuasarAFCE OutputMeta
@@ -107,7 +108,7 @@ writeQuery path file sql vars =
   left $ WriteQuery path file sql vars id
 
 compileQuery
-  ∷ DirPath
+  ∷ AbsDir
   → SqlQuery
   → Vars
   → QuasarAFCE CompileResultR
@@ -115,13 +116,13 @@ compileQuery path sql vars =
   left $ CompileQuery path sql vars id
 
 fileMetadata
-  ∷ FilePath
+  ∷ AbsFile
   → QuasarAFCE Unit
 fileMetadata path =
   left $ FileMetadata path id
 
 dirMetadata
-  ∷ DirPath
+  ∷ AbsDir
   → Maybe Pagination
   → QuasarAFCE (Array QResource)
 dirMetadata path pagination =
@@ -129,75 +130,75 @@ dirMetadata path pagination =
 
 readFile
   ∷ PrecisionMode
-  → FilePath
+  → AbsFile
   → Maybe Pagination
   → QuasarAFCE JArray
 readFile mode path pagination =
   left $ ReadFile mode path pagination id
 
 readFileEJson
-  ∷ FilePath
+  ∷ AbsFile
   → Maybe Pagination
   → QuasarAFCE (Array EJson)
 readFileEJson path pagination =
   readFile Precise path pagination <#> resultsAsEJson
 
 writeFile
-  ∷ FilePath
+  ∷ AbsFile
   → QData
   → QuasarAFCE Unit
 writeFile path content =
   left $ WriteFile path content id
 
 writeDir
-  ∷ DirPath
+  ∷ AbsDir
   → Blob
   → QuasarAFCE Unit
 writeDir path content =
   left $ WriteDir path content id
 
 appendFile
-  ∷ FilePath
+  ∷ AbsFile
   → QData
   → QuasarAFCE Unit
 appendFile path content =
   left $ AppendFile path content id
 
 deleteData
-  ∷ AnyPath
+  ∷ AbsPath
   → QuasarAFCE Unit
 deleteData path =
   left $ DeleteData path id
 
 moveData
-  ∷ AnyPath
-  → AnyPath
+  ∷ AbsPath
+  → AbsPath
   → QuasarAFCE Unit
 moveData from to =
   left $ MoveData from to id
 
 getMount
-  ∷ AnyPath
+  ∷ AbsPath
   → QuasarAFCE MountConfig
 getMount path =
   left $ GetMount path id
 
 createMount
-  ∷ AnyPath
+  ∷ AbsPath
   → MountConfig
   → QuasarAFCE Unit
 createMount path config =
   left $ CreateMount path config Nothing id
 
 updateMount
-  ∷ AnyPath
+  ∷ AbsPath
   → MountConfig
   → QuasarAFCE Unit
 updateMount path config =
   left $ UpdateMount path config Nothing id
 
 createCachedView
-  ∷ AnyPath
+  ∷ AbsPath
   → View.Config
   → Seconds
   → QuasarAFCE Unit
@@ -205,7 +206,7 @@ createCachedView path config maxAge =
   left $ CreateMount path (ViewConfig config) (Just maxAge) id
 
 updateCachedView
-  ∷ AnyPath
+  ∷ AbsPath
   → View.Config
   → Seconds
   → QuasarAFCE Unit

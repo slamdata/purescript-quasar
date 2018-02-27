@@ -20,10 +20,11 @@ import Prelude
 
 import Data.Argonaut (Json, JArray, decodeJson, (.?))
 import Data.Either (Either, note)
-import Quasar.Types (FilePath, parseQFilePath)
+import Pathy (AbsFile)
+import Quasar.Types (parseQFilePath)
 
 type OutputMeta =
-  { out ∷ FilePath
+  { out ∷ AbsFile
   , phases ∷ JArray
   }
 
