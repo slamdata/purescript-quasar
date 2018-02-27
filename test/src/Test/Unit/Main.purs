@@ -53,7 +53,7 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost/testBucket?password=&docTypeKey="
       (CBT.TestConfig
-        { host: [ This (URI.NameAddress $ RegName.unsafeFromString "localhost") ]
+        { host: Just $ This (URI.NameAddress $ RegName.unsafeFromString "localhost")
         , bucketName: fromString "testBucket"
         , password: ""
         , docTypeKey: ""
@@ -63,14 +63,14 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost:99999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
       (CBT.TestConfig
-        { host: [Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 99999)]
+        { host: Just $ Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 99999)
         , bucketName: fromString "testBucket"
         , password: "pass"
         , docTypeKey: "type"
         , queryTimeout: Just (Seconds (20.0))
         })
   let mongoURI =
-        encode URI.qAbsoluteURI
+        encode URI.mongoURI
           (Mongo.toURI
             { hosts: [Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 12345)]
             , auth: Nothing

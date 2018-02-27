@@ -180,7 +180,7 @@ evalQuasarAdvanced (CreateToken mbName actions k) = do
        }
 evalQuasarAdvanced (UpdateToken tid actions k) = do
   config ← ask
-  url ← mkUrl (Right (Paths.token </> Pt.file (Qa.runTokenId tid))) mempty
+  url ← mkUrl (Right (Paths.token </> Pt.file' (Name $ Qa.runTokenId tid))) mempty
   map k
     $ mkAuthedRequest (jsonResult >>> map Qa.runToken)
     $ _{ url = url

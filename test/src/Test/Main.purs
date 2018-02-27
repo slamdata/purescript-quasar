@@ -82,7 +82,7 @@ config ∷ Config ()
 config =
   { basePath: Left
     { scheme: Scheme.unsafeFromString "http"
-    , authority: Just (URI.Authority Nothing [Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 53174)])
+    , authority: Just $ URI.Authority Nothing $ Just $ Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 53174)
     , path: rootDir
     }
   , idToken: Nothing
