@@ -96,4 +96,4 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority credent
   pure { hosts, auth: auth', props }
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.unsafeSchemaFromString "mongodb"
+uriScheme = URI.unsafeSchemeFromString "mongodb"

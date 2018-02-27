@@ -78,7 +78,7 @@ run pred qf = do
 config ∷ Config ()
 config =
   { basePath: Left
-    { scheme: URI.unsafeSchemaFromString "http"
+    { scheme: URI.unsafeSchemeFromString "http"
     , authority: Just (URI.Authority Nothing [Both (URI.NameAddress $ URI.unsafeRegNameFromString "localhost") (URI.unsafePortFromInt 53174)])
     , path: rootDir
     }

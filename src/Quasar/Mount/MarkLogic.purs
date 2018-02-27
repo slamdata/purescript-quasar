@@ -94,4 +94,4 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority credent
   pure { host, path, credentials, format}
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.unsafeSchemaFromString "xcc"
+uriScheme = URI.unsafeSchemeFromString "xcc"

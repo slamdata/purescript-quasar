@@ -107,7 +107,7 @@ extractHost' scheme uri = do
     URI.HierarchicalPartAuth (URI.Authority _ host) _ → pure host
 
 sparkURIScheme ∷ URI.Scheme
-sparkURIScheme = URI.unsafeSchemaFromString "spark"
+sparkURIScheme = URI.unsafeSchemeFromString "spark"
 
 hdfsURIScheme ∷ URI.Scheme
-hdfsURIScheme = URI.unsafeSchemaFromString "hdfs"
+hdfsURIScheme = URI.unsafeSchemeFromString "hdfs"

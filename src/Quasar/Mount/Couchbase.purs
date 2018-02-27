@@ -106,5 +106,5 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ host)
     }
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.unsafeSchemaFromString "couchbase"
+uriScheme = URI.unsafeSchemeFromString "couchbase"
 

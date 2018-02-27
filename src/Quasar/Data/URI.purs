@@ -33,7 +33,7 @@ module Quasar.Data.URI
   , regNameFromString
   , portFromInt
   , printScheme
-  , unsafeSchemaFromString
+  , unsafeSchemeFromString
   , unsafePortFromInt
   , unsafeRegNameFromString
   , module URI
@@ -234,8 +234,8 @@ opts =
 printScheme :: URI.Scheme -> String
 printScheme = Scheme.print
 
-unsafeSchemaFromString :: String -> URI.Scheme
-unsafeSchemaFromString = Scheme.unsafeFromString
+unsafeSchemeFromString :: String -> URI.Scheme
+unsafeSchemeFromString = Scheme.unsafeFromString
 
 regNameFromString :: String -> Maybe RegName
 regNameFromString = RegName.fromString

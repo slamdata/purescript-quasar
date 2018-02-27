@@ -75,7 +75,7 @@ fromURI (URI.AbsoluteURI scheme _ query) = do
   pure { query: q, vars }
 
 uriScheme ∷ URI.Scheme
-uriScheme = URI.unsafeSchemaFromString "sql2"
+uriScheme = URI.unsafeSchemeFromString "sql2"
 
 extractQuery ∷ Array (Tuple String (Maybe String)) → Maybe String
 extractQuery= join <<< lookup "q"
