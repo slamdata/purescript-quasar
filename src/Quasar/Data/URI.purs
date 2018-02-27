@@ -17,12 +17,15 @@ limitations under the License.
 module Quasar.Data.URI 
   ( QAbsoluteURI
   , qAbsoluteURI
+  , MongoURI
+  , mongoURI
   , QRelativeRef
   , qRelativeRef
   , QURIRef
   , qURIRef
   , QHierarchicalPart
   , QURIHost
+  , QURIHosts
   , QQuery
   , AbsPath
   , AnyPath
@@ -49,6 +52,8 @@ import Data.URI (URI(..), RelativePart(..), Authority(..), AbsoluteURI(..), Hier
 import Data.URI.AbsoluteURI (AbsoluteURIOptions) as URI
 import Data.URI.AbsoluteURI (print, parser) as AbsoluteURI
 import Data.URI.Common (URIPartParseError(..))
+import Data.URI.HostPortPair (HostPortPair) as URI
+import Data.URI.HostPortPair (print, parser) as HostPortPair
 import Data.URI.Extra.MultiHostPortPair (MultiHostPortPair) as URI
 import Data.URI.Extra.MultiHostPortPair (print, parser) as MultiHostPortPair
 import Data.URI.Extra.QueryPairs (QueryPairs(..), Key, Value) as URI
@@ -76,13 +81,18 @@ import Type.Row (class RowListNub, class RowToList)
 type AbsPath = Py.AbsPath
 type AnyPath = Either Py.AbsPath Py.RelPath
 
-type QURIHost = URI.MultiHostPortPair URI.Host URI.Port
+type QURIHost = URI.HostPortPair URI.Host URI.Port
+type QURIHosts = URI.MultiHostPortPair URI.Host URI.Port
+
 type QAuthority = URI.Authority URI.UserPassInfo QURIHost
 type QQuery = URI.QueryPairs String String
 type QHierarchicalPart = URI.HierarchicalPart URI.UserPassInfo QURIHost AbsPath AbsPath
 
 type QAbsoluteURI = URI.AbsoluteURI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery
 type QAbsoluteURIOptions = URI.AbsoluteURIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery
+
+type MongoURI = URI.AbsoluteURI URI.UserPassInfo QURIHosts AbsPath AbsPath QQuery
+type MongoURIOptions = URI.AbsoluteURIOptions URI.UserPassInfo QURIHosts AbsPath AbsPath QQuery
 
 type QRelativeRef = URI.RelativeRef URI.UserPassInfo QURIHost AbsPath AnyPath QQuery URI.Fragment
 type QRelativeRefOptions = URI.RelativeRefOptions URI.UserPassInfo QURIHost AbsPath AnyPath QQuery URI.Fragment
@@ -98,6 +108,11 @@ qAbsoluteURI = basicCodec
   (flip runParser $ AbsoluteURI.parser opts.absoluteURI)
   (AbsoluteURI.print opts.absoluteURI)
 
+mongoURI ∷ BasicCodec (Either ParseError) String MongoURI
+mongoURI = basicCodec
+  (flip runParser $ AbsoluteURI.parser opts.mongoURI)
+  (AbsoluteURI.print opts.mongoURI)
+
 qRelativeRef ∷ BasicCodec (Either ParseError) String QRelativeRef
 qRelativeRef = basicCodec
   (flip runParser $ RelativeRef.parser opts.relativeRef)
@@ -110,18 +125,21 @@ qURIRef = basicCodec
 
 opts :: 
   { absoluteURI ∷ Record QAbsoluteURIOptions
+  , mongoURI ∷ Record MongoURIOptions
   , relativeRef ∷ Record QRelativeRefOptions
   , uriRef ∷ Record QURIRefOptions
   }
 opts =
-  { absoluteURI: _common `union` _Path `union` _HierPath
-  , relativeRef: _common `union` _Path`union` _Fragment `union` _RelPath
-  , uriRef: _common `union` _HierPath `union` _Path `union` _Fragment `union` _RelPath
+  { absoluteURI: _common `union` _Host `union` _Path `union` _HierPath
+  , mongoURI: _common `union` _Hosts `union` _Path `union` _HierPath
+  , relativeRef: _common `union` _Host `union` _Path`union` _Fragment `union` _RelPath
+  , uriRef: _common `union` _Host `union` _HierPath `union` _Path `union` _Fragment `union` _RelPath
   }
   where
-  _common = _UserInfo `union` _Hosts `union` _Query
+  _common = _UserInfo `union` _Query
 
   _UserInfo = { parseUserInfo, printUserInfo }
+  _Host = { parseHosts: parseHost, printHosts: printHost }
   _Hosts = { parseHosts, printHosts }
   _Query = { parseQuery, printQuery }
   _Path = { parsePath, printPath }
@@ -139,9 +157,14 @@ opts =
   printUserInfo :: URI.UserPassInfo -> URI.UserInfo
   printUserInfo = UserPassInfo.print
 
-  parseHosts :: Parser String QURIHost
+  parseHost :: Parser String QURIHost
+  parseHost = HostPortPair.parser pure pure
+  printHost :: QURIHost -> String
+  printHost = HostPortPair.print id id
+  
+  parseHosts :: Parser String QURIHosts
   parseHosts = MultiHostPortPair.parser pure pure
-  printHosts :: QURIHost -> String
+  printHosts :: QURIHosts -> String
   printHosts = MultiHostPortPair.print id id
 
   parsePath :: Path -> Either URIPartParseError AbsPath

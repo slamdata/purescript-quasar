@@ -23,6 +23,7 @@ import Prelude
 
 import Control.Monad.Gen (class MonadGen, filtered)
 import Control.Monad.Gen as Gen
+import Control.Monad.Gen.Common (genMaybe)
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.Char.Gen as CG
@@ -66,7 +67,10 @@ genPort ∷ ∀ m. MonadRec m => MonadGen m ⇒ m URI.Port
 genPort = filtered $ Port.fromInt <$> Gen.chooseInt 50000 65535
 
 genHost ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHost
-genHost = Gen.unfoldable $ genThese genHostURI genPort
+genHost = genMaybe $ genThese genHostURI genPort
+
+genHosts ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHosts
+genHosts = Gen.unfoldable $ genThese genHostURI genPort
 
 genThese ∷ ∀ m a b. MonadGen m ⇒ MonadRec m ⇒ m a -> m b -> m (These a b)
 genThese ma mb = filtered do

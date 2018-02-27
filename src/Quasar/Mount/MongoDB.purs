@@ -49,25 +49,25 @@ instance showAuth ∷ Show Auth where
     "(Auth { path: " <> show path <> ", credentials: " <> show credentials <> " })"
 
 type Config =
-  { hosts ∷ URI.QURIHost
+  { hosts ∷ URI.QURIHosts
   , auth ∷ Maybe Auth
   , props ∷ SM.StrMap (Maybe String)
   }
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = encode URI.qAbsoluteURI (toURI config)
+  let uri = encode URI.mongoURI (toURI config)
   in "mongodb" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< decode URI.qAbsoluteURI
+  <=< lmap show <<< decode URI.mongoURI
   <=< (_ .? "connectionUri")
   <=< (_ .? "mongodb")
   <=< decodeJson
 
-toURI ∷ Config → URI.QAbsoluteURI
+toURI ∷ Config → URI.MongoURI
 toURI { hosts, auth, props } =
   URI.AbsoluteURI
     uriScheme
@@ -81,7 +81,7 @@ toURI { hosts, auth, props } =
       else Just (URI.QueryPairs (SM.toUnfoldable props)))
 
 
-fromURI ∷ URI.QAbsoluteURI → Either String Config
+fromURI ∷ URI.MongoURI → Either String Config
 fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartNoAuth _) _) = do
   Left "Expected 'auth' part in URI"
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority credentials hosts) path) query) = do
