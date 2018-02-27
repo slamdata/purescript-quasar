@@ -59,7 +59,7 @@ instance decodeJsonOperation ∷ DecodeJson Operation where
       "Read" → pure Read
       "Modify" → pure Modify
       "Delete" → pure Delete
-      _ → Left "Incorrect permission"
+      _ → Left "Could not parse permission"
 
 
 data AccessType
@@ -80,7 +80,7 @@ instance decodeJsonAccessType ∷ DecodeJson AccessType where
     "Structural" → pure Structural
     "Content" → pure Content
     "Mount" → pure Mount
-    _ → Left "Incorrect resource type"
+    _ → Left "Could not parse resource type"
 
 
 data QResource
@@ -103,21 +103,21 @@ instance decodeJsonQResource ∷ DecodeJson QResource where
       groupPath = Str.stripPrefix (Str.Pattern "group:") str
       filePath = Str.stripPrefix (Str.Pattern "data:") str
     case groupPath, filePath of
-      Nothing, Nothing → Left "Incorrect resource"
+      Nothing, Nothing → Left "Could not parse resource"
       Just pt, _ →
         map Group
-          $ lmap (const "Incorrect group resource")
+          $ lmap (const "Could not parse group resource")
           $ parseGroupPath pt
       _, Just pt →
-        (map File $ lmap (const $ "Incorrect file resource") $ parseFile pt)
+        (map File $ lmap (const $ "Could not parse file resource") $ parseFile pt)
         <|>
-        (map Dir $ lmap (const $ "Incorrect directory resource") $ parseDir pt)
+        (map Dir $ lmap (const $ "Could not parse directory resource") $ parseDir pt)
 
 parseFile ∷ String → Either String AbsFile
-parseFile = parseQFilePath >>> note "Incorrect resource"
+parseFile = parseQFilePath >>> note "Could not parse resource"
 
 parseDir ∷ String → Either String AbsDir
-parseDir = parseQDirPath >>> note "Incorrect resource"
+parseDir = parseQDirPath >>> note "Could not parse resource"
 
 
 type ActionR =
@@ -232,14 +232,14 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
       -- string isn't email.
       if isJust (Str.indexOf (Str.Pattern "@") str)
         then pure str
-        else Left "Incorrect email"
+        else Left "Could not parse email"
 
     parseUserId ∷ String → Either String UserId
     parseUserId str =
       Str.stripPrefix (Str.Pattern "user:") str
       >>= fromString 
       # map UserId
-      # note "Incorrect user"
+      # note "Could not parse user"
       
 
     parseTokenId ∷ String → Either String TokenId
@@ -247,13 +247,13 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
       Str.stripPrefix (Str.Pattern "token:") str
       >>= fromString 
       # map TokenId
-      # note "Incorrect token"
+      # note "Could not parse token"
       
 
 parseGroup ∷ String → Either String GroupPath
 parseGroup string =
   Str.stripPrefix (Str.Pattern "group:") string
-  # note "Incorrect group"
+  # note "Could not parse group"
   >>= parseGroupPath
 
 
@@ -304,7 +304,7 @@ instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
     extractGroups ∷ Array String → Either String (Array GroupPath)
     extractGroups =
       traverse \x →
-        note "Incorrect subgroup" do
+        note "Could not parse subgroup" do
           -- Quasar returns file paths for the subgroups, so we have to append a slash
           dir ← parseQDirPath (x <> "/")
           pure $ GroupPath dir

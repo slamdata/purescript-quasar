@@ -58,7 +58,7 @@ instance decodeJsonCompileResult ∷ DecodeJson CompileResult where
       <#> CompileResult
 
 parseFile ∷ String → Either String AbsFile
-parseFile = parseQFilePath >>> note "Incorrect resource"
+parseFile = parseQFilePath >>> note "Could not parse resource"
 
 compileResultFromString ∷ String → Either String CompileResultR
 compileResultFromString s =
