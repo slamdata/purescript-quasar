@@ -60,6 +60,7 @@ data QuasarAF a
   | TokenList ((Array QA.TokenR) :~> a)
   | TokenInfo QA.TokenId (QA.TokenR :~> a)
   | CreateToken (Maybe QA.TokenName) (Array QA.ActionR) (QA.TokenR :~> a)
+  | UpdateToken QA.TokenId (Array QA.ActionR) (QA.TokenR :~> a)
   | DeleteToken QA.TokenId (Unit :~> a)
   | AuthProviders ((Array QA.ProviderR) :~> a)
   | Licensee (QA.Licensee :~> a)
@@ -317,6 +318,13 @@ createToken
   → QuasarAFCE QA.TokenR
 createToken mbName actions =
   right $ CreateToken mbName actions id
+
+updateToken
+  ∷ QA.TokenId
+  → Array QA.ActionR
+  → QuasarAFCE QA.TokenR
+updateToken tid actions =
+  right $ UpdateToken tid actions id
 
 deleteToken
   ∷ QA.TokenId
