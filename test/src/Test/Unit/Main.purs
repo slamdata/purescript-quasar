@@ -26,10 +26,12 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
 import Data.String.NonEmpty (fromString)
+import Data.String.NonEmpty as NES
 import Data.These (These(..))
 import Data.Time.Duration (Seconds(..))
 import Data.URI.Host.RegName as RegName
 import Data.URI.Port as Port
+import Partial.Unsafe (unsafePartial)
 import Quasar.Data.URI as URI
 import Quasar.Mount as QM
 import Quasar.Mount.Couchbase as CB
@@ -53,7 +55,7 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost/testBucket?password=&docTypeKey="
       (CBT.TestConfig
-        { host: Just $ This (URI.NameAddress $ RegName.unsafeFromString "localhost")
+        { host: Just $ This (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost")
         , bucketName: fromString "testBucket"
         , password: ""
         , docTypeKey: ""
@@ -63,7 +65,7 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost:99999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
       (CBT.TestConfig
-        { host: Just $ Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 99999)
+        { host: Just $ Both (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost") (Port.unsafeFromInt 99999)
         , bucketName: fromString "testBucket"
         , password: "pass"
         , docTypeKey: "type"
@@ -72,7 +74,7 @@ main = do
   let mongoURI =
         encode URI.mongoURI
           (Mongo.toURI
-            { hosts: [Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 12345)]
+            { hosts: [Both (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost") (Port.unsafeFromInt 12345)]
             , auth: Nothing
             , props: mempty})
   if mongoURI == "mongodb://localhost:12345/"

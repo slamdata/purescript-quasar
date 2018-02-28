@@ -45,6 +45,7 @@ import Data.List (List(..), reverse)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (un)
 import Data.Record.Builder as Builder
+import Data.String.NonEmpty (NonEmptyString, fromString)
 import Data.String.NonEmpty as NES
 import Data.Tuple (Tuple(..))
 import Data.URI (PathAbsolute, PathRootless)
@@ -52,14 +53,14 @@ import Data.URI (URI(..), RelativePart(..), Authority(..), AbsoluteURI(..), Hier
 import Data.URI.AbsoluteURI (AbsoluteURIOptions) as URI
 import Data.URI.AbsoluteURI (print, parser) as AbsoluteURI
 import Data.URI.Common (URIPartParseError(..))
-import Data.URI.HostPortPair (HostPortPair) as URI
-import Data.URI.HostPortPair (print, parser) as HostPortPair
 import Data.URI.Extra.MultiHostPortPair (MultiHostPortPair) as URI
 import Data.URI.Extra.MultiHostPortPair (print, parser) as MultiHostPortPair
 import Data.URI.Extra.QueryPairs (QueryPairs(..), Key, Value) as URI
 import Data.URI.Extra.QueryPairs (print, parse, keyToString, valueToString, keyFromString, valueFromString) as QueryPairs
 import Data.URI.Extra.UserPassInfo (UserPassInfo(..)) as URI
 import Data.URI.Extra.UserPassInfo (print, parse) as UserPassInfo
+import Data.URI.HostPortPair (HostPortPair) as URI
+import Data.URI.HostPortPair (print, parser) as HostPortPair
 import Data.URI.Path (Path)
 import Data.URI.Path (print) as Path
 import Data.URI.Path.Absolute (print, PathAbsolute(..)) as PathAbsolute
@@ -73,7 +74,7 @@ import Data.URI.URI (URIOptions) as URI
 import Data.URI.URIRef (URIRefOptions) as URI
 import Data.URI.URIRef (print, parser) as URIRef
 import Partial.Unsafe (unsafeCrashWith)
-import Pathy (foldPath, posixParser)
+import Pathy (Name(..), foldPath, posixParser)
 import Pathy as Py
 import Text.Parsing.Parser (ParseError, Parser, runParser)
 import Type.Row (class RowListNub, class RowToList)
@@ -211,19 +212,27 @@ opts =
   
   _printRelPath :: Py.RelPath → PathNoScheme.PathNoScheme
   _printRelPath = bimap viewRelDir viewRelFile >>> case _ of
-    Left Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString "./") []
+    Left Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString currentDirSegment) []
     Left (Cons head tail) ->
       PathNoScheme.PathNoScheme
-        $ Tuple (unsafeSegmentNZNCFromString $ maybe "../" runName head)
+        $ Tuple (unsafeSegmentNZNCFromString $ maybe parentDirSegment (un Name) head)
         $ (segmentFromString <<< maybe "../" runName <$> fromFoldable tail) <> [ segmentFromString "" ]
 
     Right (Tuple d n) -> case d of
-      Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString $ runName n) []
+      Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString $ un Name n) []
       Cons head tail -> PathNoScheme.PathNoScheme
-        $ Tuple (unsafeSegmentNZNCFromString $ maybe "../" runName head)
+        $ Tuple (unsafeSegmentNZNCFromString $ maybe parentDirSegment (un Name) head)
         $ (segmentFromString <<< maybe "../" runName <$> fromFoldable tail) <> [ asSegment n ]
 
 
+  currentDirSegment :: NonEmptyString
+  currentDirSegment = case NES.fromString "./" of
+    Nothing -> unsafeCrashWith "unreachable case in currentDirSegment"
+    Just a -> a
+  parentDirSegment :: NonEmptyString
+  parentDirSegment = case NES.fromString "../" of
+    Nothing -> unsafeCrashWith "unreachable case in parentDirSegment"
+    Just a -> a
   _parseAbsPath :: String -> Either URIPartParseError Py.AbsPath
   _parseAbsPath =
     Py.parsePath posixParser
@@ -256,7 +265,7 @@ union
 union r1 r2 = Builder.build (Builder.merge r2) r1
 
 asSegmentNZ :: forall a. Py.Name a -> PathSegmentNZ
-asSegmentNZ = runName >>> unsafeSegmentNZFromString
+asSegmentNZ = un Py.Name >>> unsafeSegmentNZFromString
 
 asSegment :: forall a. Py.Name a -> PathSegment
 asSegment = runName >>> segmentFromString 

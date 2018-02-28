@@ -32,6 +32,7 @@ import Data.NonEmpty ((:|))
 import Data.String as S
 import Data.String.Gen as SG
 import Data.String.NonEmpty (NonEmptyString, cons)
+import Data.String.NonEmpty as NES
 import Data.These (These(..))
 import Data.URI.Host.IPv4Address (fromInts) as IPv4Address
 import Data.URI.Host.RegName as RegName
@@ -58,10 +59,10 @@ genHostURI = Gen.oneOf $ genIPv4 :| [genName]
     d ← Gen.chooseInt 1 254
     pure $ URI.IPv4Address <$> IPv4Address.fromInts a b c d
   genName = URI.NameAddress <$> genRegName
-  genRegName = filtered do
-    head ← S.singleton <$> CG.genAlpha
+  genRegName = do
+    head ← CG.genAlpha
     tail ← genAlphaNumericString
-    pure $ RegName.fromString $ head <> tail
+    pure $ RegName.fromString $ NES.cons head tail
 
 genPort ∷ ∀ m. MonadRec m => MonadGen m ⇒ m URI.Port
 genPort = filtered $ Port.fromInt <$> Gen.chooseInt 50000 65535

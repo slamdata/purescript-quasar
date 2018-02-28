@@ -37,6 +37,7 @@ import Data.Maybe (Maybe(..))
 import Data.Posix.Signal (Signal(SIGTERM))
 import Data.StrMap as SM
 import Data.String as Str
+import Data.String.NonEmpty as NES
 import Data.Symbol (SProxy(..))
 import Data.These (These(..))
 import Data.Tuple (Tuple(..))
@@ -82,7 +83,12 @@ config ∷ Config ()
 config =
   { basePath: Left
     { scheme: Scheme.unsafeFromString "http"
-    , authority: Just $ URI.Authority Nothing $ Just $ Both (URI.NameAddress $ RegName.unsafeFromString "localhost") (Port.unsafeFromInt 53174)
+    , authority: Just
+        $ URI.Authority Nothing
+        $ Just
+        $ Both
+            (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost")
+            (Port.unsafeFromInt 53174)
     , path: rootDir
     }
   , idToken: Nothing
