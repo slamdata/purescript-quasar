@@ -48,6 +48,7 @@ import Data.Monoid (mempty)
 import Data.Path.Pathy (Abs, AnyPath, Path, Rel, RelDir, RelPath, Sandboxed, dir, file, relativeTo, rootDir, unsandbox, (</>))
 import Data.StrMap as SM
 import Data.String as Str
+import Data.String as String
 import Data.Tuple (Tuple(..))
 import Data.URI as URI
 import Data.URI.URIRef as URIRef
@@ -57,6 +58,7 @@ import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
 import Quasar.ConfigF as CF
+import Quasar.Error.Compilation (CompilationError(..))
 import Quasar.QuasarF (Pagination, QError(..), PDFError(..), UnauthorizedDetails(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Unsafe.Coerce (unsafeCoerce)
@@ -191,6 +193,12 @@ parseHumanReadableError json =
     , do e ← json .? "error"
          message ← e .? "message"
          pure (ErrorMessage {title: Nothing, message, raw: json})
+    , do e ← json .? "error"
+         detail ← e .? "detail"
+         message ← detail .? "message"
+         if String.indexOf (String.Pattern "Keyword `having` not supported.") message == Just 0
+           then Right (CompilationError HavingIsNotAvailable)
+           else Left "Failed to parse CompilationError"
     , do e ← json .? "error"
          detail ← e .? "detail"
          title ← e .?? "status"
