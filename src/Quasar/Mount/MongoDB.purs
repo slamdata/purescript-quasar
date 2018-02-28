@@ -34,9 +34,9 @@ import Data.Foldable (null)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
 import Data.StrMap as SM
-import Data.URI.Scheme as Scheme
 import Pathy as P
-import Quasar.Data.URI as URI
+import Quasar.URI as URI
+import URI.Scheme as Scheme
 
 newtype Auth = Auth { path ∷ P.AbsPath, credentials ∷ URI.UserPassInfo }
 

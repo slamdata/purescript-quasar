@@ -19,7 +19,7 @@ module Quasar.QuasarF.Interpreter.Config where
 import Data.Either (Either)
 import Data.Maybe (Maybe)
 import Pathy (AbsDir, RelDir)
-import Quasar.Data.URI as URI
+import Quasar.URI as URI
 
 type AbsBasePath = { scheme ∷ URI.Scheme, authority ∷ Maybe URI.QAuthority, path ∷ AbsDir }
 type BasePath = Either AbsBasePath RelDir

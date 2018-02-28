@@ -32,9 +32,9 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
-import Data.URI.Scheme as Scheme
 import Pathy (AbsPath)
-import Quasar.Data.URI as URI
+import Quasar.URI as URI
+import URI.Scheme as Scheme
 
 type Config =
   { host ∷ URI.QURIHost

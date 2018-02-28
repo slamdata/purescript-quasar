@@ -22,16 +22,16 @@ import Control.Monad.Free (Free)
 import Data.Either (Either(..))
 import Data.Functor.Coproduct (Coproduct)
 import Data.Maybe (Maybe(..))
-import Pathy (rootDir)
 import Data.String as String
-import Quasar.Data.URI as URI
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
+import Pathy (rootDir)
 import Quasar.Advanced.Paths as Paths
 import Quasar.Advanced.QuasarAF (GroupPath(..))
 import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
 import Quasar.ConfigF as CF
 import Quasar.QuasarF.Interpreter.Internal (mkFSUrl)
+import Quasar.URI as URI
 
 type AXFP = AXF.AffjaxFP RequestContent String
 

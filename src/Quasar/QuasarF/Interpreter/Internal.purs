@@ -45,8 +45,8 @@ import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (mempty)
-import Data.StrMap as SM
 import Data.String as Str
+import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
@@ -55,9 +55,9 @@ import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
 import Pathy (class IsDirOrFile, Abs, AbsPath, Path, Rel, RelDir, RelPath, relativeTo, rootDir, (</>))
 import Quasar.ConfigF as CF
-import Quasar.Data.URI as URI
 import Quasar.QuasarF (Pagination, QError(..), PDFError(..), UnauthorizedDetails(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
+import Quasar.URI as URI
 
 type AXFP = AXF.AffjaxFP RequestContent String
 type AjaxM r a = Free (Coproduct (CF.ConfigF (Config r)) AXFP) a
@@ -102,7 +102,7 @@ mkFSUrl
   → AbsPath
   → URI.QQuery
   → AjaxM r String
-mkFSUrl relDir fsPath q = mkUrl (bimap baseify baseify fsPath) q 
+mkFSUrl relDir fsPath q = mkUrl (bimap baseify baseify fsPath) q
   where
     baseify ∷ ∀ b. IsDirOrFile b => Path Abs b → Path Rel b
     baseify p = relDir </> p `relativeTo` rootDir
@@ -125,7 +125,7 @@ mkUrl' relPath q = do
       in URI.URI scheme hierPart query Nothing
 
     toRelativeRef :: RelDir -> URI.QRelativeRef
-    toRelativeRef relDir = 
+    toRelativeRef relDir =
       URI.RelativeRef
         (URI.RelativePartNoAuth
           (Just $ Right (bimap (relDir </> _) (relDir </> _) relPath)))

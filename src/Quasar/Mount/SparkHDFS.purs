@@ -32,11 +32,11 @@ import Data.Either (Either(..), note)
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
-import Data.URI.Scheme as Scheme
 import Global (encodeURIComponent, decodeURIComponent)
 import Pathy (AbsDir)
-import Quasar.Data.URI as URI
 import Quasar.Types (parseQDirPath, printQPath)
+import Quasar.URI as URI
+import URI.Scheme as Scheme
 
 type Config =
   { sparkHost ∷ URI.QURIHost
@@ -63,7 +63,7 @@ toURI cfg =
   mkURI sparkURIScheme cfg.sparkHost (Just (URI.QueryPairs $ requiredProps <> optionalProps))
   where
   requiredProps ∷ Array (Tuple String (Maybe String))
-  requiredProps = 
+  requiredProps =
     [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ encode URI.qAbsoluteURI $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
     , Tuple "rootPath" $ Just $ printQPath cfg.path
     ]

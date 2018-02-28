@@ -29,16 +29,15 @@ import Control.Monad.Rec.Class (class MonadRec)
 import Data.Char.Gen as CG
 import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
-import Data.String as S
 import Data.String.Gen as SG
 import Data.String.NonEmpty (NonEmptyString, cons)
 import Data.String.NonEmpty as NES
 import Data.These (These(..))
-import Data.URI.Host.IPv4Address (fromInts) as IPv4Address
-import Data.URI.Host.RegName as RegName
-import Data.URI.Port as Port
 import Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
-import Quasar.Data.URI as URI
+import Quasar.URI as URI
+import URI.Host.Gen as HostGen
+import URI.Host.RegName as RegName
+import URI.Port as Port
 
 genAlphaNumericString ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m String
 genAlphaNumericString = SG.genString genAlphaNumericChar
@@ -52,12 +51,7 @@ genAlphaNumericChar = Gen.oneOf $ CG.genDigitChar :| [CG.genAlpha]
 genHostURI ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.Host
 genHostURI = Gen.oneOf $ genIPv4 :| [genName]
   where
-  genIPv4 = filtered do
-    a ← Gen.chooseInt 1 254
-    b ← Gen.chooseInt 1 254
-    c ← Gen.chooseInt 1 254
-    d ← Gen.chooseInt 1 254
-    pure $ URI.IPv4Address <$> IPv4Address.fromInts a b c d
+  genIPv4 = URI.IPv4Address <$> HostGen.genIPv4
   genName = URI.NameAddress <$> genRegName
   genRegName = do
     head ← CG.genAlpha

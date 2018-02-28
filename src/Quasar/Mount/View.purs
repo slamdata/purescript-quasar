@@ -24,16 +24,16 @@ import Data.Codec (decode, encode)
 import Data.Either (Either(..), note)
 import Data.Foldable (foldMap)
 import Data.Maybe (Maybe(..), maybe)
-import Data.StrMap as SM
 import Data.String as Str
+import Data.StrMap as SM
 import Data.Tuple (Tuple(..), lookup)
-import Data.URI.Scheme as Scheme
-import Quasar.Data.URI as URI
 import Quasar.Types (Vars)
+import Quasar.URI as URI
 import SqlSquared (SqlQuery)
 import SqlSquared as Sql
 import Text.Parsing.Parser (ParseError(..))
 import Text.Parsing.Parser.Pos (Position(..))
+import URI.Scheme as Scheme
 
 type Config =
   { query ∷ SqlQuery

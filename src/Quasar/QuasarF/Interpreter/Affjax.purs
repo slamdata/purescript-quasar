@@ -37,8 +37,8 @@ import Data.Maybe (Maybe(..))
 import Data.MediaType.Common (applicationJSON)
 import Data.Monoid (mempty)
 import Data.Newtype (un)
-import Data.StrMap as SM
 import Data.String.NonEmpty (toString)
+import Data.StrMap as SM
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
@@ -48,7 +48,6 @@ import Pathy (Name(..), AbsDir, peel, peelFile, rootDir)
 import Quasar.ConfigF as CF
 import Quasar.Data.Json as Json
 import Quasar.Data.MediaTypes (applicationZip)
-import Quasar.Data.URI as URI
 import Quasar.FS.DirMetadata as DirMetadata
 import Quasar.Metastore as Metastore
 import Quasar.Mount as Mount
@@ -60,6 +59,7 @@ import Quasar.Query.OutputMeta as QueryOutputMeta
 import Quasar.ServerInfo as ServerInfo
 import Quasar.Types (printQPath)
 import Quasar.Types as QT
+import Quasar.URI as URI
 import SqlSquared as Sql
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))

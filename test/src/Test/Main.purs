@@ -41,9 +41,9 @@ import Data.String.NonEmpty as NES
 import Data.Symbol (SProxy(..))
 import Data.These (These(..))
 import Data.Tuple (Tuple(..))
-import Data.URI.Host.RegName as RegName
-import Data.URI.Port as Port
-import Data.URI.Scheme as Scheme
+import URI.Host.RegName as RegName
+import URI.Port as Port
+import URI.Scheme as Scheme
 import Network.HTTP.Affjax (AJAX)
 import Node.ChildProcess as CP
 import Node.Encoding (Encoding(..))
@@ -56,7 +56,7 @@ import Pathy (rootDir, dir, file, (</>))
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..))
 import Quasar.Data.Json as Json
-import Quasar.Data.URI as URI
+import Quasar.URI as URI
 import Quasar.Mount (MountConfig(..))
 import Quasar.QuasarF (QuasarF, QError(..))
 import Quasar.QuasarF as QF

@@ -29,10 +29,10 @@ import Data.String.NonEmpty (fromString)
 import Data.String.NonEmpty as NES
 import Data.These (These(..))
 import Data.Time.Duration (Seconds(..))
-import Data.URI.Host.RegName as RegName
-import Data.URI.Port as Port
+import URI.Host.RegName as RegName
+import URI.Port as Port
 import Partial.Unsafe (unsafePartial)
-import Quasar.Data.URI as URI
+import Quasar.URI as URI
 import Quasar.Mount as QM
 import Quasar.Mount.Couchbase as CB
 import Quasar.Mount.MongoDB as Mongo
@@ -63,9 +63,9 @@ main = do
         })
 
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
-    "couchbase://localhost:99999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
+    "couchbase://localhost:9999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
       (CBT.TestConfig
-        { host: Just $ Both (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost") (Port.unsafeFromInt 99999)
+        { host: Just $ Both (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost") (Port.unsafeFromInt 9999)
         , bucketName: fromString "testBucket"
         , password: "pass"
         , docTypeKey: "type"

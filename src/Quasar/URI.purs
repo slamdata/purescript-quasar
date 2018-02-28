@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -}
 
-module Quasar.Data.URI 
+module Quasar.URI
   ( QAbsoluteURI
   , qAbsoluteURI
   , MongoURI
@@ -45,39 +45,39 @@ import Data.List (List(..), reverse)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (un)
 import Data.Record.Builder as Builder
-import Data.String.NonEmpty (NonEmptyString, fromString)
+import Data.String.NonEmpty (NonEmptyString)
 import Data.String.NonEmpty as NES
 import Data.Tuple (Tuple(..))
-import Data.URI (PathAbsolute, PathRootless)
-import Data.URI (URI(..), RelativePart(..), Authority(..), AbsoluteURI(..), HierarchicalPart(..), HierPath, Host(..), Path(..), Port, RelativeRef(..), URIRef, Fragment, Query, UserInfo) as URI
-import Data.URI.AbsoluteURI (AbsoluteURIOptions) as URI
-import Data.URI.AbsoluteURI (print, parser) as AbsoluteURI
-import Data.URI.Common (URIPartParseError(..))
-import Data.URI.Extra.MultiHostPortPair (MultiHostPortPair) as URI
-import Data.URI.Extra.MultiHostPortPair (print, parser) as MultiHostPortPair
-import Data.URI.Extra.QueryPairs (QueryPairs(..), Key, Value) as URI
-import Data.URI.Extra.QueryPairs (print, parse, keyToString, valueToString, keyFromString, valueFromString) as QueryPairs
-import Data.URI.Extra.UserPassInfo (UserPassInfo(..)) as URI
-import Data.URI.Extra.UserPassInfo (print, parse) as UserPassInfo
-import Data.URI.HostPortPair (HostPortPair) as URI
-import Data.URI.HostPortPair (print, parser) as HostPortPair
-import Data.URI.Path (Path)
-import Data.URI.Path (print) as Path
-import Data.URI.Path.Absolute (print, PathAbsolute(..)) as PathAbsolute
-import Data.URI.Path.NoScheme (print, PathNoScheme(..)) as PathNoScheme
-import Data.URI.Path.Rootless (print) as PathRootless
-import Data.URI.Path.Segment (PathSegment, PathSegmentNZ, segmentFromString, unsafeSegmentNZFromString, unsafeSegmentNZNCFromString)
-import Data.URI.RelativeRef (RelativeRefOptions) as URI
-import Data.URI.RelativeRef (print, parser, RelPath) as RelativeRef
-import Data.URI.Scheme (Scheme) as URI
-import Data.URI.URI (URIOptions) as URI
-import Data.URI.URIRef (URIRefOptions) as URI
-import Data.URI.URIRef (print, parser) as URIRef
 import Partial.Unsafe (unsafeCrashWith)
 import Pathy (Name(..), foldPath, posixParser)
 import Pathy as Py
 import Text.Parsing.Parser (ParseError, Parser, runParser)
 import Type.Row (class RowListNub, class RowToList)
+import URI (PathAbsolute, PathRootless)
+import URI (URI(..), RelativePart(..), Authority(..), AbsoluteURI(..), HierarchicalPart(..), HierPath, Host(..), Path(..), Port, RelativeRef(..), URIRef, Fragment, Query, UserInfo) as URI
+import URI.AbsoluteURI (AbsoluteURIOptions) as URI
+import URI.AbsoluteURI (print, parser) as AbsoluteURI
+import URI.Common (URIPartParseError(..))
+import URI.Extra.MultiHostPortPair (MultiHostPortPair) as URI
+import URI.Extra.MultiHostPortPair (print, parser) as MultiHostPortPair
+import URI.Extra.QueryPairs (print, parse, keyToString, valueToString, keyFromString, valueFromString) as QueryPairs
+import URI.Extra.QueryPairs (QueryPairs(..), Key, Value) as URI
+import URI.Extra.UserPassInfo (print, parse) as UserPassInfo
+import URI.Extra.UserPassInfo (UserPassInfo(..)) as URI
+import URI.HostPortPair (HostPortPair) as URI
+import URI.HostPortPair (print, parser) as HostPortPair
+import URI.Path (Path)
+import URI.Path (print) as Path
+import URI.Path.Absolute (print, PathAbsolute(..)) as PathAbsolute
+import URI.Path.NoScheme (print, PathNoScheme(..)) as PathNoScheme
+import URI.Path.Rootless (print) as PathRootless
+import URI.Path.Segment (PathSegment, PathSegmentNZ, segmentFromString, unsafeSegmentNZFromString, unsafeSegmentNZNCFromString)
+import URI.RelativeRef (print, parser, RelPath) as RelativeRef
+import URI.RelativeRef (RelativeRefOptions) as URI
+import URI.Scheme (Scheme) as URI
+import URI.URI (URIOptions) as URI
+import URI.URIRef (print, parser) as URIRef
+import URI.URIRef (URIRefOptions) as URI
 
 type AbsPath = Py.AbsPath
 type AnyPath = Either Py.AbsPath Py.RelPath
@@ -124,7 +124,7 @@ qURIRef = basicCodec
   (flip runParser $ URIRef.parser opts.uriRef)
   (URIRef.print opts.uriRef)
 
-opts :: 
+opts ::
   { absoluteURI ∷ Record QAbsoluteURIOptions
   , mongoURI ∷ Record MongoURIOptions
   , relativeRef ∷ Record QRelativeRefOptions
@@ -162,7 +162,7 @@ opts =
   parseHost = HostPortPair.parser pure pure
   printHost :: QURIHost -> String
   printHost = HostPortPair.print id id
-  
+
   parseHosts :: Parser String QURIHosts
   parseHosts = MultiHostPortPair.parser pure pure
   printHosts :: QURIHosts -> String
@@ -175,10 +175,10 @@ opts =
     Left d ->
       URI.Path
         $ (fromFoldable d <#> runName >>> segmentFromString) <> [ segmentFromString "" ]
-    Right (Tuple d n) -> 
+    Right (Tuple d n) ->
       URI.Path
       $ (fromFoldable d <#> asSegment) <> [asSegment n]
-      
+
 
   parseHierPath :: Either PathAbsolute PathRootless -> Either URIPartParseError AbsPath
   parseHierPath = _parseAbsPath <<< either PathAbsolute.print PathRootless.print
@@ -207,9 +207,9 @@ opts =
       Nil -> PathAbsolute.PathAbsolute $ Just $ Tuple (asSegmentNZ n) []
       Cons head tail -> PathAbsolute.PathAbsolute
         $ Just
-        $ Tuple (asSegmentNZ head) 
+        $ Tuple (asSegmentNZ head)
         $ (asSegment <$> fromFoldable tail) <> [ asSegment n ]
-  
+
   _printRelPath :: Py.RelPath → PathNoScheme.PathNoScheme
   _printRelPath = bimap viewRelDir viewRelFile >>> case _ of
     Left Nil -> PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString currentDirSegment) []
@@ -254,7 +254,7 @@ opts =
     >>> note (URIPartParseError "Could not parse valid relative path")
 
 -- Union which rejects duplicates
-union 
+union
   :: forall r1 r2 r3 r3l
    . Union r1 r2 r3
   => RowToList r3 r3l
@@ -268,7 +268,7 @@ asSegmentNZ :: forall a. Py.Name a -> PathSegmentNZ
 asSegmentNZ = un Py.Name >>> unsafeSegmentNZFromString
 
 asSegment :: forall a. Py.Name a -> PathSegment
-asSegment = runName >>> segmentFromString 
+asSegment = runName >>> segmentFromString
 
 runName :: forall a. Py.Name a -> String
 runName = un Py.Name >>> NES.toString
@@ -293,4 +293,3 @@ viewRelDir = reverse <<< go
 
 viewRelFile :: Py.Path Py.Rel Py.File -> Tuple (List (Maybe (Py.Name Py.Dir))) (Py.Name Py.File)
 viewRelFile = Py.peelFile >>> lmap viewRelDir
-

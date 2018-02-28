@@ -31,14 +31,14 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Newtype (un)
 import Data.Number as Num
-import Data.StrMap as SM
 import Data.String.NonEmpty (NonEmptyString)
+import Data.StrMap as SM
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
-import Data.URI.Scheme as Scheme
 import Pathy (Name(..), (</>))
 import Pathy as P
-import Quasar.Data.URI as URI
+import Quasar.URI as URI
+import URI.Scheme as Scheme
 
 type Config =
   { host ∷ URI.QURIHost
@@ -87,7 +87,7 @@ toURI { host, bucketName, password, docTypeKey, queryTimeout } =
     ] <> maybe [] (pure <<< Tuple "queryTimeoutSeconds" <<< Just <<< show <<< un Seconds) queryTimeout
 
 fromURI ∷ URI.QAbsoluteURI → Either String Config
-fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartNoAuth path) query) = 
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartNoAuth path) query) =
   Left "Expected 'auth' part in URI"
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ host) path) query) = do
   unless (scheme == uriScheme) $ Left "Expected 'couchbase' URL scheme"
@@ -108,4 +108,3 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ host)
 
 uriScheme ∷ URI.Scheme
 uriScheme = Scheme.unsafeFromString "couchbase"
-

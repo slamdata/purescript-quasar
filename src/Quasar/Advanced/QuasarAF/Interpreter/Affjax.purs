@@ -49,10 +49,10 @@ import Quasar.Advanced.QuasarAF.Interpreter.Config (Config)
 import Quasar.Advanced.QuasarAF.Interpreter.Internal (mkGroupUrl)
 import Quasar.Advanced.Types as Qa
 import Quasar.ConfigF as CF
-import Quasar.Data.URI as URI
 import Quasar.Error (QResponse)
 import Quasar.QuasarF.Interpreter.Affjax as QCI
 import Quasar.QuasarF.Interpreter.Internal (ask, defaultRequest, jsonResult, mkRequest, mkUrl, unitResult)
+import Quasar.URI as URI
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
 
