@@ -45,8 +45,9 @@ import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (mempty)
-import Data.String as Str
-import Data.StrMap as SM
+import Data.String as String
+import Data.StrMap (StrMap)
+import Data.StrMap as StrMap
 import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
@@ -55,6 +56,7 @@ import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
 import Pathy (class IsDirOrFile, Abs, AbsPath, Path, Rel, RelDir, RelPath, relativeTo, rootDir, (</>))
 import Quasar.ConfigF as CF
+import Quasar.Error.Compilation (CompilationError(..))
 import Quasar.QuasarF (Pagination, QError(..), PDFError(..), UnauthorizedDetails(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Quasar.URI as URI
@@ -74,8 +76,8 @@ strResult = Right
 unitResult ∷ String → Either Error Unit
 unitResult = const (Right unit)
 
-toVarParams ∷ SM.StrMap String → URI.QQuery
-toVarParams = URI.QueryPairs <<< map (bimap ("var." <> _) Just) <<< SM.toUnfoldable
+toVarParams ∷ StrMap String → URI.QQuery
+toVarParams = URI.QueryPairs <<< map (bimap ("var." <> _) Just) <<< StrMap.toUnfoldable
 
 toPageParams ∷ Maybe Pagination → URI.QQuery
 toPageParams Nothing = mempty
@@ -166,7 +168,7 @@ handleResult f =
     Left err → Left (Error err)
   where
   isWWWAuthenticate ∷ RH.ResponseHeader → Boolean
-  isWWWAuthenticate = eq "www-authenticate" <<< Str.toLower <<< RH.responseHeaderName
+  isWWWAuthenticate = eq "www-authenticate" <<< String.toLower <<< RH.responseHeaderName
 
 hush ∷ ∀ a b. Either a b → Maybe b
 hush = either (const Nothing) Just
@@ -180,6 +182,12 @@ parseHumanReadableError json =
     , do e ← json .? "error"
          message ← e .? "message"
          pure (ErrorMessage {title: Nothing, message, raw: json})
+    , do e ← json .? "error"
+         detail ← e .? "detail"
+         message ← detail .? "message"
+         if String.indexOf (String.Pattern "Keyword `having` not supported.") message == Just 0
+           then Right (CompilationError HavingIsNotAvailable)
+           else Left "Failed to parse CompilationError"
     , do e ← json .? "error"
          detail ← e .? "detail"
          title ← e .?? "status"
@@ -211,4 +219,4 @@ parseHumanReadableError json =
     ])
   where
     wrapError ∷ Json.Json → Json.JObject
-    wrapError = SM.singleton "error"
+    wrapError = StrMap.singleton "error"
