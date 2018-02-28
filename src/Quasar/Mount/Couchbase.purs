@@ -68,16 +68,16 @@ toURI { host, bucketName, password, docTypeKey, queryTimeout } =
     hierarchicalPart
     (Just (URI.QueryPairs props))
   where
-  hierarchicalPart :: URI.QHierarchicalPart
+  hierarchicalPart ∷ URI.QHierarchicalPart
   hierarchicalPart =
     URI.HierarchicalPartAuth
       authority
       (case bucketName of
-        Nothing -> Just $ Left P.rootDir
-        Just n -> Just $ Right $ P.rootDir </> P.file' (Name n)
+        Nothing → Just $ Left P.rootDir
+        Just n → Just $ Right $ P.rootDir </> P.file' (Name n)
       )
 
-  authority :: URI.QAuthority
+  authority ∷ URI.QAuthority
   authority = URI.Authority Nothing host
 
   props ∷ Array (Tuple String (Maybe String))

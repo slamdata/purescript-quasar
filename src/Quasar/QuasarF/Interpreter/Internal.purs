@@ -104,7 +104,7 @@ mkFSUrl
   → AjaxM r String
 mkFSUrl relDir fsPath q = mkUrl (bimap baseify baseify fsPath) q
   where
-    baseify ∷ ∀ b. IsDirOrFile b => Path Abs b → Path Rel b
+    baseify ∷ ∀ b. IsDirOrFile b ⇒ Path Abs b → Path Rel b
     baseify p = relDir </> p `relativeTo` rootDir
 
 mkUrl ∷ ∀ r. RelPath → URI.QQuery → AjaxM r String
@@ -119,12 +119,12 @@ mkUrl' relPath q = do
       let
         hierPath = (Just (bimap (path </> _) (path </> _) relPath))
         hierPart = case authority of
-          Nothing -> URI.HierarchicalPartNoAuth hierPath
-          Just authority' -> URI.HierarchicalPartAuth authority' hierPath
+          Nothing → URI.HierarchicalPartNoAuth hierPath
+          Just authority' → URI.HierarchicalPartAuth authority' hierPath
         query = if q == mempty then Nothing else Just q
       in URI.URI scheme hierPart query Nothing
 
-    toRelativeRef :: RelDir -> URI.QRelativeRef
+    toRelativeRef ∷ RelDir → URI.QRelativeRef
     toRelativeRef relDir =
       URI.RelativeRef
         (URI.RelativePartNoAuth

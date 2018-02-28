@@ -166,9 +166,9 @@ eval = case _ of
   CreateMount path config mbMaxAge k → do
     let
       Tuple parentDir name = case bimap peel peelFile path of
-        Left Nothing -> Tuple rootDir ""
-        Left (Just dp) -> dp <#> un Name >>> toString >>> (_ <> "/")
-        Right fp -> fp <#> un Name >>> toString
+        Left Nothing → Tuple rootDir ""
+        Left (Just dp) → dp <#> un Name >>> toString >>> (_ <> "/")
+        Right fp → fp <#> un Name >>> toString
     url ← mkFSUrl Paths.mount (Left parentDir) (headerParams [Tuple "X-File-Name" name])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
@@ -201,7 +201,7 @@ eval = case _ of
     k <$> (mkRequest unitResult $ put url $ snd (toRequest (Metastore.toJSON metastore)))
 
 
-serverInfoResult ∷ String -> Either Error ServerInfo.ServerInfo
+serverInfoResult ∷ String → Either Error ServerInfo.ServerInfo
 serverInfoResult = lmap error <$> ServerInfo.fromJSON <=< jsonResult
 
 writeQueryResult ∷ String → Either Error QueryOutputMeta.OutputMeta

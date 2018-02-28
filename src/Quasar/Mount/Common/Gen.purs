@@ -58,7 +58,7 @@ genHostURI = Gen.oneOf $ genIPv4 :| [genName]
     tail ← genAlphaNumericString
     pure $ RegName.fromString $ NES.cons head tail
 
-genPort ∷ ∀ m. MonadRec m => MonadGen m ⇒ m URI.Port
+genPort ∷ ∀ m. MonadRec m ⇒ MonadGen m ⇒ m URI.Port
 genPort = filtered $ Port.fromInt <$> Gen.chooseInt 50000 65535
 
 genHost ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHost
@@ -67,15 +67,15 @@ genHost = genMaybe $ genThese genHostURI genPort
 genHosts ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHosts
 genHosts = Gen.unfoldable $ genThese genHostURI genPort
 
-genThese ∷ ∀ m a b. MonadGen m ⇒ MonadRec m ⇒ m a -> m b -> m (These a b)
+genThese ∷ ∀ m a b. MonadGen m ⇒ MonadRec m ⇒ m a → m b → m (These a b)
 genThese ma mb = filtered do
-  a' <- GenC.genMaybe ma
-  b' <- GenC.genMaybe mb
+  a' ← GenC.genMaybe ma
+  b' ← GenC.genMaybe mb
   pure case a', b' of
-    Just a, Just b -> Just $ Both a b
-    Just a, Nothing -> Just $ This a
-    Nothing, Just b -> Just $ That b
-    Nothing, Nothing -> Nothing
+    Just a, Just b → Just $ Both a b
+    Just a, Nothing → Just $ This a
+    Nothing, Just b → Just $ That b
+    Nothing, Nothing → Nothing
 
 genCredentials ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.UserPassInfo
 genCredentials =

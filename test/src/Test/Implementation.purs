@@ -23,7 +23,7 @@ import Test.Property.Main as Prop
 import Test.QuickCheck (QC)
 import Test.Unit.Main as Unit
 
-main ∷ forall eff. QC (assert ∷ ASSERT | eff) Unit
+main ∷ ∀ eff. QC (assert ∷ ASSERT | eff) Unit
 main = do
   Prop.main
   Unit.main

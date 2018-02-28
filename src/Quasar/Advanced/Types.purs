@@ -166,15 +166,15 @@ instance encodeJsonUserId ∷ EncodeJson UserId where
 instance decodeJsonUserId ∷ DecodeJson UserId where
   decodeJson = map UserId <<< decodeNEString
 
-encodeNEString :: NonEmptyString -> Json
+encodeNEString ∷ NonEmptyString → Json
 encodeNEString = encodeJson <<< toString
 
-decodeNEString :: Json -> Either String NonEmptyString
+decodeNEString ∷ Json → Either String NonEmptyString
 decodeNEString j = do
-  str <- decodeJson j
+  str ← decodeJson j
   case fromString str of
-    Nothing -> Left "Expected string to be non empty"
-    Just a -> pure a
+    Nothing → Left "Expected string to be non empty"
+    Just a → pure a
 
 newtype TokenId = TokenId NonEmptyString
 
@@ -237,18 +237,18 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
     parseUserId ∷ String → Either String UserId
     parseUserId str =
       Str.stripPrefix (Str.Pattern "user:") str
-      >>= fromString 
+      >>= fromString
       # map UserId
       # note "Could not parse user"
-      
+
 
     parseTokenId ∷ String → Either String TokenId
     parseTokenId str =
       Str.stripPrefix (Str.Pattern "token:") str
-      >>= fromString 
+      >>= fromString
       # map TokenId
       # note "Could not parse token"
-      
+
 
 parseGroup ∷ String → Either String GroupPath
 parseGroup string =

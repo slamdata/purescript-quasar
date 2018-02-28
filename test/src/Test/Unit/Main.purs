@@ -88,7 +88,7 @@ testURIParse
   ⇒ (URI.QAbsoluteURI → Either String a)
   → String
   → a
-  → Eff (assert :: ASSERT | eff) Unit
+  → Eff (assert ∷ ASSERT | eff) Unit
 testURIParse fromURI uri expected =
   case decode URI.qAbsoluteURI uri of
     Left err → fail $ "Test URI failed to parse as a URI even: \n\n\t" <> uri <> "\n\n\t" <> show err <> "\n\n"
@@ -99,5 +99,5 @@ testURIParse fromURI uri expected =
           | config == expected → pure unit
           | otherwise → fail $ "Test URI failed to parse as expected config: \n\n\t" <> uri <> "\n\n\tExpected: " <> show expected <> "\n\n\tActual: " <> show config <> "\n\n"
 
-fail ∷ ∀ eff. String → Eff (assert :: ASSERT | eff) Unit
+fail ∷ ∀ eff. String → Eff (assert ∷ ASSERT | eff) Unit
 fail = flip assert' false

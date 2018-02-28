@@ -99,7 +99,7 @@ instance ordMount ∷ Ord1 f ⇒ Ord (MountF f) where
 instance showMount ∷ (Show (f TS.TacitString), Functor f) ⇒ Show (MountF f) where
   show =
     let
-      show' :: forall a. Show a ⇒ f a → String
+      show' ∷ ∀ a. Show a ⇒ f a → String
       show' = map (show >>> TS.hush) >>> show
     in case _ of
       View p → "(View " <> show' p <> ")"
@@ -120,13 +120,13 @@ fromJSON parent = decodeJson >=> \obj → do
   typ ← obj .? "type"
   name' ← note "empty name" <<< fromString =<< (obj .? "name")
   let
-    err :: forall a. Either String a
+    err ∷ ∀ a. Either String a
     err = Left $ "Unexpected type '" <> typ <> "' for mount '" <> mount <> "'"
-    onFile :: Either String (Identity AbsFile)
+    onFile ∷ Either String (Identity AbsFile)
     onFile = if typ == "file" then Right $ Identity $ parent </> file' (Name name') else err
-    onDir :: Either String (Identity AbsDir)
+    onDir ∷ Either String (Identity AbsDir)
     onDir = if typ == "directory" then Right $ Identity $ parent </> dir' (Name name') else err
-    onAnyPath :: Either String (Identity AbsPath)
+    onAnyPath ∷ Either String (Identity AbsPath)
     onAnyPath = map (map Left) onDir <|> map (map Right) onFile
   case typeFromName mount of
     View _ → View <$> onFile

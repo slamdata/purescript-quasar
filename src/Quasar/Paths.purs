@@ -20,28 +20,28 @@ import Pathy (RelDir, RelFile, file, dir, (</>))
 import Data.Symbol (SProxy(..))
 
 upload ∷ RelFile
-upload = file (SProxy :: SProxy "upload")
+upload = file (SProxy ∷ SProxy "upload")
 
 metadata ∷ RelDir
-metadata = dir (SProxy :: SProxy "metadata") </> dir (SProxy :: SProxy "fs")
+metadata = dir (SProxy ∷ SProxy "metadata") </> dir (SProxy ∷ SProxy "fs")
 
 metastore ∷ RelFile
-metastore = file (SProxy :: SProxy "metastore")
+metastore = file (SProxy ∷ SProxy "metastore")
 
 mount ∷ RelDir
-mount = dir (SProxy :: SProxy "mount") </> dir (SProxy :: SProxy "fs")
+mount = dir (SProxy ∷ SProxy "mount") </> dir (SProxy ∷ SProxy "fs")
 
 data_ ∷ RelDir
-data_ = dir (SProxy :: SProxy "data") </> dir (SProxy :: SProxy "fs")
+data_ = dir (SProxy ∷ SProxy "data") </> dir (SProxy ∷ SProxy "fs")
 
 query ∷ RelDir
-query = dir (SProxy :: SProxy "query") </> dir (SProxy :: SProxy "fs")
+query = dir (SProxy ∷ SProxy "query") </> dir (SProxy ∷ SProxy "fs")
 
 compile ∷ RelDir
-compile = dir (SProxy :: SProxy "compile") </> dir (SProxy :: SProxy "fs")
+compile = dir (SProxy ∷ SProxy "compile") </> dir (SProxy ∷ SProxy "fs")
 
 serverInfo ∷ RelFile
-serverInfo = dir (SProxy :: SProxy "server") </> file (SProxy :: SProxy "info")
+serverInfo = dir (SProxy ∷ SProxy "server") </> file (SProxy ∷ SProxy "info")
 
 invoke ∷ RelDir
-invoke = dir (SProxy :: SProxy "invoke") </> dir (SProxy :: SProxy "fs")
+invoke = dir (SProxy ∷ SProxy "invoke") </> dir (SProxy ∷ SProxy "fs")

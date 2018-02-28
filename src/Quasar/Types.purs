@@ -26,13 +26,13 @@ import Data.StrMap (StrMap)
 import Data.Traversable (traverse)
 import Pathy (class IsDirOrFile, Abs, AbsDir, AbsFile, Path, parseAbsDir, parseAbsFile, posixParser, posixPrinter, printPath, sandboxAny)
 
-printQPath :: forall b. IsDirOrFile b => Path Abs b -> String
+printQPath ∷ ∀ b. IsDirOrFile b ⇒ Path Abs b → String
 printQPath = sandboxAny >>> printPath posixPrinter
 
-parseQFilePath :: String -> Maybe AbsFile
+parseQFilePath ∷ String → Maybe AbsFile
 parseQFilePath = parseAbsFile posixParser
 
-parseQDirPath :: String -> Maybe AbsDir
+parseQDirPath ∷ String → Maybe AbsDir
 parseQDirPath = parseAbsDir posixParser
 
 type Vars = StrMap String

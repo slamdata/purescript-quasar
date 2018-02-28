@@ -20,33 +20,31 @@ import Pathy (RelDir, RelFile, dir, file, (</>))
 import Data.Symbol (SProxy(..))
 
 oidcProviders ∷ RelFile
-oidcProviders = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "oidc") </> file (SProxy :: SProxy "providers")
+oidcProviders = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "oidc") </> file (SProxy ∷ SProxy "providers")
 
 token ∷ RelDir
-token = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "token")
+token = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "token")
 
 group ∷ RelDir
-group = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "group")
+group = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "group")
 
 permission ∷ RelDir
-permission = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "permission")
+permission = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "permission")
 
 children ∷ RelFile
-children = file (SProxy :: SProxy "children")
+children = file (SProxy ∷ SProxy "children")
 
 authority ∷ RelDir
-authority = dir (SProxy :: SProxy "security") </> dir (SProxy :: SProxy "authority")
+authority = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "authority")
 
 licenseInfo ∷ RelFile
-licenseInfo = dir (SProxy :: SProxy "server") </> file (SProxy :: SProxy "licenseInfo")
+licenseInfo = dir (SProxy ∷ SProxy "server") </> file (SProxy ∷ SProxy "licenseInfo")
 
 licensee ∷ RelFile
-licensee = dir (SProxy :: SProxy "server") </> file (SProxy :: SProxy "licensee")
+licensee = dir (SProxy ∷ SProxy "server") </> file (SProxy ∷ SProxy "licensee")
 
 pdfInfo ∷ RelFile
-pdfInfo = dir (SProxy :: SProxy "service") </> dir (SProxy :: SProxy "pdf") </> file (SProxy :: SProxy "info")
+pdfInfo = dir (SProxy ∷ SProxy "service") </> dir (SProxy ∷ SProxy "pdf") </> file (SProxy ∷ SProxy "info")
 
 generatePdf ∷ RelFile
-generatePdf = dir (SProxy :: SProxy "service") </> dir (SProxy :: SProxy "pdf") </> file (SProxy :: SProxy "generate")
-
-
+generatePdf = dir (SProxy ∷ SProxy "service") </> dir (SProxy ∷ SProxy "pdf") </> file (SProxy ∷ SProxy "generate")

@@ -220,16 +220,16 @@ main = void $ runAff (const (pure unit)) $ jumpOutOnError do
 
   where
   testDbAnyDir = rootDir
-  nonexistant = rootDir </> file (SProxy :: SProxy "nonexistant")
-  testFile1 = rootDir </> file (SProxy :: SProxy "test1")
-  testFile2Dir = rootDir </> dir (SProxy :: SProxy "subdir")
-  testFile2 = testFile2Dir </> file (SProxy :: SProxy "test2")
-  testFile3Dir = rootDir </> dir (SProxy :: SProxy "what")
-  testFile3 = testFile3Dir </> file (SProxy :: SProxy "test2")
-  testMount = rootDir </> file (SProxy :: SProxy "testMount")
-  testMount2 = rootDir </> file (SProxy :: SProxy "testMount2")
-  testMount3 = rootDir </> dir (SProxy :: SProxy "testMount3")
-  testProcess = rootDir </> dir (SProxy :: SProxy "testMount3") </> file (SProxy :: SProxy "test")
+  nonexistant = rootDir </> file (SProxy ∷ SProxy "nonexistant")
+  testFile1 = rootDir </> file (SProxy ∷ SProxy "test1")
+  testFile2Dir = rootDir </> dir (SProxy ∷ SProxy "subdir")
+  testFile2 = testFile2Dir </> file (SProxy ∷ SProxy "test2")
+  testFile3Dir = rootDir </> dir (SProxy ∷ SProxy "what")
+  testFile3 = testFile3Dir </> file (SProxy ∷ SProxy "test2")
+  testMount = rootDir </> file (SProxy ∷ SProxy "testMount")
+  testMount2 = rootDir </> file (SProxy ∷ SProxy "testMount2")
+  testMount3 = rootDir </> dir (SProxy ∷ SProxy "testMount3")
+  testProcess = rootDir </> dir (SProxy ∷ SProxy "testMount3") </> file (SProxy ∷ SProxy "test")
 
   isNotFound ∷ ∀ a. Either QError a → Boolean
   isNotFound e = case e of

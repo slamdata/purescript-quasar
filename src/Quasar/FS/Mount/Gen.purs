@@ -31,7 +31,7 @@ import Quasar.FS.Mount (MountF(..), Mount, MountType)
 import Quasar.Mount.Common.Gen (genAbsDirPath, genAbsFilePath)
 
 
-genMountType :: ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MountType
+genMountType ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MountType
 genMountType = Gen.oneOf
   $ (pure $ View $ Const unit) :|
   [ pure $ Module $ Const unit
@@ -44,7 +44,7 @@ genMountType = Gen.oneOf
   , genUnicodeString <#> (_ `Unknown` Const unit)
   ]
 
-genMount :: ∀ m. MonadGen m ⇒ MonadRec m ⇒ m Mount
+genMount ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m Mount
 genMount = Gen.oneOf
   $ (genAbsFilePath <#> Identity >>> View) :|
   [ genAbsDirPath <#> Identity >>> Module
