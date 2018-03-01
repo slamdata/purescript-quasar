@@ -80,5 +80,5 @@ genThese ma mb = filtered do
 genCredentials ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.UserPassInfo
 genCredentials =
   URI.UserPassInfo <$> ({ user: _, password: _ }
-    <$> genAlphaNumericString
-    <*> Gen.choose (pure Nothing) (Just <$> genAlphaNumericString))
+    <$> genAlphaNumericNEString
+    <*> Gen.choose (pure Nothing) (Just <$> genAlphaNumericNEString))
