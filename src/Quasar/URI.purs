@@ -23,6 +23,8 @@ module Quasar.URI
   , qRelativeRef
   , QURIRef
   , qURIRef
+  , QURI
+  , qURI
   , QHierarchicalPart
   , QURIHost
   , QURIHosts
@@ -75,9 +77,10 @@ import URI.Path.Segment (PathSegment, PathSegmentNZ, segmentFromString, unsafeSe
 import URI.RelativeRef (print, parser, RelPath) as RelativeRef
 import URI.RelativeRef (RelativeRefOptions) as URI
 import URI.Scheme (Scheme) as URI
-import URI.URI (URIOptions) as URI
 import URI.URIRef (print, parser) as URIRef
 import URI.URIRef (URIRefOptions) as URI
+import URI.URI (print, parser) as URI'
+import URI.URI (URIOptions) as URI
 
 type AbsPath = Py.AbsPath
 type AnyPath = Either Py.AbsPath Py.RelPath
@@ -101,8 +104,8 @@ type QRelativeRefOptions = URI.RelativeRefOptions URI.UserPassInfo QURIHost AbsP
 type QURIRef = URI.URIRef URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
 type QURIRefOptions = URI.URIRefOptions URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
 
--- type QURI = URI.URI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
--- type QURIOptions = URI.URIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
+type QURI = URI.URI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
+type QURIOptions = URI.URIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
 
 qAbsoluteURI ∷ BasicCodec (Either ParseError) String QAbsoluteURI
 qAbsoluteURI = basicCodec
@@ -124,17 +127,24 @@ qURIRef = basicCodec
   (flip runParser $ URIRef.parser opts.uriRef)
   (URIRef.print opts.uriRef)
 
+qURI ∷ BasicCodec (Either ParseError) String QURI
+qURI = basicCodec
+  (flip runParser $ URI'.parser opts.uri)
+  (URI'.print opts.uri)
+
 opts ∷
   { absoluteURI ∷ Record QAbsoluteURIOptions
   , mongoURI ∷ Record MongoURIOptions
   , relativeRef ∷ Record QRelativeRefOptions
   , uriRef ∷ Record QURIRefOptions
+  , uri ∷ Record QURIOptions
   }
 opts =
   { absoluteURI: _common `union` _Host `union` _Path `union` _HierPath
   , mongoURI: _common `union` _Hosts `union` _Path `union` _HierPath
   , relativeRef: _common `union` _Host `union` _Path`union` _Fragment `union` _RelPath
   , uriRef: _common `union` _Host `union` _HierPath `union` _Path `union` _Fragment `union` _RelPath
+  , uri: _common `union` _Host `union` _HierPath `union` _Path `union` _Fragment
   }
   where
   _common = _UserInfo `union` _Query
