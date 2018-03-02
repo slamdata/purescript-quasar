@@ -26,6 +26,7 @@ module Quasar.URI
   , QURI
   , qURI
   , QHierarchicalPart
+  , QRelativePart
   , QURIHost
   , QURIHosts
   , QQuery
@@ -90,7 +91,9 @@ type QURIHosts = URI.MultiHostPortPair URI.Host URI.Port
 
 type QAuthority = URI.Authority URI.UserPassInfo QURIHost
 type QQuery = URI.QueryPairs String String
+
 type QHierarchicalPart = URI.HierarchicalPart URI.UserPassInfo QURIHost AbsPath AbsPath
+type QRelativePart = URI.RelativePart URI.UserPassInfo QURIHost AbsPath AnyPath
 
 type QAbsoluteURI = URI.AbsoluteURI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery
 type QAbsoluteURIOptions = URI.AbsoluteURIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery
