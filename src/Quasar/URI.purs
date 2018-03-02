@@ -92,23 +92,23 @@ type QURIHosts = URI.MultiHostPortPair URI.Host URI.Port
 type QAuthority = URI.Authority URI.UserPassInfo QURIHost
 type QQuery = URI.QueryPairs String String
 
-type QHierarchicalPart = URI.HierarchicalPart URI.UserPassInfo QURIHost AbsPath AbsPath
-type QRelativePart = URI.RelativePart URI.UserPassInfo QURIHost AbsPath AnyPath
+type QHierarchicalPart = URI.HierarchicalPart URI.UserPassInfo QURIHost (Maybe AbsPath) AbsPath
+type QRelativePart = URI.RelativePart URI.UserPassInfo QURIHost (Maybe AbsPath) AnyPath
 
-type QAbsoluteURI = URI.AbsoluteURI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery
-type QAbsoluteURIOptions = URI.AbsoluteURIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery
+type QAbsoluteURI = URI.AbsoluteURI URI.UserPassInfo QURIHost (Maybe AbsPath) AbsPath QQuery
+type QAbsoluteURIOptions = URI.AbsoluteURIOptions URI.UserPassInfo QURIHost (Maybe AbsPath) AbsPath QQuery
 
-type MongoURI = URI.AbsoluteURI URI.UserPassInfo QURIHosts AbsPath AbsPath QQuery
-type MongoURIOptions = URI.AbsoluteURIOptions URI.UserPassInfo QURIHosts AbsPath AbsPath QQuery
+type MongoURI = URI.AbsoluteURI URI.UserPassInfo QURIHosts (Maybe AbsPath) AbsPath QQuery
+type MongoURIOptions = URI.AbsoluteURIOptions URI.UserPassInfo QURIHosts (Maybe AbsPath) AbsPath QQuery
 
-type QRelativeRef = URI.RelativeRef URI.UserPassInfo QURIHost AbsPath AnyPath QQuery URI.Fragment
-type QRelativeRefOptions = URI.RelativeRefOptions URI.UserPassInfo QURIHost AbsPath AnyPath QQuery URI.Fragment
+type QRelativeRef = URI.RelativeRef URI.UserPassInfo QURIHost (Maybe AbsPath) AnyPath QQuery URI.Fragment
+type QRelativeRefOptions = URI.RelativeRefOptions URI.UserPassInfo QURIHost (Maybe AbsPath) AnyPath QQuery URI.Fragment
 
-type QURIRef = URI.URIRef URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
-type QURIRefOptions = URI.URIRefOptions URI.UserPassInfo QURIHost AbsPath AbsPath AnyPath QQuery URI.Fragment
+type QURIRef = URI.URIRef URI.UserPassInfo QURIHost (Maybe AbsPath) AbsPath AnyPath QQuery URI.Fragment
+type QURIRefOptions = URI.URIRefOptions URI.UserPassInfo QURIHost (Maybe AbsPath) AbsPath AnyPath QQuery URI.Fragment
 
-type QURI = URI.URI URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
-type QURIOptions = URI.URIOptions URI.UserPassInfo QURIHost AbsPath AbsPath QQuery URI.Fragment
+type QURI = URI.URI URI.UserPassInfo QURIHost (Maybe AbsPath) AbsPath QQuery URI.Fragment
+type QURIOptions = URI.URIOptions URI.UserPassInfo QURIHost (Maybe AbsPath) AbsPath QQuery URI.Fragment
 
 qAbsoluteURI ∷ BasicCodec (Either ParseError) String QAbsoluteURI
 qAbsoluteURI = basicCodec
@@ -181,16 +181,21 @@ opts =
   printHosts ∷ QURIHosts → String
   printHosts = MultiHostPortPair.print id id
 
-  parsePath ∷ Path → Either URIPartParseError AbsPath
-  parsePath = _parseAbsPath <<< Path.print
-  printPath ∷ AbsPath → Path
-  printPath = bimap viewAbsDir viewAbsFile >>>case _ of
-    Left d →
-      URI.Path
-        $ (fromFoldable d <#> runName >>> segmentFromString) <> [ segmentFromString "" ]
-    Right (Tuple d n) →
-      URI.Path
-      $ (fromFoldable d <#> asSegment) <> [asSegment n]
+  parsePath ∷ Path → Either URIPartParseError (Maybe AbsPath)
+  parsePath = case _ of
+    URI.Path [] → pure Nothing
+    p → Just <$> _parseAbsPath (Path.print p)
+  printPath ∷ Maybe AbsPath → Path
+  printPath = case _ of
+    Nothing → URI.Path []
+    Just absP →
+      case bimap viewAbsDir viewAbsFile absP of
+        Left d →
+          URI.Path
+            $ (fromFoldable d <#> runName >>> segmentFromString) <> [ segmentFromString "" ]
+        Right (Tuple d n) →
+          URI.Path
+            $ (fromFoldable d <#> asSegment) <> [asSegment n]
 
 
   parseHierPath ∷ Either PathAbsolute PathRootless → Either URIPartParseError AbsPath
