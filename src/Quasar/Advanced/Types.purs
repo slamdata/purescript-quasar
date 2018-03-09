@@ -9,10 +9,12 @@ import Data.Either (Either(..), note)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Newtype as Newtype
 import Data.String as Str
-import Data.String.NonEmpty (NonEmptyString, fromString, toString)
+import Data.String.NonEmpty (NonEmptyString)
+import Data.String.NonEmpty as NES
 import Data.Traversable (traverse)
 import OIDC.Crypt.JSONWebKey (JSONWebKey)
 import OIDC.Crypt.Types (Issuer(..), ClientId(..))
+import Partial.Unsafe (unsafePartial)
 import Pathy (AbsDir, AbsFile, rootDir)
 import Quasar.Types (parseQDirPath, parseQFilePath, printQPath)
 
@@ -22,15 +24,17 @@ derive instance eqGroupPath ∷ Eq GroupPath
 derive instance ordGroupPath ∷ Ord GroupPath
 derive instance newtypeGroupPath ∷ Newtype.Newtype GroupPath _
 
-printGroupPath ∷ GroupPath → String
+printGroupPath ∷ GroupPath → NonEmptyString
 printGroupPath gp =
   let
     dir = Newtype.un GroupPath gp
   in
-   -- TODO(Christoph): Get rid of this once quasar treats Groups as directories
+
+    unsafePartial $ NES.unsafeFromString
+    -- TODO(Christoph): Get rid of this once quasar treats Groups as directories
     if dir == rootDir
-    then printQPath dir
-    else fromMaybe "/" (Str.stripSuffix (Str.Pattern "/") (printQPath dir))
+      then printQPath dir
+      else fromMaybe "/" (Str.stripSuffix (Str.Pattern "/") (printQPath dir))
 
 parseGroupPath ∷ String → Either String GroupPath
 -- TODO(Christoph): Clean this up once Quasar treats Groups as directories
@@ -94,7 +98,7 @@ derive instance ordQResource ∷ Ord QResource
 instance encodeJsonQResource ∷ EncodeJson QResource where
   encodeJson (File pt) = encodeJson $ "data:" <> printQPath pt
   encodeJson (Dir pt) = encodeJson $ "data:" <> printQPath pt
-  encodeJson (Group gpt) = encodeJson $ "group:" <> printGroupPath gpt
+  encodeJson (Group gpt) = encodeJson $ "group:" <> NES.toString (printGroupPath gpt)
 
 instance decodeJsonQResource ∷ DecodeJson QResource where
   decodeJson js = do
@@ -167,12 +171,12 @@ instance decodeJsonUserId ∷ DecodeJson UserId where
   decodeJson = map UserId <<< decodeNEString
 
 encodeNEString ∷ NonEmptyString → Json
-encodeNEString = encodeJson <<< toString
+encodeNEString = encodeJson <<< NES.toString
 
 decodeNEString ∷ Json → Either String NonEmptyString
 decodeNEString j = do
   str ← decodeJson j
-  case fromString str of
+  case NES.fromString str of
     Nothing → Left "Expected string to be non empty"
     Just a → pure a
 
@@ -214,7 +218,7 @@ derive instance ordGrantedTo ∷ Ord GrantedTo
 
 instance encodeJsonGrantedTo ∷ EncodeJson GrantedTo where
   encodeJson (UserGranted uid) = encodeJson uid
-  encodeJson (GroupGranted gpt) = encodeJson $ printGroupPath gpt
+  encodeJson (GroupGranted gpt) = encodeJson $ NES.toString (printGroupPath gpt)
   encodeJson (TokenGranted tk) = encodeJson tk
 
 instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
@@ -237,7 +241,7 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
     parseUserId ∷ String → Either String UserId
     parseUserId str =
       Str.stripPrefix (Str.Pattern "user:") str
-      >>= fromString
+      >>= NES.fromString
       # map UserId
       # note "Could not parse user"
 
@@ -245,7 +249,7 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
     parseTokenId ∷ String → Either String TokenId
     parseTokenId str =
       Str.stripPrefix (Str.Pattern "token:") str
-      >>= fromString
+      >>= NES.fromString
       # map TokenId
       # note "Could not parse token"
 
@@ -331,9 +335,9 @@ data ShareableSubject
 
 instance encodeJsonShareableSubject ∷ EncodeJson ShareableSubject where
   encodeJson (UserSubject (UserId uid)) =
-    encodeJson $ "user:" <> toString uid
+    encodeJson $ "user:" <> NES.toString uid
   encodeJson (GroupSubject gpt) =
-    encodeJson $ printGroupPath gpt
+    encodeJson $ NES.toString (printGroupPath gpt)
 
 
 type ShareRequestR =
@@ -349,8 +353,8 @@ runShareRequest (ShareRequest r) = r
 
 instance encodeJsonShareRequest ∷ EncodeJson ShareRequest where
   encodeJson (ShareRequest obj) =
-    "subjects" := ((map (append "user:" <<< toString <<< runUserId) obj.users)
-                   <> map (append "group:" <<< printGroupPath) obj.groups)
+    "subjects" := ((map (append "user:" <<< NES.toString <<< runUserId) obj.users)
+                   <> map (append "group:" <<< NES.toString <<< printGroupPath) obj.groups)
     ~> "actions" := (map Action $ obj.actions)
     ~> jsonEmptyObject
 
