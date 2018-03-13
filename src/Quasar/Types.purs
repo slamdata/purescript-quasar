@@ -24,7 +24,7 @@ import Data.Either (Either, note)
 import Data.Maybe (Maybe)
 import Data.StrMap (StrMap)
 import Data.Traversable (traverse)
-import Pathy (class IsDirOrFile, class IsRelOrAbs, Abs, AbsDir, AbsFile, Path, parseAbsDir, parseAbsFile, posixParser, posixPrinter, printPath, sandboxAny)
+import Pathy (class IsDirOrFile, class IsRelOrAbs, AbsDir, AbsFile, Path, parseAbsDir, parseAbsFile, posixParser, posixPrinter, printPath, sandboxAny)
 
 printQPath ∷ ∀ a b. IsRelOrAbs a ⇒ IsDirOrFile b ⇒ Path a b → String
 printQPath = sandboxAny >>> printPath posixPrinter
