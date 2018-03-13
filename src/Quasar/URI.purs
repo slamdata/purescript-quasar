@@ -192,7 +192,7 @@ opts =
       case bimap viewAbsDir viewAbsFile absP of
         Left d →
           URI.Path
-            $ (fromFoldable d <#> runName >>> segmentFromString) <> [ segmentFromString "" ]
+            $ (fromFoldable d <#> runName >>> segmentFromString) <> [ forceTrailingSlash ]
         Right (Tuple d n) →
           URI.Path
             $ (fromFoldable d <#> asSegment) <> [asSegment n]
@@ -220,7 +220,7 @@ opts =
     Left Nil → PathAbsolute.PathAbsolute Nothing
     Left (Cons head tail) → PathAbsolute.PathAbsolute $ Just
       $ Tuple (asSegmentNZ head)
-      $ (asSegment <$> fromFoldable tail) <> [ segmentFromString "" ]
+      $ (asSegment <$> fromFoldable tail) <> [ forceTrailingSlash ]
     Right (Tuple d n) → case d of
       Nil → PathAbsolute.PathAbsolute $ Just $ Tuple (asSegmentNZ n) []
       Cons head tail → PathAbsolute.PathAbsolute
@@ -234,21 +234,26 @@ opts =
     Left (Cons head tail) →
       PathNoScheme.PathNoScheme
         $ Tuple (unsafeSegmentNZNCFromString $ maybe parentDirSegment (un Name) head)
-        $ (segmentFromString <<< maybe "../" runName <$> fromFoldable tail) <> [ segmentFromString "" ]
+        $ (segmentFromString <<< maybe ".." runName <$> fromFoldable tail) <> [ forceTrailingSlash ]
 
     Right (Tuple d n) → case d of
       Nil → PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString $ un Name n) []
       Cons head tail → PathNoScheme.PathNoScheme
         $ Tuple (unsafeSegmentNZNCFromString $ maybe parentDirSegment (un Name) head)
-        $ (segmentFromString <<< maybe "../" runName <$> fromFoldable tail) <> [ asSegment n ]
+        $ (segmentFromString <<< maybe ".." runName <$> fromFoldable tail) <> [ asSegment n ]
 
-
+  
+  -- Array of segments is joined using "/" so to have trailing slash in rendered
+  -- string for dir pathes, we need to use this empty segment.
+  forceTrailingSlash ∷ PathSegment
+  forceTrailingSlash = segmentFromString ""
+    
   currentDirSegment ∷ NonEmptyString
-  currentDirSegment = case NES.fromString "./" of
+  currentDirSegment = case NES.fromString "." of
     Nothing → unsafeCrashWith "unreachable case in currentDirSegment"
     Just a → a
   parentDirSegment ∷ NonEmptyString
-  parentDirSegment = case NES.fromString "../" of
+  parentDirSegment = case NES.fromString ".." of
     Nothing → unsafeCrashWith "unreachable case in parentDirSegment"
     Just a → a
   _parseAbsPath ∷ String → Either URIPartParseError Py.AbsPath
