@@ -27,6 +27,7 @@ module Quasar.URI
   , qURI
   , QHierarchicalPart
   , QRelativePart
+  , QURIHost'
   , QURIHost
   , QURIHosts
   , QQuery
@@ -50,6 +51,7 @@ import Data.Newtype (un)
 import Data.Record.Builder as Builder
 import Data.String.NonEmpty (NonEmptyString)
 import Data.String.NonEmpty as NES
+import Data.These (These)
 import Data.Tuple (Tuple(..))
 import Partial.Unsafe (unsafeCrashWith)
 import Pathy (Name(..), foldPath, posixParser)
@@ -86,6 +88,7 @@ import URI.URI (URIOptions) as URI
 type AbsPath = Py.AbsPath
 type AnyPath = Either Py.AbsPath Py.RelPath
 
+type QURIHost' = These URI.Host URI.Port
 type QURIHost = URI.HostPortPair URI.Host URI.Port
 type QURIHosts = URI.MultiHostPortPair URI.Host URI.Port
 
