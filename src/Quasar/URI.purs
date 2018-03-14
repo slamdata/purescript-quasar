@@ -34,6 +34,22 @@ module Quasar.URI
   , AbsPath
   , AnyPath
   , QAuthority
+  , parseQuery
+  , printQuery
+  , parseUserInfo
+  , printUserInfo
+  , parseHost
+  , printHost
+  , parseHosts
+  , printHosts
+  , parsePath
+  , printPath
+  , parseHierPath
+  , printHierPath
+  , parseFragment
+  , printFragment
+  , printRelPath
+  , parseRelPath
   , opts
   , module URI
   ) where
@@ -166,120 +182,123 @@ opts =
   _Fragment = { parseFragment, printFragment }
   _RelPath = { parseRelPath, printRelPath }
 
-  parseQuery ∷ URI.Query → Either URIPartParseError QQuery
-  parseQuery = QueryPairs.parse (QueryPairs.keyToString >>> pure) (QueryPairs.valueToString >>> pure)
-  printQuery ∷ QQuery → URI.Query
-  printQuery = QueryPairs.print QueryPairs.keyFromString QueryPairs.valueFromString
+parseQuery ∷ URI.Query → Either URIPartParseError QQuery
+parseQuery = QueryPairs.parse (QueryPairs.keyToString >>> pure) (QueryPairs.valueToString >>> pure)
+printQuery ∷ QQuery → URI.Query
+printQuery = QueryPairs.print QueryPairs.keyFromString QueryPairs.valueFromString
 
-  parseUserInfo ∷ URI.UserInfo → Either URIPartParseError URI.UserPassInfo
-  parseUserInfo = UserPassInfo.parse
-  printUserInfo ∷ URI.UserPassInfo → URI.UserInfo
-  printUserInfo = UserPassInfo.print
+parseUserInfo ∷ URI.UserInfo → Either URIPartParseError URI.UserPassInfo
+parseUserInfo = UserPassInfo.parse
+printUserInfo ∷ URI.UserPassInfo → URI.UserInfo
+printUserInfo = UserPassInfo.print
 
-  parseHost ∷ Parser String QURIHost
-  parseHost = HostPortPair.parser pure pure
-  printHost ∷ QURIHost → String
-  printHost = HostPortPair.print id id
+parseHost ∷ Parser String QURIHost
+parseHost = HostPortPair.parser pure pure
+printHost ∷ QURIHost → String
+printHost = HostPortPair.print id id
 
-  parseHosts ∷ Parser String QURIHosts
-  parseHosts = MultiHostPortPair.parser pure pure
-  printHosts ∷ QURIHosts → String
-  printHosts = MultiHostPortPair.print id id
+parseHosts ∷ Parser String QURIHosts
+parseHosts = MultiHostPortPair.parser pure pure
+printHosts ∷ QURIHosts → String
+printHosts = MultiHostPortPair.print id id
 
-  parsePath ∷ Path → Either URIPartParseError (Maybe AbsPath)
-  parsePath = case _ of
-    URI.Path [] → pure Nothing
-    p → Just <$> _parseAbsPath (Path.print p)
-  printPath ∷ Maybe AbsPath → Path
-  printPath = case _ of
-    Nothing → URI.Path []
-    Just absP →
-      case bimap viewAbsDir viewAbsFile absP of
-        Left d →
-          URI.Path
-            $ (fromFoldable d <#> runName >>> segmentFromString) <> [ forceTrailingSlash ]
-        Right (Tuple d n) →
-          URI.Path
-            $ (fromFoldable d <#> asSegment) <> [asSegment n]
+parsePath ∷ Path → Either URIPartParseError (Maybe AbsPath)
+parsePath = case _ of
+  URI.Path [] → pure Nothing
+  p → Just <$> _parseAbsPath (Path.print p)
+printPath ∷ Maybe AbsPath → Path
+printPath = case _ of
+  Nothing → URI.Path []
+  Just absP →
+    case bimap viewAbsDir viewAbsFile absP of
+      Left d →
+        URI.Path
+          $ (fromFoldable d <#> runName >>> segmentFromString) <> [ forceTrailingSlash ]
+      Right (Tuple d n) →
+        URI.Path
+          $ (fromFoldable d <#> asSegment) <> [asSegment n]
 
+parseHierPath ∷ Either PathAbsolute PathRootless → Either URIPartParseError AbsPath
+parseHierPath = _parseAbsPath <<< either PathAbsolute.print PathRootless.print
+printHierPath ∷ AbsPath → Either PathAbsolute PathRootless
+printHierPath = _printAbsPath >>> Left
 
-  parseHierPath ∷ Either PathAbsolute PathRootless → Either URIPartParseError AbsPath
-  parseHierPath = _parseAbsPath <<< either PathAbsolute.print PathRootless.print
-  printHierPath ∷ AbsPath → Either PathAbsolute PathRootless
-  printHierPath = _printAbsPath >>> Left
+parseFragment ∷ URI.Fragment → Either URIPartParseError URI.Fragment
+parseFragment = Right
+printFragment ∷ URI.Fragment → URI.Fragment
+printFragment = id
 
-  parseFragment ∷ URI.Fragment → Either URIPartParseError URI.Fragment
-  parseFragment = Right
-  printFragment ∷ URI.Fragment → URI.Fragment
-  printFragment = id
+printRelPath ∷ AnyPath → RelativeRef.RelPath
+printRelPath = bimap _printAbsPath _printRelPath
+parseRelPath ∷ RelativeRef.RelPath → Either URIPartParseError AnyPath
+parseRelPath = bitraverse
+  (PathAbsolute.print >>> _parseAbsPath)
+  (PathNoScheme.print >>> _parseRelPath)
 
-  printRelPath ∷ AnyPath → RelativeRef.RelPath
-  printRelPath = bimap _printAbsPath _printRelPath
-  parseRelPath ∷ RelativeRef.RelPath → Either URIPartParseError AnyPath
-  parseRelPath = bitraverse
-    (PathAbsolute.print >>> _parseAbsPath)
-    (PathNoScheme.print >>> _parseRelPath)
+-- ===== INTERNAL =====
 
-  _printAbsPath ∷ Py.AbsPath → PathAbsolute
-  _printAbsPath = bimap viewAbsDir viewAbsFile >>> case _ of
-    Left Nil → PathAbsolute.PathAbsolute Nothing
-    Left (Cons head tail) → PathAbsolute.PathAbsolute $ Just
+_printAbsPath ∷ Py.AbsPath → PathAbsolute
+_printAbsPath = bimap viewAbsDir viewAbsFile >>> case _ of
+  Left Nil → PathAbsolute.PathAbsolute Nothing
+  Left (Cons head tail) → PathAbsolute.PathAbsolute $ Just
+    $ Tuple (asSegmentNZ head)
+    $ (asSegment <$> fromFoldable tail) <> [ forceTrailingSlash ]
+  Right (Tuple d n) → case d of
+    Nil → PathAbsolute.PathAbsolute $ Just $ Tuple (asSegmentNZ n) []
+    Cons head tail → PathAbsolute.PathAbsolute
+      $ Just
       $ Tuple (asSegmentNZ head)
-      $ (asSegment <$> fromFoldable tail) <> [ forceTrailingSlash ]
-    Right (Tuple d n) → case d of
-      Nil → PathAbsolute.PathAbsolute $ Just $ Tuple (asSegmentNZ n) []
-      Cons head tail → PathAbsolute.PathAbsolute
-        $ Just
-        $ Tuple (asSegmentNZ head)
-        $ (asSegment <$> fromFoldable tail) <> [ asSegment n ]
+      $ (asSegment <$> fromFoldable tail) <> [ asSegment n ]
 
-  _printRelPath ∷ Py.RelPath → PathNoScheme.PathNoScheme
-  _printRelPath = bimap viewRelDir viewRelFile >>> case _ of
-    Left Nil → PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString currentDirSegment) []
-    Left (Cons head tail) →
-      PathNoScheme.PathNoScheme
-        $ Tuple (unsafeSegmentNZNCFromString $ maybe parentDirSegment (un Name) head)
-        $ (segmentFromString <<< maybe ".." runName <$> fromFoldable tail) <> [ forceTrailingSlash ]
+_printRelPath ∷ Py.RelPath → PathNoScheme.PathNoScheme
+_printRelPath = bimap viewRelDir viewRelFile >>> case _ of
+  Left Nil → PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString currentDirSegment) []
+  Left (Cons head tail) →
+    PathNoScheme.PathNoScheme
+      $ Tuple (unsafeSegmentNZNCFromString $ maybe parentDirSegment (un Name) head)
+      $ (segmentFromString <<< maybe ".." runName <$> fromFoldable tail) <> [ forceTrailingSlash ]
 
-    Right (Tuple d n) → case d of
-      Nil → PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString $ un Name n) []
-      Cons head tail → PathNoScheme.PathNoScheme
-        $ Tuple (unsafeSegmentNZNCFromString $ maybe parentDirSegment (un Name) head)
-        $ (segmentFromString <<< maybe ".." runName <$> fromFoldable tail) <> [ asSegment n ]
+  Right (Tuple d n) → case d of
+    Nil → PathNoScheme.PathNoScheme $ Tuple (unsafeSegmentNZNCFromString $ un Name n) []
+    Cons head tail → PathNoScheme.PathNoScheme
+      $ Tuple (unsafeSegmentNZNCFromString $ maybe parentDirSegment (un Name) head)
+      $ (segmentFromString <<< maybe ".." runName <$> fromFoldable tail) <> [ asSegment n ]
 
+
+-- Array of segments is joined using "/" so to have trailing slash in rendered
+-- string for dir pathes, we need to use this empty segment.
+forceTrailingSlash ∷ PathSegment
+forceTrailingSlash = segmentFromString ""
   
-  -- Array of segments is joined using "/" so to have trailing slash in rendered
-  -- string for dir pathes, we need to use this empty segment.
-  forceTrailingSlash ∷ PathSegment
-  forceTrailingSlash = segmentFromString ""
-    
-  currentDirSegment ∷ NonEmptyString
-  currentDirSegment = case NES.fromString "." of
-    Nothing → unsafeCrashWith "unreachable case in currentDirSegment"
-    Just a → a
-  parentDirSegment ∷ NonEmptyString
-  parentDirSegment = case NES.fromString ".." of
-    Nothing → unsafeCrashWith "unreachable case in parentDirSegment"
-    Just a → a
-  _parseAbsPath ∷ String → Either URIPartParseError Py.AbsPath
-  _parseAbsPath =
-    Py.parsePath posixParser
-      (const Nothing)
-      (Just <<< Left)
-      (const Nothing)
-      (Just <<< Right)
-      Nothing
-    >>> note (URIPartParseError "Could not parse valid absolute path")
+currentDirSegment ∷ NonEmptyString
+currentDirSegment = case NES.fromString "." of
+  Nothing → unsafeCrashWith "unreachable case in currentDirSegment"
+  Just a → a
 
-  _parseRelPath ∷ String → Either URIPartParseError Py.RelPath
-  _parseRelPath =
-    Py.parsePath posixParser
-      (Just <<< Left)
-      (const Nothing)
-      (Just <<< Right)
-      (const Nothing)
-      Nothing
-    >>> note (URIPartParseError "Could not parse valid relative path")
+parentDirSegment ∷ NonEmptyString
+parentDirSegment = case NES.fromString ".." of
+  Nothing → unsafeCrashWith "unreachable case in parentDirSegment"
+  Just a → a
+
+_parseAbsPath ∷ String → Either URIPartParseError Py.AbsPath
+_parseAbsPath =
+  Py.parsePath posixParser
+    (const Nothing)
+    (Just <<< Left)
+    (const Nothing)
+    (Just <<< Right)
+    Nothing
+  >>> note (URIPartParseError "Could not parse valid absolute path")
+
+_parseRelPath ∷ String → Either URIPartParseError Py.RelPath
+_parseRelPath =
+  Py.parsePath posixParser
+    (Just <<< Left)
+    (const Nothing)
+    (Just <<< Right)
+    (const Nothing)
+    Nothing
+  >>> note (URIPartParseError "Could not parse valid relative path")
 
 -- Union which rejects duplicates
 union
