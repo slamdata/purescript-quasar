@@ -31,8 +31,8 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Newtype (un)
 import Data.Number as Num
-import Data.String.NonEmpty (NonEmptyString)
 import Data.StrMap as SM
+import Data.String.NonEmpty as NES
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..))
 import Pathy (Name(..), (</>))
@@ -42,7 +42,7 @@ import URI.Scheme as Scheme
 
 type Config =
   { host ∷ URI.QURIHost'
-  , bucketName ∷ Maybe NonEmptyString
+  , bucketName ∷ String
   , password ∷ String
   , docTypeKey ∷ String
   , queryTimeout ∷ Maybe Seconds
@@ -72,7 +72,7 @@ toURI { host, bucketName, password, docTypeKey, queryTimeout } =
   hierarchicalPart =
     URI.HierarchicalPartAuth
       (URI.Authority Nothing (Just host))
-      (case bucketName of
+      (case NES.fromString bucketName of
         Nothing → Just $ Left P.rootDir
         Just n → Just $ Right $ P.rootDir </> P.file' (Name n)
       )
@@ -93,9 +93,9 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ (Just
   bucketName ← case path of
     Nothing → Left "Path is missing from URL"
     Just (Left p)
-      | p == P.rootDir → pure Nothing
+      | p == P.rootDir → pure ""
       | otherwise → Left "Expected a file path"
-    Just (Right p) → pure $ Just $ un P.Name $ P.fileName p
+    Just (Right p) → pure $ NES.toString $ un P.Name $ P.fileName p
   let props = maybe SM.empty (\(URI.QueryPairs qs) → SM.fromFoldable qs) query
   pure
     { host

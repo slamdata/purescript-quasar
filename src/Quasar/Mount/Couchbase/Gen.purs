@@ -19,19 +19,17 @@ module Quasar.Mount.Couchbase.Gen where
 import Prelude
 
 import Control.Monad.Gen (class MonadGen)
-import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
-import Data.Maybe (Maybe(..))
 import Data.Time.Duration.Gen (genSeconds)
-import Quasar.Mount.Common.Gen (genAlphaNumericNEString, genAlphaNumericString, genHost')
+import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost')
 import Quasar.Mount.Couchbase as CB
 
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m CB.Config
 genConfig =
   { host: _, bucketName: _, password: _, docTypeKey: _, queryTimeout: _ }
     <$> genHost'
-    <*> Gen.choose (pure Nothing) (Just <$> genAlphaNumericNEString)
+    <*> genAlphaNumericString
     <*> genAlphaNumericString
     <*> genAlphaNumericString
     <*> GenC.genMaybe genSeconds

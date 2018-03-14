@@ -25,7 +25,6 @@ import Data.Codec (decode, encode)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
-import Data.String.NonEmpty (fromString)
 import Data.String.NonEmpty as NES
 import Data.These (These(..))
 import Data.Time.Duration (Seconds(..))
@@ -56,7 +55,7 @@ main = do
     "couchbase://localhost/testBucket?password=&docTypeKey="
       (CBT.TestConfig
         { host: Just $ This (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost")
-        , bucketName: fromString "testBucket"
+        , bucketName: "testBucket"
         , password: ""
         , docTypeKey: ""
         , queryTimeout: Nothing
@@ -66,7 +65,7 @@ main = do
     "couchbase://localhost:9999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
       (CBT.TestConfig
         { host: Just $ Both (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost") (Port.unsafeFromInt 9999)
-        , bucketName: fromString "testBucket"
+        , bucketName: "testBucket"
         , password: "pass"
         , docTypeKey: "type"
         , queryTimeout: Just (Seconds (20.0))
