@@ -41,7 +41,7 @@ import Quasar.URI as URI
 import URI.Scheme as Scheme
 
 type Config =
-  { host ∷ URI.QURIHost
+  { host ∷ URI.QURIHost'
   , bucketName ∷ Maybe NonEmptyString
   , password ∷ String
   , docTypeKey ∷ String
@@ -71,14 +71,11 @@ toURI { host, bucketName, password, docTypeKey, queryTimeout } =
   hierarchicalPart ∷ URI.QHierarchicalPart
   hierarchicalPart =
     URI.HierarchicalPartAuth
-      authority
+      (URI.Authority Nothing (Just host))
       (case bucketName of
         Nothing → Just $ Left P.rootDir
         Just n → Just $ Right $ P.rootDir </> P.file' (Name n)
       )
-
-  authority ∷ URI.QAuthority
-  authority = URI.Authority Nothing host
 
   props ∷ Array (Tuple String (Maybe String))
   props =
@@ -89,7 +86,9 @@ toURI { host, bucketName, password, docTypeKey, queryTimeout } =
 fromURI ∷ URI.QAbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartNoAuth path) query) =
   Left "Expected 'auth' part in URI"
-fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ host) path) query) = do
+fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartAuth (URI.Authority _ Nothing) _) _) = do
+  Left "Expected 'host' part to be present in URL"
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ (Just host)) path) query) = do
   unless (scheme == uriScheme) $ Left "Expected 'couchbase' URL scheme"
   bucketName ← case path of
     Nothing → Left "Path is missing from URL"

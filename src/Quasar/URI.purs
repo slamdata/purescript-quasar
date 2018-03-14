@@ -89,8 +89,10 @@ type AbsPath = Py.AbsPath
 type AnyPath = Either Py.AbsPath Py.RelPath
 
 type QURIHost' = These URI.Host URI.Port
-type QURIHost = URI.HostPortPair URI.Host URI.Port
-type QURIHosts = URI.MultiHostPortPair URI.Host URI.Port
+-- NOTE: this is same as `URI.HostPortPair URI.Host URI.Port`
+type QURIHost = Maybe QURIHost'
+-- NOTE: this is same as `URI.MultiHostPortPair URI.Host URI.Port`
+type QURIHosts = Array QURIHost'
 
 type QAuthority = URI.Authority URI.UserPassInfo QURIHost
 type QQuery = URI.QueryPairs String String

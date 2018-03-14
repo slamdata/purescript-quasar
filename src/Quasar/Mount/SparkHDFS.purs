@@ -39,8 +39,8 @@ import Quasar.URI as URI
 import URI.Scheme as Scheme
 
 type Config =
-  { sparkHost ∷ URI.QURIHost
-  , hdfsHost ∷ URI.QURIHost
+  { sparkHost ∷ URI.QURIHost'
+  , hdfsHost ∷ URI.QURIHost'
   , path ∷ AbsDir
   , props ∷ SM.StrMap (Maybe String)
   }
@@ -74,7 +74,9 @@ toURI cfg =
 fromURI ∷ URI.QAbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartNoAuth _) _) = do
   Left "Expected 'auth' part in URI"
-fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ sparkHost) _) query) = do
+fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartAuth (URI.Authority _ Nothing) _) _) = do
+  Left "Expected 'host' part to be present in URL"
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ (Just sparkHost)) _) query) = do
   unless (scheme == sparkURIScheme) $ Left "Expected `spark` URL scheme"
   let props = maybe SM.empty (\(URI.QueryPairs qs) → SM.fromFoldable qs) query
 
@@ -92,20 +94,21 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ spark
 
   pure { sparkHost, hdfsHost, path, props: props'' }
 
-mkURI ∷ URI.Scheme → URI.QURIHost → Maybe URI.QQuery → URI.QAbsoluteURI
+mkURI ∷ URI.Scheme → URI.QURIHost' → Maybe URI.QQuery → URI.QAbsoluteURI
 mkURI scheme host params =
   URI.AbsoluteURI
     (scheme)
-    (URI.HierarchicalPartAuth (URI.Authority Nothing host) Nothing)
+    (URI.HierarchicalPartAuth (URI.Authority Nothing (Just host)) Nothing)
     params
 
-extractHost' ∷ URI.Scheme → String → Either String URI.QURIHost
+extractHost' ∷ URI.Scheme → String → Either String URI.QURIHost'
 extractHost' scheme uri = do
   URI.AbsoluteURI scheme' hierPart _ ← lmap show $ decode URI.qAbsoluteURI uri
   unless (scheme' == scheme) $ Left $ "Expected '" <> Scheme.print scheme <> "' URL scheme"
   case hierPart of
     URI.HierarchicalPartNoAuth _ → Left $ "Expected auth part to be present in URL"
-    URI.HierarchicalPartAuth (URI.Authority _ host) _ → pure host
+    URI.HierarchicalPartAuth (URI.Authority _ Nothing) _ → Left "Expected 'host' part to be present in URL"
+    URI.HierarchicalPartAuth (URI.Authority _ (Just host)) _ → pure host
 
 sparkURIScheme ∷ URI.Scheme
 sparkURIScheme = Scheme.unsafeFromString "spark"

@@ -61,11 +61,14 @@ genHostURI = Gen.oneOf $ genIPv4 :| [genName]
 genPort ∷ ∀ m. MonadRec m ⇒ MonadGen m ⇒ m URI.Port
 genPort = filtered $ Port.fromInt <$> Gen.chooseInt 50000 65535
 
+genHost' ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHost'
+genHost' = genThese genHostURI genPort
+
 genHost ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHost
-genHost = genMaybe $ genThese genHostURI genPort
+genHost = genMaybe genHost'
 
 genHosts ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHosts
-genHosts = Gen.unfoldable $ genThese genHostURI genPort
+genHosts = Gen.unfoldable genHost'
 
 genThese ∷ ∀ m a b. MonadGen m ⇒ MonadRec m ⇒ m a → m b → m (These a b)
 genThese ma mb = filtered do

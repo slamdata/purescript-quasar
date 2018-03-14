@@ -37,7 +37,7 @@ import Quasar.URI as URI
 import URI.Scheme as Scheme
 
 type Config =
-  { host ∷ URI.QURIHost
+  { host ∷ URI.QURIHost'
   , path ∷ Maybe AbsPath
   , credentials ∷ Maybe URI.UserPassInfo
   , format ∷ Format
@@ -72,7 +72,7 @@ toURI ∷ Config → URI.QAbsoluteURI
 toURI { host, path, credentials, format } =
   URI.AbsoluteURI
     uriScheme
-    (URI.HierarchicalPartAuth (URI.Authority credentials host) path)
+    (URI.HierarchicalPartAuth (URI.Authority credentials (Just host)) path)
     (Just (URI.QueryPairs [ (Tuple "format" (Just formatStr)) ]))
   where
   formatStr ∷ String
@@ -83,7 +83,9 @@ toURI { host, path, credentials, format } =
 fromURI ∷ URI.QAbsoluteURI → Either String Config
 fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartNoAuth _) _) = do
   Left "Expected 'auth' part in URI"
-fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority credentials host) path) query) = do
+fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartAuth (URI.Authority _ Nothing) _) _) = do
+  Left "Expected 'host' part to be present in URL"
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority credentials (Just host)) path) query) = do
   unless (scheme == uriScheme) $ Left "Expected 'xcc' URL scheme"
   let
     props = maybe SM.empty (\(URI.QueryPairs qs) → SM.fromFoldable qs) query
