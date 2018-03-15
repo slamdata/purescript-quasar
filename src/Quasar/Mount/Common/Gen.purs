@@ -24,7 +24,6 @@ import Prelude
 import Control.Monad.Gen (class MonadGen, filtered)
 import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common (genMaybe)
-import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.Char.Gen as CG
 import Data.Maybe (Maybe(..))
@@ -32,7 +31,7 @@ import Data.NonEmpty ((:|))
 import Data.String.Gen as SG
 import Data.String.NonEmpty (NonEmptyString)
 import Data.String.NonEmpty as NES
-import Data.These (These(..))
+import Data.These.Gen (genThese)
 import Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
 import Quasar.URI as URI
 import URI.Host.Gen as HostGen
@@ -58,16 +57,6 @@ genHost = genMaybe genHost'
 
 genHosts ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHosts
 genHosts = Gen.unfoldable genHost'
-
-genThese ∷ ∀ m a b. MonadGen m ⇒ MonadRec m ⇒ m a → m b → m (These a b)
-genThese ma mb = filtered do
-  a' ← GenC.genMaybe ma
-  b' ← GenC.genMaybe mb
-  pure case a', b' of
-    Just a, Just b → Just $ Both a b
-    Just a, Nothing → Just $ This a
-    Nothing, Just b → Just $ That b
-    Nothing, Nothing → Nothing
 
 genCredentials ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.UserPassInfo
 genCredentials =
