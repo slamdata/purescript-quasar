@@ -66,16 +66,15 @@ toURI { host, bucketName, password, docTypeKey, queryTimeout } =
   URI.AbsoluteURI
     uriScheme
     hierarchicalPart
-    (Just (URI.QueryPairs props))
+    (Just $ URI.QueryPairs props)
   where
   hierarchicalPart ∷ URI.QHierarchicalPart
   hierarchicalPart =
     URI.HierarchicalPartAuth
-      (URI.Authority Nothing (Just host))
-      (case NES.fromString bucketName of
+      (URI.Authority Nothing $ Just host)
+      case NES.fromString bucketName of
         Nothing → Just $ Left P.rootDir
         Just n → Just $ Right $ P.rootDir </> P.file' (Name n)
-      )
 
   props ∷ Array (Tuple String (Maybe String))
   props =

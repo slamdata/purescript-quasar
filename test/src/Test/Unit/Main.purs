@@ -54,7 +54,7 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost/testBucket?password=&docTypeKey="
       (CBT.TestConfig
-        { host: Just $ This (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost")
+        { host: This (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost")
         , bucketName: "testBucket"
         , password: ""
         , docTypeKey: ""
@@ -64,7 +64,7 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost:9999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
       (CBT.TestConfig
-        { host: Just $ Both (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost") (Port.unsafeFromInt 9999)
+        { host: Both (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost") (Port.unsafeFromInt 9999)
         , bucketName: "testBucket"
         , password: "pass"
         , docTypeKey: "type"

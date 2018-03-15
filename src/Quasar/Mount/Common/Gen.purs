@@ -30,39 +30,28 @@ import Data.Char.Gen as CG
 import Data.Maybe (Maybe(..))
 import Data.NonEmpty ((:|))
 import Data.String.Gen as SG
-import Data.String.NonEmpty (NonEmptyString, cons)
+import Data.String.NonEmpty (NonEmptyString)
 import Data.String.NonEmpty as NES
 import Data.These (These(..))
 import Pathy.Gen (genAbsDirPath, genAbsFilePath) as PGen
 import Quasar.URI as URI
 import URI.Host.Gen as HostGen
-import URI.Host.RegName as RegName
 import URI.Port as Port
 
 genAlphaNumericString ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m String
 genAlphaNumericString = SG.genString genAlphaNumericChar
 
 genAlphaNumericNEString ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m NonEmptyString
-genAlphaNumericNEString = cons <$> genAlphaNumericChar <*> SG.genString genAlphaNumericChar
+genAlphaNumericNEString = NES.cons <$> genAlphaNumericChar <*> SG.genString genAlphaNumericChar
 
 genAlphaNumericChar ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m Char
 genAlphaNumericChar = Gen.oneOf $ CG.genDigitChar :| [CG.genAlpha]
-
-genHostURI ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.Host
-genHostURI = Gen.oneOf $ genIPv4 :| [genName]
-  where
-  genIPv4 = URI.IPv4Address <$> HostGen.genIPv4
-  genName = URI.NameAddress <$> genRegName
-  genRegName = do
-    head ← CG.genAlpha
-    tail ← genAlphaNumericString
-    pure $ RegName.fromString $ NES.cons head tail
 
 genPort ∷ ∀ m. MonadRec m ⇒ MonadGen m ⇒ m URI.Port
 genPort = filtered $ Port.fromInt <$> Gen.chooseInt 50000 65535
 
 genHost' ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHost'
-genHost' = genThese genHostURI genPort
+genHost' = genThese HostGen.genHost genPort
 
 genHost ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m URI.QURIHost
 genHost = genMaybe genHost'
