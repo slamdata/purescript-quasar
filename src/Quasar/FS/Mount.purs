@@ -21,11 +21,11 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, (.?))
 import Data.Const (Const(..))
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Eq (class Eq1, eq1)
 import Data.Identity (Identity(..))
 import Data.Maybe (Maybe)
-import Data.Newtype (unwrap)
+import Data.Newtype (un, unwrap)
 import Data.Ord (class Ord1, compare1)
 import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
 import Data.TacitString as TS
@@ -137,9 +137,6 @@ fromJSON parent = decodeJson >=> \obj → do
     Mimir _ → Mimir <$> onDir
     Unknown n _ → Unknown n <$> onAnyPath
 
-foldPath ∷ ∀ r. (DirPath → r) → (FilePath → r) → Mount → r
-foldPath onDir onPath = overPath (onDir >>> Const) (onPath >>> Const) >>> unwrap
-
 getPath ∷ Mount → AnyPath
 getPath = foldPath Left Right
 
@@ -158,16 +155,47 @@ typeFromName = case _ of
   "mimir" → Mimir $ Const unit
   other → Unknown other $ Const unit
 
-overPath ∷ ∀ f. Functor f ⇒ (DirPath → f DirPath) → (FilePath → f FilePath) → Mount → f Mount
-overPath overDir overFile = case _ of
-  View (Identity file) → overFile file <#> Identity >>> View
-  Module (Identity dir) → overDir dir <#> Identity >>> Module
-  MongoDB (Identity dir) → overDir dir <#> Identity >>> MongoDB
-  Couchbase (Identity dir) → overDir dir <#> Identity >>> Couchbase
-  MarkLogic (Identity dir) → overDir dir <#> Identity >>> MarkLogic
-  SparkHDFS (Identity dir) → overDir dir <#> Identity >>> SparkHDFS
-  SparkLocal (Identity dir) → overDir dir <#> Identity >>> SparkLocal
-  Mimir (Identity dir) → overDir dir <#> Identity >>> Mimir
-  Unknown name (Identity path) → case path of
-    Left dir → overDir dir <#> Left >>> Identity >>> Unknown name
-    Right file → overFile file <#> Right >>> Identity >>> Unknown name
+foldPath ∷ ∀ r. (DirPath → r) → (FilePath → r) → Mount → r
+foldPath onDir onPath = foldPath'
+  (un Identity >>> onDir)
+  (un Identity >>> onPath)
+  (un Identity >>> either onDir onPath)
+
+foldPath' ∷ ∀ r f. (f DirPath → r) → (f FilePath → r) → (f AnyPath → r) → MountF f → r
+foldPath' onDir onPath onAny = overPath' (onDir >>> Const) (onPath >>> Const) (onAny >>> Const) >>> unwrap
+
+
+overPath ∷ ∀ m. Functor m ⇒ (DirPath → m DirPath) → (FilePath → m FilePath) → Mount → m Mount
+overPath overDir overFile = overPath'
+  (un Identity >>> overDir >>> map Identity)
+  (un Identity >>> overFile >>> map Identity)
+  (\(Identity any) -> case any of
+    Left dir → overDir dir <#> Left >>> Identity
+    Right file → overFile file <#> Right >>> Identity)
+
+overPath'
+  ∷ ∀ f g m
+  . Functor m
+  ⇒ (f DirPath → m (g DirPath))
+  → (f FilePath → m (g FilePath))
+  → (f AnyPath → m (g AnyPath)) 
+  → MountF f → m (MountF g)
+overPath' overDir overFile overAny= case _ of
+  View file → overFile file <#> View
+  Module dir → overDir dir <#> Module
+  MongoDB dir → overDir dir <#> MongoDB
+  Couchbase dir → overDir dir <#> Couchbase
+  MarkLogic dir → overDir dir <#> MarkLogic
+  SparkHDFS dir → overDir dir <#> SparkHDFS
+  SparkLocal dir → overDir dir <#> SparkLocal
+  Mimir dir → overDir dir <#> Mimir
+  Unknown name path → overAny path <#> Unknown name
+
+
+newtype Move a = Move { from :: a, to :: a}
+
+runMountMove :: MountF Move -> Move AnyPath
+runMountMove = foldPath'
+  (\(Move { to, from }) -> Move { to: Left to, from: Left from })
+  (\(Move { to, from }) -> Move { to: Right to, from: Right from })
+  id
