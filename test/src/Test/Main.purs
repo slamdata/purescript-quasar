@@ -188,11 +188,11 @@ main = void $ runAff (const (pure unit)) $ jumpOutOnError do
     run isRight $ QF.getMount (Left rootDir)
     run isRight $ QF.getMount (Right testMount)
 
-    log "\nMoveData (mount):"
-    run isRight $ QF.moveData (Right testMount) (Right testMount2)
+    log "\nMoveMount:"
+    run isRight $ QF.moveMount (Right testMount) (Right testMount2)
 
-    log "\nDeleteData (mount):"
-    run isRight $ QF.deleteData (Right testMount2)
+    log "\nDeleteMount:"
+    run isRight $ QF.deleteMount (Right testMount2)
 
     log "\nInvokeFile:"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
