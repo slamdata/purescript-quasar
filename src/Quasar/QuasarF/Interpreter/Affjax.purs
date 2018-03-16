@@ -49,6 +49,7 @@ import Quasar.ConfigF as CF
 import Quasar.Data.Json as Json
 import Quasar.Data.MediaTypes (applicationZip)
 import Quasar.FS.DirMetadata as DirMetadata
+import Quasar.FS.Mount (Move(..), getPath, runMountMove)
 import Quasar.Metastore as Metastore
 import Quasar.Mount as Mount
 import Quasar.Paths as Paths
@@ -188,17 +189,19 @@ eval = case _ of
   GetMount path k →
     k <$> (mkRequest mountConfigResult <<< get =<< mkFSUrl Paths.mount path mempty)
 
-  MoveMount fromPath toPath k → do
-    let destHeader = Tuple "Destination" (either printPath printPath toPath)
-    url ← mkFSUrl Paths.mount fromPath (headerParams [destHeader])
+  MoveMount move k → do
+    let 
+      Move {to, from} = runMountMove move
+      destHeader = Tuple "Destination" (either printPath printPath to)
+    url ← mkFSUrl Paths.mount from (headerParams [destHeader])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
         , method = Left MOVE
         })
 
-  DeleteMount path k →
-    k <$> (mkRequest unitResult <<< delete =<< mkFSUrl Paths.mount path mempty)
+  DeleteMount mount k → 
+    k <$> (mkRequest unitResult <<< delete =<< mkFSUrl Paths.mount (getPath mount) mempty)
 
   GetMetastore k → do
     url ← mkUrl (Right Paths.metastore) mempty

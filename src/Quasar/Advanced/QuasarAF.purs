@@ -36,6 +36,7 @@ import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QError(..), QResponse, lowerQError, printQError)
 import Quasar.FS (QResource)
+import Quasar.FS.Mount (Mount, MountF, Move(..))
 import Quasar.Metastore (Metastore)
 import Quasar.Mount (MountConfig(..))
 import Quasar.Mount.View as View
@@ -214,17 +215,16 @@ updateCachedView path config maxAge =
   left $ UpdateMount path (ViewConfig config) (Just maxAge) id
 
 moveMount
-  ∷ AnyPath
-  → AnyPath
+  ∷ MountF Move
   → QuasarAFCE Unit
-moveMount from to =
-  left $ MoveMount from to id
+moveMount move =
+  left $ MoveMount move id
 
 deleteMount
-  ∷ AnyPath
+  ∷ Mount
   → QuasarAFCE Unit
-deleteMount path =
-  left $ DeleteMount path id
+deleteMount mount =
+  left $ DeleteMount mount id
 
 getMetastore ∷ QuasarAFCE (Metastore ())
 getMetastore = left $ GetMetastore id

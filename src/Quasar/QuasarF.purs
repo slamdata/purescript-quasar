@@ -31,6 +31,7 @@ import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
 import Quasar.Error (type (:~>), QResponse, QError(..), PDFError(..), UnauthorizedDetails(..), lowerQError, printQError)
 import Quasar.FS (QResource)
+import Quasar.FS.Mount (Move, Mount, MountF)
 import Quasar.Metastore (Metastore)
 import Quasar.Mount (MountConfig(..))
 import Quasar.Mount.View as View
@@ -56,8 +57,8 @@ data QuasarF a
   | GetMount AnyPath (MountConfig :~> a)
   | CreateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
   | UpdateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
-  | MoveMount AnyPath AnyPath (Unit :~> a)
-  | DeleteMount AnyPath (Unit :~> a)
+  | MoveMount (MountF Move) (Unit :~> a)
+  | DeleteMount Mount (Unit :~> a)
   | GetMetastore (Metastore () :~> a)
   | PutMetastore { initialize ∷ Boolean, metastore ∷ Metastore (password ∷ String) } (Unit :~> a)
 
@@ -223,17 +224,16 @@ updateCachedView path config maxAge =
   UpdateMount path (ViewConfig config) (Just maxAge) id
 
 moveMount
-  ∷ AnyPath
-  → AnyPath
+  ∷ MountF Move
   → QuasarFE Unit
-moveMount from to =
-  MoveMount from to id
+moveMount move =
+  MoveMount move id
 
 deleteMount
-  ∷ AnyPath
+  ∷ Mount
   → QuasarFE Unit
-deleteMount path =
-  DeleteMount path id
+deleteMount mount =
+  DeleteMount mount id
 
 getMetastore ∷ QuasarFE (Metastore ())
 getMetastore = GetMetastore id

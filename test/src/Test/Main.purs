@@ -33,6 +33,7 @@ import Data.Argonaut.JCursor as JC
 import Data.Either (Either(..), isRight)
 import Data.Foldable (traverse_)
 import Data.Functor.Coproduct (left)
+import Data.Identity (Identity(..))
 import Data.Maybe (Maybe(..))
 import Data.Path.Pathy (rootDir, dir, file, (</>))
 import Data.Posix.Signal (Signal(SIGTERM))
@@ -51,6 +52,8 @@ import Partial.Unsafe (unsafePartial)
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..))
 import Quasar.Data.Json as Json
+import Quasar.FS (MountF(..))
+import Quasar.FS.Mount (Move(..))
 import Quasar.Mount (MountConfig(..))
 import Quasar.QuasarF (QuasarF, QError(..))
 import Quasar.QuasarF as QF
@@ -189,10 +192,10 @@ main = void $ runAff (const (pure unit)) $ jumpOutOnError do
     run isRight $ QF.getMount (Right testMount)
 
     log "\nMoveMount:"
-    run isRight $ QF.moveMount (Right testMount) (Right testMount2)
+    run isRight $ QF.moveMount (Unknown "" $ Move {from: Right testMount, to: Right testMount2})
 
     log "\nDeleteMount:"
-    run isRight $ QF.deleteMount (Right testMount2)
+    run isRight $ QF.deleteMount (Unknown "" $ Identity $ Right testMount2)
 
     log "\nInvokeFile:"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
