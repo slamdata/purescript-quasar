@@ -214,6 +214,19 @@ updateCachedView
 updateCachedView path config maxAge =
   left $ UpdateMount path (ViewConfig config) (Just maxAge) id
 
+moveMount
+  ∷ AbsPath
+  → AbsPath
+  → QuasarAFCE Unit
+moveMount from to =
+  left $ MoveMount from to id
+
+deleteMount
+  ∷ AbsPath
+  → QuasarAFCE Unit
+deleteMount path =
+  left $ DeleteMount path id
+
 getMetastore ∷ QuasarAFCE (Metastore ())
 getMetastore = left $ GetMetastore id
 

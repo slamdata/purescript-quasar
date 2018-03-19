@@ -191,6 +191,18 @@ eval = case _ of
   GetMount path k →
     k <$> (mkRequest mountConfigResult <<< get =<< mkFSUrl Paths.mount path mempty)
 
+  MoveMount fromPath toPath k → do
+    let destHeader = Tuple "Destination" (either printQPath printQPath toPath)
+    url ← mkFSUrl Paths.mount fromPath (headerParams [destHeader])
+    k <$> mkRequest unitResult
+      (AXF.affjax defaultRequest
+        { url = url
+        , method = Left MOVE
+        })
+
+  DeleteMount path k →
+    k <$> (mkRequest unitResult <<< delete =<< mkFSUrl Paths.mount path mempty)
+
   GetMetastore k → do
     url ← mkUrl (Right Paths.metastore) mempty
     k <$> mkRequest metastoreResult (get url)

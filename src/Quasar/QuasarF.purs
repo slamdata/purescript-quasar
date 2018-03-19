@@ -55,6 +55,8 @@ data QuasarF a
   | DeleteData AbsPath (Unit :~> a)
   | MoveData AbsPath AbsPath (Unit :~> a)
   | GetMount AbsPath (MountConfig :~> a)
+  | MoveMount AbsPath AbsPath (Unit :~> a)
+  | DeleteMount AbsPath (Unit :~> a)
   | CreateMount AbsPath MountConfig (Maybe Seconds) (Unit :~> a)
   | UpdateMount AbsPath MountConfig (Maybe Seconds) (Unit :~> a)
   | GetMetastore (Metastore () :~> a)
@@ -220,6 +222,19 @@ updateCachedView
   → QuasarFE Unit
 updateCachedView path config maxAge =
   UpdateMount path (ViewConfig config) (Just maxAge) id
+
+moveMount
+  ∷ AbsPath
+  → AbsPath
+  → QuasarFE Unit
+moveMount from to =
+  MoveMount from to id
+
+deleteMount
+  ∷ AbsPath
+  → QuasarFE Unit
+deleteMount path =
+  DeleteMount path id
 
 getMetastore ∷ QuasarFE (Metastore ())
 getMetastore = GetMetastore id
