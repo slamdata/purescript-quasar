@@ -24,8 +24,11 @@ derive instance eqGroupPath ∷ Eq GroupPath
 derive instance ordGroupPath ∷ Ord GroupPath
 derive instance newtypeGroupPath ∷ Newtype.Newtype GroupPath _
 
-printGroupPath ∷ GroupPath → NonEmptyString
-printGroupPath gp =
+printGroupPath ∷ GroupPath → String
+printGroupPath = NES.toString <<< runGroupPath
+
+runGroupPath ∷ GroupPath → NonEmptyString
+runGroupPath gp =
   let
     dir = Newtype.un GroupPath gp
   in
@@ -98,7 +101,7 @@ derive instance ordQResource ∷ Ord QResource
 instance encodeJsonQResource ∷ EncodeJson QResource where
   encodeJson (File pt) = encodeJson $ "data:" <> printQPath pt
   encodeJson (Dir pt) = encodeJson $ "data:" <> printQPath pt
-  encodeJson (Group gpt) = encodeJson $ "group:" <> NES.toString (printGroupPath gpt)
+  encodeJson (Group gpt) = encodeJson $ "group:" <> printGroupPath gpt
 
 instance decodeJsonQResource ∷ DecodeJson QResource where
   decodeJson js = do
@@ -161,6 +164,9 @@ newtype UserId = UserId NonEmptyString
 runUserId ∷ UserId → NonEmptyString
 runUserId (UserId s) = s
 
+printUserId ∷ UserId → String
+printUserId = NES.toString <<< runUserId
+
 derive instance eqUserId ∷ Eq UserId
 derive instance ordUserId ∷ Ord UserId
 
@@ -218,7 +224,7 @@ derive instance ordGrantedTo ∷ Ord GrantedTo
 
 instance encodeJsonGrantedTo ∷ EncodeJson GrantedTo where
   encodeJson (UserGranted uid) = encodeJson uid
-  encodeJson (GroupGranted gpt) = encodeJson $ NES.toString (printGroupPath gpt)
+  encodeJson (GroupGranted gpt) = encodeJson $ printGroupPath gpt
   encodeJson (TokenGranted tk) = encodeJson tk
 
 instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
@@ -337,7 +343,7 @@ instance encodeJsonShareableSubject ∷ EncodeJson ShareableSubject where
   encodeJson (UserSubject (UserId uid)) =
     encodeJson $ "user:" <> NES.toString uid
   encodeJson (GroupSubject gpt) =
-    encodeJson $ NES.toString (printGroupPath gpt)
+    encodeJson $ printGroupPath gpt
 
 
 type ShareRequestR =
@@ -353,8 +359,8 @@ runShareRequest (ShareRequest r) = r
 
 instance encodeJsonShareRequest ∷ EncodeJson ShareRequest where
   encodeJson (ShareRequest obj) =
-    "subjects" := ((map (append "user:" <<< NES.toString <<< runUserId) obj.users)
-                   <> map (append "group:" <<< NES.toString <<< printGroupPath) obj.groups)
+    "subjects" := ((map (append "user:" <<< printUserId) obj.users)
+                   <> map (append "group:" <<< printGroupPath) obj.groups)
     ~> "actions" := (map Action $ obj.actions)
     ~> jsonEmptyObject
 
