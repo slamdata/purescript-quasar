@@ -26,6 +26,7 @@ import DOM.File.Types (Blob)
 import Data.Argonaut (JArray)
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Seconds)
+import Pathy (AbsDir, AbsFile, AbsPath)
 import Quasar.Data (QData)
 import Quasar.Data.Json (PrecisionMode(..))
 import Quasar.Data.Json.Extended (EJson, resultsAsEJson)
@@ -36,28 +37,28 @@ import Quasar.Mount (MountConfig(..))
 import Quasar.Mount.View as View
 import Quasar.Query.OutputMeta (OutputMeta)
 import Quasar.ServerInfo (ServerInfo)
-import Quasar.Types (AnyPath, FilePath, DirPath, Pagination, Vars, CompileResultR)
+import Quasar.Types (Pagination, Vars, CompileResultR)
 import SqlSquared (SqlQuery)
 
 data QuasarF a
   = ServerInfo (ServerInfo :~> a)
-  | ReadQuery PrecisionMode DirPath SqlQuery Vars (Maybe Pagination) (JArray :~> a)
-  | WriteQuery DirPath FilePath SqlQuery Vars (OutputMeta :~> a)
-  | CompileQuery DirPath SqlQuery Vars (CompileResultR :~> a)
-  | FileMetadata FilePath (Unit :~> a)
-  | DirMetadata DirPath (Maybe Pagination) ((Array QResource) :~> a)
-  | ReadFile PrecisionMode FilePath (Maybe Pagination) (JArray :~> a)
-  | WriteFile FilePath QData (Unit :~> a)
-  | WriteDir DirPath Blob (Unit :~> a)
-  | AppendFile FilePath QData (Unit :~> a)
-  | InvokeFile PrecisionMode FilePath Vars (Maybe Pagination) (JArray :~> a)
-  | DeleteData AnyPath (Unit :~> a)
-  | MoveData AnyPath AnyPath (Unit :~> a)
-  | GetMount AnyPath (MountConfig :~> a)
-  | CreateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
-  | UpdateMount AnyPath MountConfig (Maybe Seconds) (Unit :~> a)
-  | MoveMount AnyPath AnyPath (Unit :~> a)
-  | DeleteMount AnyPath (Unit :~> a)
+  | ReadQuery PrecisionMode AbsDir SqlQuery Vars (Maybe Pagination) (JArray :~> a)
+  | WriteQuery AbsDir AbsFile SqlQuery Vars (OutputMeta :~> a)
+  | CompileQuery AbsDir SqlQuery Vars (CompileResultR :~> a)
+  | FileMetadata AbsFile (Unit :~> a)
+  | DirMetadata AbsDir (Maybe Pagination) ((Array QResource) :~> a)
+  | ReadFile PrecisionMode AbsFile (Maybe Pagination) (JArray :~> a)
+  | WriteFile AbsFile QData (Unit :~> a)
+  | WriteDir AbsDir Blob (Unit :~> a)
+  | AppendFile AbsFile QData (Unit :~> a)
+  | InvokeFile PrecisionMode AbsFile Vars (Maybe Pagination) (JArray :~> a)
+  | DeleteData AbsPath (Unit :~> a)
+  | MoveData AbsPath AbsPath (Unit :~> a)
+  | GetMount AbsPath (MountConfig :~> a)
+  | MoveMount AbsPath AbsPath (Unit :~> a)
+  | DeleteMount AbsPath (Unit :~> a)
+  | CreateMount AbsPath MountConfig (Maybe Seconds) (Unit :~> a)
+  | UpdateMount AbsPath MountConfig (Maybe Seconds) (Unit :~> a)
   | GetMetastore (Metastore () :~> a)
   | PutMetastore { initialize ∷ Boolean, metastore ∷ Metastore (password ∷ String) } (Unit :~> a)
 
@@ -73,7 +74,7 @@ serverInfo =
 
 readQuery
   ∷ PrecisionMode
-  → DirPath
+  → AbsDir
   → SqlQuery
   → Vars
   → Maybe Pagination
@@ -82,7 +83,7 @@ readQuery mode path sql vars pagination =
   ReadQuery mode path sql vars pagination id
 
 readQueryEJson
-  ∷ DirPath
+  ∷ AbsDir
   → SqlQuery
   → Vars
   → Maybe Pagination
@@ -91,8 +92,8 @@ readQueryEJson path sql vars pagination =
   readQuery Precise path sql vars pagination <#> resultsAsEJson
 
 writeQuery
-  ∷ DirPath
-  → FilePath
+  ∷ AbsDir
+  → AbsFile
   → SqlQuery
   → Vars
   → QuasarFE OutputMeta
@@ -100,7 +101,7 @@ writeQuery path file sql vars =
   WriteQuery path file sql vars id
 
 compileQuery
-  ∷ DirPath
+  ∷ AbsDir
   → SqlQuery
   → Vars
   → QuasarFE CompileResultR
@@ -108,13 +109,13 @@ compileQuery path sql vars =
   CompileQuery path sql vars id
 
 fileMetadata
-  ∷ FilePath
+  ∷ AbsFile
   → QuasarFE Unit
 fileMetadata path =
   FileMetadata path id
 
 dirMetadata
-  ∷ DirPath
+  ∷ AbsDir
   → Maybe Pagination
   → QuasarFE (Array QResource)
 dirMetadata path pagination =
@@ -122,35 +123,35 @@ dirMetadata path pagination =
 
 readFile
   ∷ PrecisionMode
-  → FilePath
+  → AbsFile
   → Maybe Pagination
   → QuasarFE JArray
 readFile mode path pagination =
   ReadFile mode path pagination id
 
 readFileEJson
-  ∷ FilePath
+  ∷ AbsFile
   → Maybe Pagination
   → QuasarFE (Array EJson)
 readFileEJson path pagination =
   readFile Precise path pagination <#> resultsAsEJson
 
 writeFile
-  ∷ FilePath
+  ∷ AbsFile
   → QData
   → QuasarFE Unit
 writeFile path content =
   WriteFile path content id
 
 writeDir
-  ∷ DirPath
+  ∷ AbsDir
   → Blob
   → QuasarFE Unit
 writeDir path content =
   WriteDir path content id
 
 appendFile
-  ∷ FilePath
+  ∷ AbsFile
   → QData
   → QuasarFE Unit
 appendFile path content =
@@ -158,7 +159,7 @@ appendFile path content =
 
 invokeFile
   ∷ PrecisionMode
-  → FilePath
+  → AbsFile
   → Vars
   → Maybe Pagination
   → QuasarFE JArray
@@ -166,7 +167,7 @@ invokeFile mode path vars pagination =
   InvokeFile mode path vars pagination id
 
 invokeFileEJson
-  ∷ FilePath
+  ∷ AbsFile
   → Vars
   → Maybe Pagination
   → QuasarFE (Array EJson)
@@ -174,40 +175,40 @@ invokeFileEJson path vars pagination =
   invokeFile Precise path vars pagination <#> resultsAsEJson
 
 deleteData
-  ∷ AnyPath
+  ∷ AbsPath
   → QuasarFE Unit
 deleteData path =
   DeleteData path id
 
 moveData
-  ∷ AnyPath
-  → AnyPath
+  ∷ AbsPath
+  → AbsPath
   → QuasarFE Unit
 moveData from to =
   MoveData from to id
 
 getMount
-  ∷ AnyPath
+  ∷ AbsPath
   → QuasarFE MountConfig
 getMount path =
   GetMount path id
 
 createMount
-  ∷ AnyPath
+  ∷ AbsPath
   → MountConfig
   → QuasarFE Unit
 createMount path config =
   CreateMount path config Nothing id
 
 updateMount
-  ∷ AnyPath
+  ∷ AbsPath
   → MountConfig
   → QuasarFE Unit
 updateMount path config =
   UpdateMount path config Nothing id
 
 createCachedView
-  ∷ AnyPath
+  ∷ AbsPath
   → View.Config
   → Seconds
   → QuasarFE Unit
@@ -215,7 +216,7 @@ createCachedView path config maxAge =
   CreateMount path (ViewConfig config) (Just maxAge) id
 
 updateCachedView
-  ∷ AnyPath
+  ∷ AbsPath
   → View.Config
   → Seconds
   → QuasarFE Unit
@@ -223,14 +224,14 @@ updateCachedView path config maxAge =
   UpdateMount path (ViewConfig config) (Just maxAge) id
 
 moveMount
-  ∷ AnyPath
-  → AnyPath
+  ∷ AbsPath
+  → AbsPath
   → QuasarFE Unit
 moveMount from to =
   MoveMount from to id
 
 deleteMount
-  ∷ AnyPath
+  ∷ AbsPath
   → QuasarFE Unit
 deleteMount path =
   DeleteMount path id
@@ -242,4 +243,3 @@ putMetastore
   ∷ { initialize ∷ Boolean, metastore ∷ Metastore (password ∷ String) }
   → QuasarFE Unit
 putMetastore ms = PutMetastore ms id
-

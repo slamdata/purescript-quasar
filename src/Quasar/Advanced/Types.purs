@@ -5,35 +5,43 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (class EncodeJson, class DecodeJson, encodeJson, decodeJson, Json, JString, (.?), (:=), (~>), jsonEmptyObject)
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..))
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Either (Either(..), note)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Newtype as Newtype
-import Data.Path.Pathy ((</>))
-import Data.Path.Pathy as Pt
 import Data.String as Str
+import Data.String.NonEmpty (NonEmptyString)
+import Data.String.NonEmpty as NES
 import Data.Traversable (traverse)
 import OIDC.Crypt.JSONWebKey (JSONWebKey)
 import OIDC.Crypt.Types (Issuer(..), ClientId(..))
+import Partial.Unsafe (unsafePartial)
+import Pathy (AbsDir, AbsFile, rootDir)
+import Quasar.Types (parseQDirPath, parseQFilePath, printQPath)
 
-newtype GroupPath = GroupPath (Pt.AbsDir Pt.Sandboxed)
+newtype GroupPath = GroupPath AbsDir
 
 derive instance eqGroupPath ∷ Eq GroupPath
 derive instance ordGroupPath ∷ Ord GroupPath
 derive instance newtypeGroupPath ∷ Newtype.Newtype GroupPath _
 
 printGroupPath ∷ GroupPath → String
-printGroupPath gp =
+printGroupPath = NES.toString <<< runGroupPath
+
+runGroupPath ∷ GroupPath → NonEmptyString
+runGroupPath gp =
   let
     dir = Newtype.un GroupPath gp
   in
-   -- TODO(Christoph): Get rid of this once quasar treats Groups as directories
-    if dir == Pt.rootDir
-    then Pt.printPath dir
-    else fromMaybe "/" (Str.stripSuffix (Str.Pattern "/") (Pt.printPath dir))
+
+    unsafePartial $ NES.unsafeFromString
+    -- TODO(Christoph): Get rid of this once quasar treats Groups as directories
+    if dir == rootDir
+      then printQPath dir
+      else fromMaybe "/" (Str.stripSuffix (Str.Pattern "/") (printQPath dir))
 
 parseGroupPath ∷ String → Either String GroupPath
 -- TODO(Christoph): Clean this up once Quasar treats Groups as directories
-parseGroupPath s = map GroupPath if s == "/" then Right Pt.rootDir else parseDir (s <> "/")
+parseGroupPath s = map GroupPath if s == "/" then Right rootDir else parseDir (s <> "/")
 
 data Operation
   = Add
@@ -58,7 +66,7 @@ instance decodeJsonOperation ∷ DecodeJson Operation where
       "Read" → pure Read
       "Modify" → pure Modify
       "Delete" → pure Delete
-      _ → Left "Incorrect permission"
+      _ → Left "Could not parse permission"
 
 
 data AccessType
@@ -79,20 +87,20 @@ instance decodeJsonAccessType ∷ DecodeJson AccessType where
     "Structural" → pure Structural
     "Content" → pure Content
     "Mount" → pure Mount
-    _ → Left "Incorrect resource type"
+    _ → Left "Could not parse resource type"
 
 
 data QResource
-  = File (Pt.AbsFile Pt.Sandboxed)
-  | Dir (Pt.AbsDir Pt.Sandboxed)
+  = File AbsFile
+  | Dir AbsDir
   | Group GroupPath
 
 derive instance eqQResource ∷ Eq QResource
 derive instance ordQResource ∷ Ord QResource
 
 instance encodeJsonQResource ∷ EncodeJson QResource where
-  encodeJson (File pt) = encodeJson $ "data:" <> Pt.printPath pt
-  encodeJson (Dir pt) = encodeJson $ "data:" <> Pt.printPath pt
+  encodeJson (File pt) = encodeJson $ "data:" <> printQPath pt
+  encodeJson (Dir pt) = encodeJson $ "data:" <> printQPath pt
   encodeJson (Group gpt) = encodeJson $ "group:" <> printGroupPath gpt
 
 instance decodeJsonQResource ∷ DecodeJson QResource where
@@ -102,29 +110,21 @@ instance decodeJsonQResource ∷ DecodeJson QResource where
       groupPath = Str.stripPrefix (Str.Pattern "group:") str
       filePath = Str.stripPrefix (Str.Pattern "data:") str
     case groupPath, filePath of
-      Nothing, Nothing → Left "Incorrect resource"
+      Nothing, Nothing → Left "Could not parse resource"
       Just pt, _ →
         map Group
-          $ lmap (const "Incorrect group resource")
+          $ lmap (const "Could not parse group resource")
           $ parseGroupPath pt
       _, Just pt →
-        (map File $ lmap (const $ "Incorrect file resource") $ parseFile pt)
+        (map File $ lmap (const $ "Could not parse file resource") $ parseFile pt)
         <|>
-        (map Dir $ lmap (const $ "Incorrect directory resource") $ parseDir pt)
+        (map Dir $ lmap (const $ "Could not parse directory resource") $ parseDir pt)
 
-parseFile ∷ String → Either String (Pt.AbsFile Pt.Sandboxed)
-parseFile pt =
-  Pt.parseAbsFile pt
-  >>= Pt.sandbox Pt.rootDir
-  <#> (Pt.rootDir </> _)
-  # maybe (Left "Incorrect resource") pure
+parseFile ∷ String → Either String AbsFile
+parseFile = parseQFilePath >>> note "Could not parse resource"
 
-parseDir ∷ String → Either String (Pt.AbsDir Pt.Sandboxed)
-parseDir pt =
-  Pt.parseAbsDir pt
-  >>= Pt.sandbox Pt.rootDir
-  <#> (Pt.rootDir </> _)
-  # maybe (Left "Incorrect resource") pure
+parseDir ∷ String → Either String AbsDir
+parseDir = parseQDirPath >>> note "Could not parse resource"
 
 
 type ActionR =
@@ -159,47 +159,59 @@ instance decodeJsonAction ∷ DecodeJson Action where
     <*> (obj .? "accessType")
     <#> Action
 
-newtype UserId = UserId String
+newtype UserId = UserId NonEmptyString
 
-runUserId ∷ UserId → String
+runUserId ∷ UserId → NonEmptyString
 runUserId (UserId s) = s
+
+printUserId ∷ UserId → String
+printUserId = NES.toString <<< runUserId
 
 derive instance eqUserId ∷ Eq UserId
 derive instance ordUserId ∷ Ord UserId
 
 instance encodeJsonUserId ∷ EncodeJson UserId where
-  encodeJson = encodeJson <<< runUserId
+  encodeJson = encodeNEString <<< runUserId
 
 instance decodeJsonUserId ∷ DecodeJson UserId where
-  decodeJson = map UserId <<< decodeJson
+  decodeJson = map UserId <<< decodeNEString
 
+encodeNEString ∷ NonEmptyString → Json
+encodeNEString = encodeJson <<< NES.toString
 
-newtype TokenId = TokenId String
+decodeNEString ∷ Json → Either String NonEmptyString
+decodeNEString j = do
+  str ← decodeJson j
+  case NES.fromString str of
+    Nothing → Left "Expected string to be non empty"
+    Just a → pure a
 
-runTokenId ∷ TokenId → String
+newtype TokenId = TokenId NonEmptyString
+
+runTokenId ∷ TokenId → NonEmptyString
 runTokenId (TokenId s) = s
 
 derive instance eqTokenId ∷ Eq TokenId
 derive instance ordTokenId ∷ Ord TokenId
 
 instance encodeJsonTokenId ∷ EncodeJson TokenId where
-  encodeJson = runTokenId >>> encodeJson
+  encodeJson = encodeNEString <<< runTokenId
 
 instance decodeJsonTokenId ∷ DecodeJson TokenId where
-  decodeJson = map TokenId <<< decodeJson
+  decodeJson = map TokenId <<< decodeNEString
 
-newtype PermissionId = PermissionId String
-runPermissionId ∷ PermissionId → String
+newtype PermissionId = PermissionId NonEmptyString
+runPermissionId ∷ PermissionId → NonEmptyString
 runPermissionId (PermissionId s) = s
 
 derive instance eqPermissionId ∷ Eq PermissionId
 derive instance ordPermissionId ∷ Ord PermissionId
 
 instance encodeJsonPermissionId ∷ EncodeJson PermissionId where
-  encodeJson = encodeJson <<< runPermissionId
+  encodeJson = encodeNEString <<< runPermissionId
 
 instance decodeJsonPermissionId ∷ DecodeJson PermissionId where
-  decodeJson = map PermissionId <<< decodeJson
+  decodeJson = map PermissionId <<< decodeNEString
 
 
 data GrantedTo
@@ -230,20 +242,28 @@ instance decodeJsonGrantedTo ∷ DecodeJson GrantedTo where
       -- string isn't email.
       if isJust (Str.indexOf (Str.Pattern "@") str)
         then pure str
-        else Left "Incorrect email"
+        else Left "Could not parse email"
 
     parseUserId ∷ String → Either String UserId
     parseUserId str =
-      Str.stripPrefix (Str.Pattern "user:") str # maybe (Left "Incorrect user") (pure <<< UserId)
+      Str.stripPrefix (Str.Pattern "user:") str
+      >>= NES.fromString
+      # map UserId
+      # note "Could not parse user"
+
 
     parseTokenId ∷ String → Either String TokenId
     parseTokenId str =
-      Str.stripPrefix (Str.Pattern "token:") str # maybe (Left "Incorrect token") (pure <<< TokenId)
+      Str.stripPrefix (Str.Pattern "token:") str
+      >>= NES.fromString
+      # map TokenId
+      # note "Could not parse token"
+
 
 parseGroup ∷ String → Either String GroupPath
 parseGroup string =
   Str.stripPrefix (Str.Pattern "group:") string
-  # maybe (Left "Incorrect group") pure
+  # note "Could not parse group"
   >>= parseGroupPath
 
 
@@ -294,14 +314,10 @@ instance decodeJsonGroupInfo ∷ DecodeJson GroupInfo where
     extractGroups ∷ Array String → Either String (Array GroupPath)
     extractGroups =
       traverse \x →
-        note "Incorrect subgroup" do
+        note "Could not parse subgroup" do
           -- Quasar returns file paths for the subgroups, so we have to append a slash
-          dir ← Pt.parseAbsDir (x <> "/")
-          sandboxed ← Pt.sandbox Pt.rootDir dir
-          pure $ GroupPath $ Pt.rootDir </> sandboxed
-
-note :: ∀ a b. a → Maybe b → Either a b
-note n m = maybe (Left n) Right m
+          dir ← parseQDirPath (x <> "/")
+          pure $ GroupPath dir
 
 
 type GroupPatchR =
@@ -325,7 +341,7 @@ data ShareableSubject
 
 instance encodeJsonShareableSubject ∷ EncodeJson ShareableSubject where
   encodeJson (UserSubject (UserId uid)) =
-    encodeJson $ "user:" <> uid
+    encodeJson $ "user:" <> NES.toString uid
   encodeJson (GroupSubject gpt) =
     encodeJson $ printGroupPath gpt
 
@@ -343,7 +359,7 @@ runShareRequest (ShareRequest r) = r
 
 instance encodeJsonShareRequest ∷ EncodeJson ShareRequest where
   encodeJson (ShareRequest obj) =
-    "subjects" := ((map (append "user:" <<< runUserId) obj.users)
+    "subjects" := ((map (append "user:" <<< printUserId) obj.users)
                    <> map (append "group:" <<< printGroupPath) obj.groups)
     ~> "actions" := (map Action $ obj.actions)
     ~> jsonEmptyObject

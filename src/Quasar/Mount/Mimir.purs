@@ -18,39 +18,25 @@ module Quasar.Mount.Mimir
   ( Config
   , toJSON
   , fromJSON
-  , parseDirPath
-  , module Exports
   ) where
 
 import Prelude
-import Data.Path.Pathy as P
+
 import Data.Argonaut (Json, decodeJson, jsonEmptyObject, (.?), (:=), (~>))
-import Data.Either (Either(..))
-import Data.Maybe (Maybe, maybe)
-import Data.Path.Pathy (Abs, Dir, Path, Sandboxed, Unsandboxed, (</>))
-import Quasar.Mount.Common (Host) as Exports
+import Data.Either (Either, note)
+import Pathy (Abs, Dir, Path)
+import Quasar.Types (parseQDirPath, printQPath)
 
-type Config = Path Abs Dir Sandboxed
-
-sandbox
-  ∷ forall a
-  . Path Abs a Unsandboxed
-  → Maybe (Path Abs a Sandboxed)
-sandbox =
-  map (P.rootDir </> _) <<< P.sandbox P.rootDir
-
-parseDirPath ∷ String -> Maybe (Path Abs Dir Sandboxed)
-parseDirPath = sandbox <=< P.parseAbsDir
+type Config = Path Abs Dir
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = P.printPath config
-  in "mimir" := ("connectionUri" := uri ~> jsonEmptyObject) ~> jsonEmptyObject
+  "mimir" := ("connectionUri" := printQPath config ~> jsonEmptyObject) ~> jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
-  = maybe (Left "Couldn't sandbox") Right
-  <<< parseDirPath
+  = note "Couldn't parse absolute dir path"
+  <<< parseQDirPath
   <=< (_ .? "connectionUri")
   <=< (_ .? "mimir")
   <=< decodeJson

@@ -20,7 +20,6 @@ module Quasar.Mount.SparkHDFS
   , fromJSON
   , toURI
   , fromURI
-  , module Exports
   ) where
 
 import Prelude
@@ -28,57 +27,58 @@ import Prelude
 import Data.Argonaut (Json, (.?), (:=), (~>))
 import Data.Argonaut as J
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..))
-import Data.List as L
+import Data.Codec (decode, encode)
+import Data.Either (Either(..), note)
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as SM
 import Data.Tuple (Tuple(..))
-import Data.URI as URI
-import Data.URI.AbsoluteURI as AbsoluteURI
-import Data.URI.Path (printPath, parseURIPathAbs)
 import Global (encodeURIComponent, decodeURIComponent)
-import Quasar.Mount.Common (Host) as Exports
-import Quasar.Mount.Common (Host, extractHost)
-import Quasar.Types (DirPath)
-import Text.Parsing.StringParser (runParser)
+import Pathy (AbsDir)
+import Quasar.Types (parseQDirPath, printQPath)
+import Quasar.URI as URI
+import URI.Scheme as Scheme
 
 type Config =
-  { sparkHost ∷ Host
-  , hdfsHost ∷ Host
-  , path ∷ DirPath
+  { sparkHost ∷ URI.QURIHost'
+  , hdfsHost ∷ URI.QURIHost'
+  , path ∷ AbsDir
   , props ∷ SM.StrMap (Maybe String)
   }
 
 toJSON ∷ Config → Json
 toJSON config =
-  let uri = AbsoluteURI.print (toURI config)
+  let uri = encode URI.qAbsoluteURI (toURI config)
   in "spark-hdfs" := ("connectionUri" := uri ~> J.jsonEmptyObject) ~> J.jsonEmptyObject
 
 fromJSON ∷ Json → Either String Config
 fromJSON
   = fromURI
-  <=< lmap show <<< AbsoluteURI.parse
+  <=< lmap show <<< decode URI.qAbsoluteURI
   <=< (_ .? "connectionUri")
   <=< (_ .? "spark-hdfs")
   <=< J.decodeJson
 
-toURI ∷ Config → URI.AbsoluteURI
-toURI cfg = mkURI sparkURIScheme cfg.sparkHost (Just (URI.Query $ requiredProps <> optionalProps))
+toURI ∷ Config → URI.QAbsoluteURI
+toURI cfg =
+  mkURI sparkURIScheme cfg.sparkHost (Just (URI.QueryPairs $ requiredProps <> optionalProps))
   where
-  requiredProps ∷ L.List (Tuple String (Maybe String))
-  requiredProps = L.fromFoldable
-    [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ AbsoluteURI.print $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
-    , Tuple "rootPath" $ Just $ printPath (Left cfg.path)
+  requiredProps ∷ Array (Tuple String (Maybe String))
+  requiredProps =
+    [ Tuple "hdfsUrl" $ Just $ encodeURIComponent $ encode URI.qAbsoluteURI $ mkURI hdfsURIScheme cfg.hdfsHost Nothing
+    , Tuple "rootPath" $ Just $ printQPath cfg.path
     ]
 
-  optionalProps ∷ L.List (Tuple String (Maybe String))
+  optionalProps ∷ Array (Tuple String (Maybe String))
   optionalProps = SM.toUnfoldable cfg.props
 
-fromURI ∷ URI.AbsoluteURI → Either String Config
-fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
-  unless (scheme == Just sparkURIScheme) $ Left "Expected `spark` URL scheme"
-  sparkHost ← extractHost auth
-  let props = maybe SM.empty (\(URI.Query qs) → SM.fromFoldable qs) query
+fromURI ∷ URI.QAbsoluteURI → Either String Config
+fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartNoAuth _) _) = do
+  Left "Expected 'auth' part in URI"
+fromURI (URI.AbsoluteURI _ (URI.HierarchicalPartAuth (URI.Authority _ Nothing) _) _) = do
+  Left "Expected 'host' part to be present in URL"
+fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPartAuth (URI.Authority _ (Just sparkHost)) _) query) = do
+  unless (scheme == sparkURIScheme) $ Left "Expected `spark` URL scheme"
+  let props = maybe SM.empty (\(URI.QueryPairs qs) → SM.fromFoldable qs) query
 
   Tuple hdfsHost props' ← case SM.pop "hdfsUrl" props of
     Just (Tuple (Just value) rest) → do
@@ -88,31 +88,30 @@ fromURI (URI.AbsoluteURI scheme (URI.HierarchicalPart auth _) query) = do
 
   Tuple path props'' ← case SM.pop "rootPath" props' of
     Just (Tuple (Just value) rest) → do
-      value' ← lmap show $ runParser parseURIPathAbs value
-      dirPath ← case value' of
-        Left dp → pure dp
-        Right _ → Left "Expected `rootPath` to be a directory path"
+      dirPath ← note "Expected `rootPath` to be a directory path" $ parseQDirPath value
       pure (Tuple dirPath rest)
     _ → Left "Expected `rootPath` query parameter"
 
   pure { sparkHost, hdfsHost, path, props: props'' }
 
-mkURI ∷ URI.Scheme → Host → Maybe URI.Query → URI.AbsoluteURI
+mkURI ∷ URI.Scheme → URI.QURIHost' → Maybe URI.QQuery → URI.QAbsoluteURI
 mkURI scheme host params =
   URI.AbsoluteURI
-    (Just scheme)
-    (URI.HierarchicalPart (Just (URI.Authority Nothing (pure host))) Nothing)
+    (scheme)
+    (URI.HierarchicalPartAuth (URI.Authority Nothing (Just host)) Nothing)
     params
 
-extractHost' ∷ URI.Scheme → String → Either String Host
-extractHost' scheme@(URI.Scheme name) uri = do
-  URI.AbsoluteURI scheme' (URI.HierarchicalPart auth _) _ ←
-    lmap show $ AbsoluteURI.parse uri
-  unless (scheme' == Just scheme) $ Left $ "Expected '" <> name <> "' URL scheme"
-  extractHost auth
+extractHost' ∷ URI.Scheme → String → Either String URI.QURIHost'
+extractHost' scheme uri = do
+  URI.AbsoluteURI scheme' hierPart _ ← lmap show $ decode URI.qAbsoluteURI uri
+  unless (scheme' == scheme) $ Left $ "Expected '" <> Scheme.print scheme <> "' URL scheme"
+  case hierPart of
+    URI.HierarchicalPartNoAuth _ → Left $ "Expected auth part to be present in URL"
+    URI.HierarchicalPartAuth (URI.Authority _ Nothing) _ → Left "Expected 'host' part to be present in URL"
+    URI.HierarchicalPartAuth (URI.Authority _ (Just host)) _ → pure host
 
 sparkURIScheme ∷ URI.Scheme
-sparkURIScheme = URI.Scheme "spark"
+sparkURIScheme = Scheme.unsafeFromString "spark"
 
 hdfsURIScheme ∷ URI.Scheme
-hdfsURIScheme = URI.Scheme "hdfs"
+hdfsURIScheme = Scheme.unsafeFromString "hdfs"

@@ -22,7 +22,8 @@ import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Gen as Gen
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
-import Quasar.Mount.Common.Gen (genAnyPath, genCredentials, genHost)
+import Pathy.Gen (genAbsAnyPath)
+import Quasar.Mount.Common.Gen (genCredentials, genHost')
 import Quasar.Mount.MarkLogic as ML
 
 genFormat ∷ ∀ m. MonadGen m ⇒ m ML.Format
@@ -31,7 +32,7 @@ genFormat = Gen.choose (pure ML.JSON) (pure ML.XML)
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m ML.Config
 genConfig =
   { host: _, path: _, credentials: _, format: _ }
-    <$> genHost
-    <*> GenC.genMaybe genAnyPath
+    <$> genHost'
+    <*> GenC.genMaybe genAbsAnyPath
     <*> GenC.genMaybe genCredentials
     <*> genFormat

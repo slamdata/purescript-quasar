@@ -19,25 +19,28 @@ module Quasar.Types where
 import Prelude
 
 import Control.Alt ((<|>))
-
 import Data.Argonaut (class DecodeJson, decodeJson, (.?), jsonParser)
-import Data.Either (Either(..))
-import Data.Maybe (maybe)
-import Data.Path.Pathy (AbsPath, AbsFile, AbsDir, Sandboxed, (</>))
-import Data.Path.Pathy as Pt
+import Data.Either (Either, note)
+import Data.Maybe (Maybe)
 import Data.StrMap (StrMap)
 import Data.Traversable (traverse)
+import Pathy (class IsDirOrFile, class IsRelOrAbs, AbsDir, AbsFile, Path, parseAbsDir, parseAbsFile, posixParser, posixPrinter, printPath, sandboxAny)
 
-type AnyPath = AbsPath Sandboxed
-type DirPath = AbsDir Sandboxed
-type FilePath = AbsFile Sandboxed
+printQPath ∷ ∀ a b. IsRelOrAbs a ⇒ IsDirOrFile b ⇒ Path a b → String
+printQPath = sandboxAny >>> printPath posixPrinter
+
+parseQFilePath ∷ String → Maybe AbsFile
+parseQFilePath = parseAbsFile posixParser
+
+parseQDirPath ∷ String → Maybe AbsDir
+parseQDirPath = parseAbsDir posixParser
 
 type Vars = StrMap String
 
 type Pagination = { offset ∷ Int, limit ∷ Int }
 
 type CompileResultR =
-  { inputs ∷ Array FilePath
+  { inputs ∷ Array AbsFile
   , physicalPlan ∷ String
   }
 
@@ -54,12 +57,8 @@ instance decodeJsonCompileResult ∷ DecodeJson CompileResult where
       <*> ((obj .? "physicalPlan") <|> pure "")
       <#> CompileResult
 
-parseFile ∷ String → Either String (Pt.AbsFile Pt.Sandboxed)
-parseFile pt =
-  Pt.parseAbsFile pt
-  >>= Pt.sandbox Pt.rootDir
-  <#> (Pt.rootDir </> _)
-  # maybe (Left "Incorrect resource") pure
+parseFile ∷ String → Either String AbsFile
+parseFile = parseQFilePath >>> note "Could not parse resource"
 
 compileResultFromString ∷ String → Either String CompileResultR
 compileResultFromString s =

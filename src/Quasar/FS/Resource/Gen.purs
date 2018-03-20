@@ -29,9 +29,9 @@ import Quasar.FS.Resource (QResource(..))
 import Quasar.Mount.Common.Gen (genAbsDirPath, genAbsFilePath)
 
 
-genQResource :: ∀ m. MonadGen m ⇒ MonadRec m ⇒ m QResource
+genQResource ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m QResource
 genQResource = Gen.frequency
   $ (Tuple 1.0 $ genAbsFilePath <#> File ) :|
-  [ Tuple 1.0 $ genAbsDirPath <#> Directory 
+  [ Tuple 1.0 $ genAbsDirPath <#> Directory
   , Tuple 3.0 $ genMount <#> Mount
   ]

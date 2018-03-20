@@ -18,10 +18,10 @@ module Quasar.QuasarF.Interpreter.Config where
 
 import Data.Either (Either)
 import Data.Maybe (Maybe)
-import Data.Path.Pathy (AbsDir, RelDir, Sandboxed, Unsandboxed)
-import Data.URI as URI
+import Pathy (AbsDir, RelDir)
+import Quasar.URI as URI
 
-type AbsBasePath = { scheme ∷ URI.Scheme, authority ∷ Maybe URI.Authority, path ∷ AbsDir Sandboxed }
-type BasePath = Either AbsBasePath (RelDir Unsandboxed)
+type AbsBasePath = { scheme ∷ URI.Scheme, authority ∷ Maybe URI.QAuthority, path ∷ AbsDir }
+type BasePath = Either AbsBasePath RelDir
 
 type Config r = { basePath ∷ BasePath | r }

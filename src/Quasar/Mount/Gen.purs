@@ -33,7 +33,7 @@ import Quasar.Mount.Unknown.Gen as Unknown
 import Quasar.Mount.Module.Gen as Module
 import Quasar.Mount.View.Gen as View
 
-genMountConfig :: ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MountConfig
+genMountConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MountConfig
 genMountConfig = Gen.oneOf
   $ (MongoDBConfig <$> MongoDB.genConfig) :|
   [ CouchbaseConfig <$> Couchbase.genConfig

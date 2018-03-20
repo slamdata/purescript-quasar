@@ -34,12 +34,16 @@ import Data.Either (Either(..), isRight)
 import Data.Foldable (traverse_)
 import Data.Functor.Coproduct (left)
 import Data.Maybe (Maybe(..))
-import Data.Path.Pathy (rootDir, dir, file, (</>))
 import Data.Posix.Signal (Signal(SIGTERM))
 import Data.StrMap as SM
 import Data.String as Str
+import Data.String.NonEmpty as NES
+import Data.Symbol (SProxy(..))
+import Data.These (These(..))
 import Data.Tuple (Tuple(..))
-import Data.URI as URI
+import URI.Host.RegName as RegName
+import URI.Port as Port
+import URI.Scheme as Scheme
 import Network.HTTP.Affjax (AJAX)
 import Node.ChildProcess as CP
 import Node.Encoding (Encoding(..))
@@ -48,9 +52,11 @@ import Node.Process (PROCESS)
 import Node.Process as Proc
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
+import Pathy (rootDir, dir, file, (</>))
 import Quasar.Advanced.QuasarAF.Interpreter.Aff (Config, eval)
 import Quasar.Data (QData(..))
 import Quasar.Data.Json as Json
+import Quasar.URI as URI
 import Quasar.Mount (MountConfig(..))
 import Quasar.QuasarF (QuasarF, QError(..))
 import Quasar.QuasarF as QF
@@ -76,8 +82,13 @@ run pred qf = do
 config ∷ Config ()
 config =
   { basePath: Left
-    { scheme: URI.Scheme "http"
-    , authority: Just (URI.Authority Nothing [Tuple (URI.NameAddress "localhost") (Just (URI.Port 53174))])
+    { scheme: Scheme.unsafeFromString "http"
+    , authority: Just
+        $ URI.Authority Nothing
+        $ Just
+        $ Both
+            (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost")
+            (Port.unsafeFromInt 53174)
     , path: rootDir
     }
   , idToken: Nothing
@@ -194,7 +205,7 @@ main = void $ runAff (const (pure unit)) $ jumpOutOnError do
     log "\nDeleteMount:"
     run isRight $ QF.deleteMount (Right testMount2)
 
-    log "\nInvokeFile:"
+    log "\nInvokeFile"
     run isRight $ QF.createMount (Left testMount3) mountConfig3
     run isRight $ QF.invokeFile Json.Precise testProcess (SM.fromFoldable [Tuple "a" "4", Tuple "b" "2"]) Nothing
 
@@ -209,16 +220,16 @@ main = void $ runAff (const (pure unit)) $ jumpOutOnError do
 
   where
   testDbAnyDir = rootDir
-  nonexistant = rootDir </> file "nonexistant"
-  testFile1 = rootDir </> file "test1"
-  testFile2Dir = rootDir </> dir "subdir"
-  testFile2 = testFile2Dir </> file "test2"
-  testFile3Dir = rootDir </> dir "what"
-  testFile3 = testFile3Dir </> file "test2"
-  testMount = rootDir </> file "testMount"
-  testMount2 = rootDir </> file "testMount2"
-  testMount3 = rootDir </> dir "testMount3" </> dir ""
-  testProcess = rootDir </> dir "testMount3" </> file "test"
+  nonexistant = rootDir </> file (SProxy ∷ SProxy "nonexistant")
+  testFile1 = rootDir </> file (SProxy ∷ SProxy "test1")
+  testFile2Dir = rootDir </> dir (SProxy ∷ SProxy "subdir")
+  testFile2 = testFile2Dir </> file (SProxy ∷ SProxy "test2")
+  testFile3Dir = rootDir </> dir (SProxy ∷ SProxy "what")
+  testFile3 = testFile3Dir </> file (SProxy ∷ SProxy "test2")
+  testMount = rootDir </> file (SProxy ∷ SProxy "testMount")
+  testMount2 = rootDir </> file (SProxy ∷ SProxy "testMount2")
+  testMount3 = rootDir </> dir (SProxy ∷ SProxy "testMount3")
+  testProcess = rootDir </> dir (SProxy ∷ SProxy "testMount3") </> file (SProxy ∷ SProxy "test")
 
   isNotFound ∷ ∀ a. Either QError a → Boolean
   isNotFound e = case e of

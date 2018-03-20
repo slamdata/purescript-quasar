@@ -21,14 +21,17 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Data.Argonaut.Parser as JP
+import Data.Codec (decode, encode)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
-import Data.NonEmpty as NE
+import Data.String.NonEmpty as NES
+import Data.These (These(..))
 import Data.Time.Duration (Seconds(..))
-import Data.Tuple (Tuple(..))
-import Data.URI as URI
-import Data.URI.AbsoluteURI as AbsoluteURI
+import URI.Host.RegName as RegName
+import URI.Port as Port
+import Partial.Unsafe (unsafePartial)
+import Quasar.URI as URI
 import Quasar.Mount as QM
 import Quasar.Mount.Couchbase as CB
 import Quasar.Mount.MongoDB as Mongo
@@ -51,7 +54,7 @@ main = do
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
     "couchbase://localhost/testBucket?password=&docTypeKey="
       (CBT.TestConfig
-        { host: Tuple (URI.NameAddress "localhost") Nothing
+        { host: This (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost")
         , bucketName: "testBucket"
         , password: ""
         , docTypeKey: ""
@@ -59,18 +62,18 @@ main = do
         })
 
   testURIParse (map CBT.TestConfig <$> CB.fromURI)
-    "couchbase://localhost:99999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
+    "couchbase://localhost:9999/testBucket?password=pass&docTypeKey=type&queryTimeoutSeconds=20"
       (CBT.TestConfig
-        { host: Tuple (URI.NameAddress "localhost") (Just (URI.Port 99999))
+        { host: Both (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost") (Port.unsafeFromInt 9999)
         , bucketName: "testBucket"
         , password: "pass"
         , docTypeKey: "type"
         , queryTimeout: Just (Seconds (20.0))
         })
   let mongoURI =
-        AbsoluteURI.print
+        encode URI.mongoURI
           (Mongo.toURI
-            { hosts: NE.singleton (Tuple (URI.NameAddress "localhost") (Just (URI.Port 12345)))
+            { hosts: [Both (URI.NameAddress $ RegName.unsafeFromString $ unsafePartial $ NES.unsafeFromString "localhost") (Port.unsafeFromInt 12345)]
             , auth: Nothing
             , props: mempty})
   if mongoURI == "mongodb://localhost:12345/"
@@ -81,12 +84,12 @@ testURIParse
   ∷ ∀ a eff
   . Eq a
   ⇒ Show a
-  ⇒ (URI.AbsoluteURI → Either String a)
+  ⇒ (URI.QAbsoluteURI → Either String a)
   → String
   → a
-  → Eff (assert :: ASSERT | eff) Unit
+  → Eff (assert ∷ ASSERT | eff) Unit
 testURIParse fromURI uri expected =
-  case AbsoluteURI.parse uri of
+  case decode URI.qAbsoluteURI uri of
     Left err → fail $ "Test URI failed to parse as a URI even: \n\n\t" <> uri <> "\n\n\t" <> show err <> "\n\n"
     Right auri →
       case fromURI auri of
@@ -95,5 +98,5 @@ testURIParse fromURI uri expected =
           | config == expected → pure unit
           | otherwise → fail $ "Test URI failed to parse as expected config: \n\n\t" <> uri <> "\n\n\tExpected: " <> show expected <> "\n\n\tActual: " <> show config <> "\n\n"
 
-fail ∷ ∀ eff. String → Eff (assert :: ASSERT | eff) Unit
+fail ∷ ∀ eff. String → Eff (assert ∷ ASSERT | eff) Unit
 fail = flip assert' false

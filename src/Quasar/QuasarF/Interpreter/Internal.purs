@@ -38,32 +38,31 @@ import Data.Argonaut as Json
 import Data.Argonaut.Decode.Combinators ((.?), (.??))
 import Data.Array as Array
 import Data.Bifunctor (bimap, lmap)
+import Data.Codec (encode)
 import Data.Either (Either(..), either)
 import Data.Foldable (oneOf)
 import Data.Functor.Coproduct (Coproduct, left, right)
 import Data.HTTP.Method (Method(..))
-import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Monoid (mempty)
-import Data.Path.Pathy (Abs, AnyPath, Path, Rel, RelDir, RelPath, Sandboxed, dir, file, relativeTo, rootDir, unsandbox, (</>))
-import Data.StrMap as SM
-import Data.String as Str
 import Data.String as String
+import Data.StrMap (StrMap)
+import Data.StrMap as StrMap
 import Data.Tuple (Tuple(..))
-import Data.URI as URI
-import Data.URI.URIRef as URIRef
 import Network.HTTP.Affjax as AX
 import Network.HTTP.Affjax.Request (RequestContent)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.ResponseHeader as RH
 import Network.HTTP.StatusCode (StatusCode(..))
+import Pathy (class IsDirOrFile, Abs, AbsPath, Path, Rel, RelDir, RelPath, relativeTo, rootDir, (</>))
 import Quasar.ConfigF as CF
 import Quasar.Error.Compilation (CompilationError(..))
 import Quasar.QuasarF (Pagination, QError(..), PDFError(..), UnauthorizedDetails(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
-import Unsafe.Coerce (unsafeCoerce)
+import Quasar.URI as URI
 
 type AXFP = AXF.AffjaxFP RequestContent String
+type AjaxM r a = Free (Coproduct (CF.ConfigF (Config r)) AXFP) a
 
 ask ∷ ∀ c r. Free (Coproduct (CF.ConfigF c) r) c
 ask = liftF $ left $ CF.GetConfig id
@@ -77,13 +76,15 @@ strResult = Right
 unitResult ∷ String → Either Error Unit
 unitResult = const (Right unit)
 
-toVarParams ∷ SM.StrMap String → URI.Query
-toVarParams = URI.Query <<< map (bimap ("var." <> _) Just) <<< SM.toUnfoldable
+toVarParams ∷ StrMap String → URI.QQuery
+toVarParams = URI.QueryPairs <<< map (bimap ("var." <> _) Just) <<< StrMap.toUnfoldable
 
-toPageParams ∷ Maybe Pagination → URI.Query
+toPageParams ∷ Maybe Pagination → URI.QQuery
 toPageParams Nothing = mempty
-toPageParams (Just { offset, limit })
-  = URI.Query $ Tuple "offset" (Just (show offset)) : Tuple "limit" (Just (show limit)) : Nil
+toPageParams (Just { offset, limit }) = URI.QueryPairs
+  [ Tuple "offset" (Just (show offset))
+  , Tuple "limit" (Just (show limit))
+  ]
 
 defaultRequest ∷ AX.AffjaxRequest RequestContent
 defaultRequest = AX.defaultRequest { content = Nothing }
@@ -98,53 +99,41 @@ delete ∷ AX.URL → AXF.AffjaxF RequestContent String
 delete u = AXF.affjax (defaultRequest { method = Left DELETE, url = u })
 
 mkFSUrl
-  ∷ ∀ s s' r
-  . RelDir s
-  → AnyPath Abs s'
-  → URI.Query
-  → Free (Coproduct (CF.ConfigF (Config r)) AXFP) String
-mkFSUrl relDir fsPath q = do
-  uri ← URIRef.print <$> mkFSUrl' relDir fsPath q
-  pure uri
-
-mkFSUrl'
-  ∷ ∀ s s' r
-  . RelDir s
-  → AnyPath Abs s'
-  → URI.Query
-  → Free (Coproduct (CF.ConfigF (Config r)) AXFP) URI.URIRef
-mkFSUrl' relDir fsPath = mkUrl' (bimap (baseify (dir "/")) (baseify (file "")) fsPath)
+  ∷ ∀ r
+  . RelDir
+  → AbsPath
+  → URI.QQuery
+  → AjaxM r String
+mkFSUrl relDir fsPath q = mkUrl (bimap baseify baseify fsPath) q
   where
-    baseify ∷ ∀ b. Path Rel b s → Path Abs b s' → Path Rel b s
-    baseify x p = relDir </> fromMaybe x (p `relativeTo` rootDir)
+    baseify ∷ ∀ b. IsDirOrFile b ⇒ Path Abs b → Path Rel b
+    baseify p = relDir </> p `relativeTo` rootDir
 
-mkUrl ∷ ∀ s r. RelPath s → URI.Query → Free (Coproduct (CF.ConfigF (Config r)) AXFP) String
-mkUrl relPath q = URIRef.print <$> mkUrl' relPath q
+mkUrl ∷ ∀ r. RelPath → URI.QQuery → AjaxM r String
+mkUrl relPath q = encode URI.qURIRef <$> mkUrl' relPath q
 
-mkUrl' ∷ ∀ s r. RelPath s → URI.Query → Free (Coproduct (CF.ConfigF (Config r)) AXFP) URI.URIRef
+mkUrl' ∷ ∀ r. RelPath → URI.QQuery → AjaxM r URI.QURIRef
 mkUrl' relPath q = do
   { basePath } ← ask
   pure (bimap toURI toRelativeRef basePath)
   where
     toURI { scheme, authority, path } =
-      URI.URI
-        (Just scheme)
-        (URI.HierarchicalPart
-          authority
-          (Just (bimap ((path </> _) <<< sandbox) ((path </> _) <<< sandbox) relPath)))
-        (if q == mempty then Nothing else Just q)
-        Nothing
+      let
+        hierPath = (Just (bimap (path </> _) (path </> _) relPath))
+        hierPart = case authority of
+          Nothing → URI.HierarchicalPartNoAuth hierPath
+          Just authority' → URI.HierarchicalPartAuth authority' hierPath
+        query = if q == mempty then Nothing else Just q
+      in URI.URI scheme hierPart query Nothing
 
-    sandbox ∷ ∀ a b. Path a b s → Path a b Sandboxed
-    sandbox = unsafeCoerce
-
+    toRelativeRef ∷ RelDir → URI.QRelativeRef
     toRelativeRef relDir =
       URI.RelativeRef
-        (URI.RelativePart
-          Nothing
-          (Just (bimap ((relDir </> _) <<< unsandbox) ((relDir </> _) <<< unsandbox) relPath)))
+        (URI.RelativePartNoAuth
+          (Just $ Right (bimap (relDir </> _) (relDir </> _) relPath)))
         (if q == mempty then Nothing else Just q)
         Nothing
+
 
 mkRequest
   ∷ ∀ a l
@@ -179,7 +168,7 @@ handleResult f =
     Left err → Left (Error err)
   where
   isWWWAuthenticate ∷ RH.ResponseHeader → Boolean
-  isWWWAuthenticate = eq "www-authenticate" <<< Str.toLower <<< RH.responseHeaderName
+  isWWWAuthenticate = eq "www-authenticate" <<< String.toLower <<< RH.responseHeaderName
 
 hush ∷ ∀ a b. Either a b → Maybe b
 hush = either (const Nothing) Just
@@ -230,4 +219,4 @@ parseHumanReadableError json =
     ])
   where
     wrapError ∷ Json.Json → Json.JObject
-    wrapError = SM.singleton "error"
+    wrapError = StrMap.singleton "error"

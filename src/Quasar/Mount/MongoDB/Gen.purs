@@ -22,13 +22,14 @@ import Control.Monad.Gen (class MonadGen)
 import Control.Monad.Gen.Common as GenC
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.StrMap.Gen as SMG
-import Quasar.Mount.Common.Gen (genAlphaNumericString, genHost, genCredentials, genAnyPath)
+import Pathy.Gen (genAbsAnyPath)
+import Quasar.Mount.Common.Gen (genAlphaNumericString, genHosts, genCredentials)
 import Quasar.Mount.MongoDB as MDB
 
 genConfig ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MDB.Config
 genConfig =
   { hosts: _, auth: _, props: _ }
-    <$> GenC.genNonEmpty genHost
+    <$> genHosts
     <*> GenC.genMaybe genAuth
     <*> SMG.genStrMap genAlphaNumericString (GenC.genMaybe genAlphaNumericString)
 
@@ -36,5 +37,5 @@ genAuth ∷ ∀ m. MonadGen m ⇒ MonadRec m ⇒ m MDB.Auth
 genAuth =
   MDB.Auth <$>
     ({ path: _, credentials: _ }
-      <$> genAnyPath
+      <$> genAbsAnyPath
       <*> genCredentials)

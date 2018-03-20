@@ -14,14 +14,13 @@ import Node.Process (PROCESS)
 import Test.Assert (ASSERT)
 
 type Effects =
-  ( avar :: AVAR
-  , cp :: CHILD_PROCESS
-  , process :: PROCESS
-  , exception :: EXCEPTION
-  , fs :: FS
-  , buffer :: BUFFER
-  , console :: CONSOLE
-  , ajax :: AJAX
-  , assert :: ASSERT
+  ( avar ∷ AVAR
+  , cp ∷ CHILD_PROCESS
+  , process ∷ PROCESS
+  , exception ∷ EXCEPTION
+  , fs ∷ FS
+  , buffer ∷ BUFFER
+  , console ∷ CONSOLE
+  , ajax ∷ AJAX
+  , assert ∷ ASSERT
   )
-

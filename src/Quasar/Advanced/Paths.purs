@@ -16,31 +16,35 @@ limitations under the License.
 
 module Quasar.Advanced.Paths where
 
-import Data.Path.Pathy (RelDir, RelFile, Sandboxed, file, dir, (</>))
+import Pathy (RelDir, RelFile, dir, file, (</>))
+import Data.Symbol (SProxy(..))
 
-oidcProviders ∷ RelFile Sandboxed
-oidcProviders = dir "security" </> dir "oidc" </> file "providers"
+oidcProviders ∷ RelFile
+oidcProviders = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "oidc") </> file (SProxy ∷ SProxy "providers")
 
-token ∷ RelDir Sandboxed
-token = dir "security" </> dir "token"
+token ∷ RelDir
+token = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "token")
 
-group ∷ RelDir Sandboxed
-group = dir "security" </> dir "group"
+group ∷ RelDir
+group = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "group")
 
-permission ∷ RelDir Sandboxed
-permission = dir "security" </> dir "permission"
+permission ∷ RelDir
+permission = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "permission")
 
-authority ∷ RelDir Sandboxed
-authority = dir "security" </> dir "authority"
+children ∷ RelFile
+children = file (SProxy ∷ SProxy "children")
 
-licenseInfo ∷ RelFile Sandboxed
-licenseInfo = dir "server" </> file "licenseInfo"
+authority ∷ RelDir
+authority = dir (SProxy ∷ SProxy "security") </> dir (SProxy ∷ SProxy "authority")
 
-licensee ∷ RelFile Sandboxed
-licensee = dir "server" </> file "licensee"
+licenseInfo ∷ RelFile
+licenseInfo = dir (SProxy ∷ SProxy "server") </> file (SProxy ∷ SProxy "licenseInfo")
 
-pdfInfo ∷ RelFile Sandboxed
-pdfInfo = dir "service" </> dir "pdf" </> file "info"
+licensee ∷ RelFile
+licensee = dir (SProxy ∷ SProxy "server") </> file (SProxy ∷ SProxy "licensee")
 
-generatePdf ∷ RelFile Sandboxed
-generatePdf = dir "service" </> dir "pdf" </> file "generate"
+pdfInfo ∷ RelFile
+pdfInfo = dir (SProxy ∷ SProxy "service") </> dir (SProxy ∷ SProxy "pdf") </> file (SProxy ∷ SProxy "info")
+
+generatePdf ∷ RelFile
+generatePdf = dir (SProxy ∷ SProxy "service") </> dir (SProxy ∷ SProxy "pdf") </> file (SProxy ∷ SProxy "generate")

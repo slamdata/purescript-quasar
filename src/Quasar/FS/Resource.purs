@@ -20,15 +20,16 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, decodeJson, (.?))
-import Data.Either (Either(..))
+import Data.Bifunctor (bimap)
+import Data.Either (Either(..), note)
 import Data.Maybe (Maybe)
-import Data.Path.Pathy (DirName, FileName, dir, file, pathName, (</>))
+import Data.String.NonEmpty (fromString)
+import Pathy (AbsDir, AbsFile, Dir, File, Name(..), AbsPath, dir', file', fileName, name, (</>))
 import Quasar.FS.Mount as Mount
-import Quasar.Types (AnyPath, FilePath, DirPath)
 
 data QResource
-  = File FilePath
-  | Directory DirPath
+  = File AbsFile
+  | Directory AbsDir
   | Mount Mount.Mount
 
 derive instance eqQResource ∷ Eq QResource
@@ -39,21 +40,21 @@ instance showQResource ∷ Show QResource where
   show (Directory p) = "(Directory " <> show p <> ")"
   show (Mount m) = "(Mount " <> show m <> ")"
 
-fromJSON ∷ DirPath → Json → Either String QResource
+fromJSON ∷ AbsDir → Json → Either String QResource
 fromJSON parent json
   = Mount <$> Mount.fromJSON parent json
   <|> do
     obj ← decodeJson json
-    name ← obj .? "name"
+    name' ← note "empty name" <<< fromString =<< (obj .? "name")
     obj .? "type" >>= case _ of
-      "directory" → Right $ Directory (parent </> dir name)
-      "file" → Right $ File (parent </> file name)
+      "directory" → Right $ Directory (parent </> dir' (Name name'))
+      "file" → Right $ File (parent </> file' (Name name'))
       typ → Left $ "unknown resource type " <> typ
 
-getPath ∷ QResource → AnyPath
+getPath ∷ QResource → AbsPath
 getPath (File p) = Right p
 getPath (Directory p) = Left p
 getPath (Mount m) = Mount.getPath m
 
-getName ∷ QResource → Either (Maybe DirName) FileName
-getName = pathName <<< getPath
+getName ∷ QResource → Either (Maybe (Name Dir)) (Name File)
+getName = bimap name fileName <<< getPath

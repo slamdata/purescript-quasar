@@ -27,24 +27,24 @@ import Control.Monad.Eff.Exception (Error, error)
 import Control.Monad.Free (Free)
 import Data.Argonaut (Json, JObject, jsonEmptyObject, (:=), (~>))
 import Data.Array (catMaybes)
-import Data.Bifunctor (lmap)
+import Data.Bifunctor (bimap, lmap)
 import Data.Either (Either(..), either)
 import Data.Foldable (class Foldable, foldl, foldMap)
 import Data.Functor.Coproduct (Coproduct)
 import Data.HTTP.Method (Method(..))
 import Data.Int as Int
-import Data.List (singleton)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..))
 import Data.MediaType.Common (applicationJSON)
 import Data.Monoid (mempty)
-import Data.Path.Pathy (peel, printPath, rootDir, runDirName, runFileName)
+import Data.Newtype (un)
+import Data.String.NonEmpty (toString)
 import Data.StrMap as SM
 import Data.Time.Duration (Seconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.URI as URI
 import Network.HTTP.Affjax.Request (RequestContent, toRequest)
 import Network.HTTP.AffjaxF as AXF
 import Network.HTTP.RequestHeader as Req
+import Pathy (Name(..), AbsDir, peel, peelFile, rootDir)
 import Quasar.ConfigF as CF
 import Quasar.Data.Json as Json
 import Quasar.Data.MediaTypes (applicationZip)
@@ -52,12 +52,14 @@ import Quasar.FS.DirMetadata as DirMetadata
 import Quasar.Metastore as Metastore
 import Quasar.Mount as Mount
 import Quasar.Paths as Paths
-import Quasar.QuasarF (QuasarF(..), DirPath)
+import Quasar.QuasarF (QuasarF(..))
 import Quasar.QuasarF.Interpreter.Config (Config)
 import Quasar.QuasarF.Interpreter.Internal (defaultRequest, delete, get, jsonResult, mkFSUrl, mkRequest, mkUrl, put, strResult, toPageParams, toVarParams, unitResult)
 import Quasar.Query.OutputMeta as QueryOutputMeta
 import Quasar.ServerInfo as ServerInfo
+import Quasar.Types (printQPath)
 import Quasar.Types as QT
+import Quasar.URI as URI
 import SqlSquared as Sql
 
 type M r = Free (Coproduct (CF.ConfigF (Config r)) (AXF.AffjaxFP RequestContent String))
@@ -86,7 +88,7 @@ eval = case _ of
         })
 
   WriteQuery path file sql vars k → do
-    let destHeader = Tuple "Destination" (printPath file)
+    let destHeader = Tuple "Destination" (printQPath file)
     url ← mkFSUrl Paths.query (Left path) (headerParams [destHeader] <> toVarParams vars)
     k <$> mkRequest writeQueryResult
       (AXF.affjax $ defaultRequest
@@ -142,7 +144,7 @@ eval = case _ of
   InvokeFile mode path vars pagination k → do
     -- We can't use toVarParams here, as the format is different for invokeFile,
     -- instead of var.x=3 it's just x=3
-    url ← mkFSUrl Paths.invoke (Right path) (URI.Query (map Just <$> SM.toUnfoldable vars) <> toPageParams pagination)
+    url ← mkFSUrl Paths.invoke (Right path) (URI.QueryPairs (map Just <$> SM.toUnfoldable vars) <> toPageParams pagination)
     k <$> mkRequest jsonResult
       (AXF.affjax defaultRequest
         { url = url
@@ -153,7 +155,7 @@ eval = case _ of
     k <$> (mkRequest unitResult <<< delete =<< mkFSUrl Paths.data_ path mempty)
 
   MoveData fromPath toPath k → do
-    let destHeader = Tuple "Destination" (either printPath printPath toPath)
+    let destHeader = Tuple "Destination" (either printQPath printQPath toPath)
     url ← mkFSUrl Paths.data_ fromPath (headerParams [destHeader])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
@@ -162,11 +164,12 @@ eval = case _ of
         })
 
   CreateMount path config mbMaxAge k → do
-    let pathParts = either peel peel path
-        parentDir = maybe rootDir fst pathParts
-        name = maybe "" (either runDirName runFileName <<< snd) pathParts
-        filenameHeader = Tuple "X-File-Name" name
-    url ← mkFSUrl Paths.mount (Left parentDir) (headerParams [filenameHeader])
+    let
+      Tuple parentDir name = case bimap peel peelFile path of
+        Left Nothing → Tuple rootDir ""
+        Left (Just dp) → dp <#> un Name >>> toString >>> (_ <> "/")
+        Right fp → fp <#> un Name >>> toString
+    url ← mkFSUrl Paths.mount (Left parentDir) (headerParams [Tuple "X-File-Name" name])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
         { url = url
@@ -189,7 +192,7 @@ eval = case _ of
     k <$> (mkRequest mountConfigResult <<< get =<< mkFSUrl Paths.mount path mempty)
 
   MoveMount fromPath toPath k → do
-    let destHeader = Tuple "Destination" (either printPath printPath toPath)
+    let destHeader = Tuple "Destination" (either printQPath printQPath toPath)
     url ← mkFSUrl Paths.mount fromPath (headerParams [destHeader])
     k <$> mkRequest unitResult
       (AXF.affjax defaultRequest
@@ -205,18 +208,18 @@ eval = case _ of
     k <$> mkRequest metastoreResult (get url)
 
   PutMetastore { initialize, metastore } k → do
-    let query = if initialize then URI.Query (singleton (Tuple "initialize" Nothing)) else mempty
-    url ← mkUrl (Right Paths.metastore) query
+    let query = if initialize then [Tuple "initialize" Nothing] else []
+    url ← mkUrl (Right Paths.metastore) (URI.QueryPairs query)
     k <$> (mkRequest unitResult $ put url $ snd (toRequest (Metastore.toJSON metastore)))
 
 
-serverInfoResult ∷ String -> Either Error ServerInfo.ServerInfo
+serverInfoResult ∷ String → Either Error ServerInfo.ServerInfo
 serverInfoResult = lmap error <$> ServerInfo.fromJSON <=< jsonResult
 
 writeQueryResult ∷ String → Either Error QueryOutputMeta.OutputMeta
 writeQueryResult = lmap error <$> QueryOutputMeta.fromJSON <=< jsonResult
 
-resourcesResult ∷ DirPath → String → Either Error DirMetadata.DirMetadata
+resourcesResult ∷ AbsDir → String → Either Error DirMetadata.DirMetadata
 resourcesResult path = lmap error <$> DirMetadata.fromJSON path <=< jsonResult
 
 mountConfigResult ∷ String → Either Error Mount.MountConfig
@@ -228,10 +231,10 @@ fileMetaResult = map (\(_ ∷ JObject) → unit) <<< jsonResult
 metastoreResult ∷ String → Either Error (Metastore.Metastore ())
 metastoreResult = lmap error <$> Metastore.fromJSON <=< jsonResult
 
-querySingleton ∷ String → String → URI.Query
-querySingleton k v = URI.Query $ singleton $ Tuple k (Just v)
+querySingleton ∷ String → String → URI.QQuery
+querySingleton k v = URI.QueryPairs [ Tuple k (Just v) ]
 
-headerParams ∷ ∀ f. Foldable f ⇒ f (Tuple String String) → URI.Query
+headerParams ∷ ∀ f. Foldable f ⇒ f (Tuple String String) → URI.QQuery
 headerParams ps = querySingleton "request-headers" (show (foldl go jsonEmptyObject ps))
   where
   go ∷ Json → Tuple String String → Json
